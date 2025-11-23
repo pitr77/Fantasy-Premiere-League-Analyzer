@@ -96,19 +96,20 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
               <thead>
                  <tr className="bg-slate-900/50 text-slate-400 text-[10px] md:text-xs uppercase tracking-wider border-b border-slate-700">
                     <th className="px-3 py-2 w-8 text-center">#</th>
-                    <th className="px-3 py-2 w-48 md:w-64">Team</th>
+                    <th className="px-3 py-2 w-32 md:w-40">Team</th>
                     <th className="px-3 py-2 text-center w-8">MP</th>
                     <th className="px-3 py-2 text-center w-8 text-green-400">W</th>
                     <th className="px-3 py-2 text-center w-8 text-slate-400">D</th>
                     <th className="px-3 py-2 text-center w-8 text-red-400">L</th>
                     <th className="px-3 py-2 text-center w-12">GD</th>
                     <th className="px-3 py-2 text-center w-12 font-bold text-white">Pts</th>
-                    <th className="px-3 py-2 w-40 text-center">Last 5 Matches</th>
+                    <th className="px-3 py-2 w-40 text-center">Form</th>
                  </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50 text-sm">
                  {tableData.map((row, index) => {
                     const team = getTeamName(row.id);
+                    // Slice last 5 matches
                     const last5 = row.form.slice(-5);
                     
                     // Highlight logic: Is this the source row OR the target row?
@@ -124,10 +125,10 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                            <td className="px-3 py-2 text-center font-mono text-slate-500 border-r border-slate-700/50 text-xs">
                               {index + 1}
                            </td>
-                           <td className="px-3 py-2 font-bold text-white flex items-center gap-2">
+                           <td className="px-3 py-2 font-bold text-white flex items-center gap-2 overflow-hidden">
                               <span className="truncate">{team?.name}</span>
-                              {isSource && <span className="text-[10px] text-purple-300 font-normal px-1.5 py-0.5 bg-purple-900/50 rounded-full">Current</span>}
-                              {isTarget && <span className="text-[10px] text-purple-300 animate-pulse font-normal px-1.5 py-0.5 bg-purple-900/50 rounded-full">Opponent</span>}
+                              {isSource && <span className="text-[10px] text-purple-300 font-normal px-1.5 py-0.5 bg-purple-900/50 rounded-full hidden md:inline">Current</span>}
+                              {isTarget && <span className="text-[10px] text-purple-300 animate-pulse font-normal px-1.5 py-0.5 bg-purple-900/50 rounded-full hidden md:inline">Opponent</span>}
                            </td>
                            <td className="px-3 py-2 text-center text-slate-300">{row.played}</td>
                            <td className="px-3 py-2 text-center text-slate-300">{row.win}</td>

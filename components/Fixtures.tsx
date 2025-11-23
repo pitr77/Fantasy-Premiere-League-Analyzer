@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { FPLFixture, FPLTeam, FPLEvent, FPLPlayer } from '../types';
-import { Calendar, LayoutGrid, Activity, AlertTriangle, CheckCircle2, Info, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
+import { Calendar, LayoutGrid, Activity, AlertTriangle, CheckCircle2, Info, ChevronDown, ChevronUp, HelpCircle, Trophy, Shield, Home } from 'lucide-react';
 
 interface FixturesProps {
   fixtures: FPLFixture[];
@@ -38,7 +38,7 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
     return { bg: 'bg-green-600', text: 'text-white', border: 'border-green-700', label: 'Easy', score: 1, threat };
   };
 
-  // Get Last 5 Form for a team
+  // Get Last 5 Form for a team (Updated from 4)
   const getTeamForm = (teamId: number) => {
       const finished = fixtures
         .filter(f => f.finished && (f.team_h === teamId || f.team_a === teamId))
@@ -99,95 +99,105 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
 
   // --- Statistics Calculation ---
   
-  const fdrStats = useMemo(() => {
+  const gwStats = useMemo(() => {
+      let totalGoals = 0;
+      let cleanSheets = 0;
+      let homeWins = 0;
       let totalMatches = 0;
-      let clearFavorites = 0; 
-      let favoritesWon = 0;
-      let upsets = 0;
 
-      fixtures.filter(f => f.finished).forEach(f => {
+      const eventFixtures = fixturesByEvent[selectedEvent] || [];
+      const finishedFixtures = eventFixtures.filter(f => f.finished);
+
+      finishedFixtures.forEach(f => {
           totalMatches++;
+          const h = f.team_h_score || 0;
+          const a = f.team_a_score || 0;
+          totalGoals += (h + a);
+          if (h === 0 || a === 0) cleanSheets++; // Rough estimation (one team kept CS)
+          if (h === 0) cleanSheets++; // Actually check both
+          if (a === 0) cleanSheets--; // Adjust double count if needed, but simplistic check:
           
-          const hForm = getTeamThreatLevel(f.team_h);
-          const aForm = getTeamThreatLevel(f.team_a);
-          const formGap = 10;
+          // Re-calc Clean Sheets properly
+          let csInMatch = 0;
+          if (a === 0) csInMatch++;
+          if (h === 0) csInMatch++;
+          cleanSheets = cleanSheets - (cleanSheets) + (cleanSheets + csInMatch); // Just accum
 
-          // Home is Favorite
-          if (hForm > aForm + formGap) {
-             clearFavorites++;
-             if ((f.team_h_score || 0) > (f.team_a_score || 0)) favoritesWon++;
-             else if ((f.team_h_score || 0) < (f.team_a_score || 0)) upsets++;
-          }
-          // Away is Favorite
-          else if (aForm > hForm + formGap) {
-             clearFavorites++;
-             if ((f.team_a_score || 0) > (f.team_h_score || 0)) favoritesWon++;
-             else if ((f.team_a_score || 0) < (f.team_h_score || 0)) upsets++;
-          }
+          if (h > a) homeWins++;
+      });
+      
+      // Fix CS accumulation logic simply
+      let csCount = 0;
+      finishedFixtures.forEach(f => {
+          if ((f.team_a_score || 0) === 0) csCount++;
+          if ((f.team_h_score || 0) === 0) csCount++;
       });
 
       return {
-          totalMatches,
-          favoritesWon,
-          upsets,
-          reliability: clearFavorites > 0 ? Math.round((favoritesWon / clearFavorites) * 100) : 0
+          totalGoals,
+          cleanSheets: csCount,
+          homeWinPct: totalMatches > 0 ? Math.round((homeWins / totalMatches) * 100) : 0,
+          count: totalMatches
       };
-  }, [fixtures, players]);
+  }, [fixturesByEvent, selectedEvent]);
 
 
   // --- Render Components ---
 
   const renderFormGuide = (form: string[]) => (
-      <div className="flex flex-col gap-0.5 items-center justify-start py-2 h-full overflow-hidden">
-          {/* Reverse form so newest is at the TOP */}
-          {[...form].reverse().map((res, i) => {
-              let color = 'bg-slate-700 border-slate-600';
-              if (res === 'W') color = 'bg-green-500 border-green-400 text-white';
-              if (res === 'L') color = 'bg-red-500 border-red-400 text-white';
-              if (res === 'D') color = 'bg-slate-500 border-slate-400 text-white';
-              
-              return (
-                  <div key={i} className={`w-4 h-4 text-[9px] font-bold flex items-center justify-center rounded-sm border shadow-sm z-10 ${color}`}>
-                      {res}
-                  </div>
-              )
-          })}
+      <div className="flex flex-col items-center justify-center py-2 h-full w-full">
+          {/* Container for the badges - Simplified */}
+          <div className="flex flex-col gap-1 p-1 rounded border border-white/20 w-7 bg-black/10">
+              {[...form].reverse().map((res, i) => {
+                  let color = 'bg-slate-700 border-slate-600';
+                  if (res === 'W') color = 'bg-green-500 border-green-400 text-white shadow-sm';
+                  if (res === 'L') color = 'bg-red-500 border-red-400 text-white shadow-sm';
+                  if (res === 'D') color = 'bg-slate-500 border-slate-400 text-white';
+                  
+                  return (
+                      <div key={i} className={`w-5 h-4 text-[9px] font-bold flex items-center justify-center rounded-sm border ${color} mx-auto`}>
+                          {res}
+                      </div>
+                  )
+              })}
+              {form.length === 0 && <span className="text-[8px] text-white/50 text-center">-</span>}
+          </div>
       </div>
   );
 
   const renderSchedule = () => (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      {/* FDR Reliability Dashboard */}
+      {/* Gameweek Stats Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow flex items-center gap-4">
-              <div className="p-3 bg-purple-500/20 rounded-full text-purple-400">
-                  <Activity size={24} />
+              <div className="p-3 bg-blue-500/20 rounded-full text-blue-400">
+                  <Trophy size={24} />
               </div>
               <div>
-                  <h3 className="text-xs text-slate-400 uppercase font-bold">FDR Accuracy</h3>
-                  <div className="text-2xl font-bold text-white">{fdrStats.reliability}%</div>
-                  <p className="text-[10px] text-slate-500">Favorites winning "Easy" games</p>
+                  <h3 className="text-xs text-slate-400 uppercase font-bold">Total Goals</h3>
+                  <div className="text-2xl font-bold text-white">{gwStats.totalGoals}</div>
+                  <p className="text-[10px] text-slate-500">Scored in {gwStats.count} matches</p>
               </div>
           </div>
           <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow flex items-center gap-4">
                <div className="p-3 bg-green-500/20 rounded-full text-green-400">
-                  <CheckCircle2 size={24} />
+                  <Shield size={24} />
               </div>
               <div>
-                  <h3 className="text-xs text-slate-400 uppercase font-bold">Expected Wins</h3>
-                  <div className="text-2xl font-bold text-white">{fdrStats.favoritesWon}</div>
-                  <p className="text-[10px] text-slate-500">Matches won by superior team</p>
+                  <h3 className="text-xs text-slate-400 uppercase font-bold">Clean Sheets</h3>
+                  <div className="text-2xl font-bold text-white">{gwStats.cleanSheets}</div>
+                  <p className="text-[10px] text-slate-500">Defensive masterclasses</p>
               </div>
           </div>
           <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow flex items-center gap-4">
-               <div className="p-3 bg-red-500/20 rounded-full text-red-400">
-                  <AlertTriangle size={24} />
+               <div className="p-3 bg-purple-500/20 rounded-full text-purple-400">
+                  <Home size={24} />
               </div>
               <div>
-                  <h3 className="text-xs text-slate-400 uppercase font-bold">Total Upsets</h3>
-                  <div className="text-2xl font-bold text-white">{fdrStats.upsets}</div>
-                  <p className="text-[10px] text-slate-500">Underdogs winning against odds</p>
+                  <h3 className="text-xs text-slate-400 uppercase font-bold">Home Dominance</h3>
+                  <div className="text-2xl font-bold text-white">{gwStats.homeWinPct}%</div>
+                  <p className="text-[10px] text-slate-500">Home wins ratio</p>
               </div>
           </div>
       </div>
@@ -208,15 +218,15 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                 <div key={fixture.id} className="relative bg-slate-800 rounded-lg border border-slate-700 shadow-sm hover:border-slate-500 transition-all group z-0 hover:z-10 overflow-visible">
                     
                     {/* WIDE Difficulty Bars with Form Inside - width 3rem (w-12) */}
-                    <div className={`absolute left-0 top-0 bottom-0 w-12 rounded-l-lg ${homeDiff.bg} flex flex-col items-center justify-start py-2 shadow-inner border-r border-black/10`}>
+                    <div className={`absolute left-0 top-0 bottom-0 w-12 rounded-l-lg ${homeDiff.bg} shadow-inner border-r border-black/10`}>
                         {renderFormGuide(homeForm)}
                     </div>
                     
-                    <div className={`absolute right-0 top-0 bottom-0 w-12 rounded-r-lg ${awayDiff.bg} flex flex-col items-center justify-start py-2 shadow-inner border-l border-black/10`}>
+                    <div className={`absolute right-0 top-0 bottom-0 w-12 rounded-r-lg ${awayDiff.bg} shadow-inner border-l border-black/10`}>
                         {renderFormGuide(awayForm)}
                     </div>
 
-                    <div className="grid grid-cols-[1fr_auto_1fr] items-center p-4 pl-16 pr-16 h-24">
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-center p-4 pl-16 pr-16 h-28">
                         
                         {/* Home Team */}
                         <div className="flex items-center justify-end gap-3 text-right">
@@ -390,49 +400,10 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                         <p>
                             <strong>Our Dynamic Model</strong> is live. It recalculates difficulty based on the <em>actual performance</em> (Form) of the opponent's best players over the last 30 days.
                         </p>
+                        <p className="mt-2 flex items-center gap-2 text-xs text-slate-400">
+                            <span className="w-4 h-4 bg-slate-800 border border-white/20 rounded flex items-center justify-center font-bold">W</span>
+                            Form guide reads from Top (Newest) to Bottom (Oldest).
+                        </p>
                     </div>
                     <div>
-                        <h4 className="font-bold text-white mb-2 flex items-center gap-2"><Activity size={14} className="text-green-400"/> How is it calculated?</h4>
-                        <p className="mb-2">
-                            <code className="bg-slate-800 px-1 py-0.5 rounded text-xs">Team Threat = Sum(Form of Top 12 Players)</code>
-                        </p>
-                        <ul className="list-disc list-inside space-y-1 text-xs">
-                            <li><span className="text-red-400 font-bold">Very Hard (Red):</span> Opponent form &gt; 55</li>
-                            <li><span className="text-orange-400 font-bold">Hard (Orange):</span> Opponent form &gt; 45</li>
-                            <li><span className="text-slate-400 font-bold">Moderate (Gray):</span> Opponent form &gt; 35</li>
-                            <li><span className="text-green-400 font-bold">Good (Green):</span> Opponent form &gt; 25</li>
-                            <li><span className="text-green-600 font-bold">Easy (Dark Green):</span> Opponent form &lt; 25</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        )}
-      </div>
-
-      {/* Controls for Schedule View */}
-      {activeTab === 'schedule' && (
-        <div className="flex justify-end">
-            <select 
-                value={selectedEvent} 
-                onChange={(e) => setSelectedEvent(Number(e.target.value))}
-                className="bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 outline-none shadow-sm cursor-pointer hover:border-purple-500 transition-colors"
-            >
-                {events.map(e => (
-                    <option key={e.id} value={e.id}>
-                    GW {e.id} {e.is_current ? '(Live)' : ''} {e.is_next ? '(Next)' : ''}
-                    </option>
-                ))}
-            </select>
-        </div>
-      )}
-
-      {/* Content Area */}
-      <div>
-          {activeTab === 'schedule' ? renderSchedule() : renderPlanner()}
-      </div>
-
-    </div>
-  );
-};
-
-export default Fixtures;
+                        <h4 className

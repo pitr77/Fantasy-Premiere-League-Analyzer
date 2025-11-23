@@ -1,8 +1,84 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { FPLPlayer, FPLTeam, FPLEvent } from '../types';
+import { FPLPlayer, FPLTeam, FPLEvent, FPLFixture } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+// Helper to format player list for prompt to save tokens
+const formatPlayersForPrompt = (players: FPLPlayer[], teams: FPLTeam[]) => {
+  return players.map(p => {
+    const teamName = teams.find(t => t.id === p.team)?.short_name || "UNK";
+    return `${p.web_name} (${teamName}, £${p.now_cost / 10}, Form: ${p.form})`;
+  }).join("; ");
+};
+
+export async function createScoutChatSession(
+  players: FPLPlayer[],
+  teams: FPLTeam[],
+  fixtures: FPLFixture[],
+  events: FPLEvent[],
+  userTeam: FPLPlayer[]
+) {
+  if (!process.env.API_KEY) {
+    throw new Error("API Key missing");
+  }
+
+  // 1. Prepare Context Data
+  const nextEvent = events.find(e => e.is_next);
+  const gameweekInfo = nextEvent ? `Next GW: ${nextEvent.id} (Deadline: ${nextEvent.deadline_time})` : "Season Finished";
+
+  // Top Players (High Form or High Ownership)
+  const topPlayers = players
+    .filter(p => parseFloat(p.form) > 4.0 || parseFloat(p.selected_by_percent) > 15.0)
+    .sort((a, b) => parseFloat(b.form) - parseFloat(a.form))
+    .slice(0, 50);
+
+  const topPlayersText = formatPlayersForPrompt(topPlayers, teams);
+
+  // User Team
+  const myTeamText = userTeam.length > 0 
+    ? formatPlayersForPrompt(userTeam, teams)
+    : "User has no team selected yet.";
+
+  // Upcoming Fixtures (Next GW only)
+  const nextGwFixtures = fixtures
+    .filter(f => f.event === nextEvent?.id)
+    .map(f => {
+      const h = teams.find(t => t.id === f.team_h)?.short_name;
+      const a = teams.find(t => t.id === f.team_a)?.short_name;
+      return `${h} vs ${a}`;
+    })
+    .join(", ");
+
+  const systemInstruction = `
+    You are an expert Fantasy Premier League (FPL) Scout and Assistant.
+    
+    CURRENT CONTEXT:
+    - Status: ${gameweekInfo}
+    - Upcoming Fixtures: ${nextGwFixtures}
+    
+    USER'S TEAM:
+    ${myTeamText}
+
+    MARKET DATA (Top Form/Ownership):
+    ${topPlayersText}
+
+    ROLE:
+    - Answer questions about transfers, captaincy, and strategy.
+    - If the user asks about a specific player not in the list, make a general assessment based on their team/price if you know it, or ask for details.
+    - Be concise, data-driven, and strategic.
+    - Use Markdown for bolding key player names.
+    - If the user's team is empty, guide them to build a team first or suggest a template.
+  `;
+
+  return ai.chats.create({
+    model: 'gemini-2.5-flash',
+    config: {
+      systemInstruction: systemInstruction,
+    }
+  });
+}
+
+// Keep the old function for backward compatibility if needed, or remove if unused.
 export async function getScoutAdvice(
   players: FPLPlayer[],
   teams: FPLTeam[],
@@ -18,7 +94,6 @@ export async function getScoutAdvice(
     };
   }
 
-  // Filter top performing players to reduce token count
   const topPlayers = players
     .sort((a, b) => parseFloat(b.form) - parseFloat(a.form))
     .slice(0, 30)
