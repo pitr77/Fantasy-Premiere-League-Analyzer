@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { FPLFixture, FPLTeam, FPLEvent, FPLPlayer } from '../types';
-import { Calendar, LayoutGrid, Activity, AlertTriangle, CheckCircle2, Info, ChevronDown, ChevronUp, HelpCircle, Trophy, Shield, Home } from 'lucide-react';
+import { Calendar, LayoutGrid, Activity, AlertTriangle, CheckCircle2, Info, ChevronDown, ChevronUp, HelpCircle, Trophy, Shield, Home, ChevronLeft, ChevronRight, BrainCircuit } from 'lucide-react';
 
 interface FixturesProps {
   fixtures: FPLFixture[];
@@ -38,7 +38,7 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
     return { bg: 'bg-green-600', text: 'text-white', border: 'border-green-700', label: 'Easy', score: 1, threat };
   };
 
-  // Get Last 5 Form for a team (Updated from 4)
+  // Get Last 5 Form for a team
   const getTeamForm = (teamId: number) => {
       const finished = fixtures
         .filter(f => f.finished && (f.team_h === teamId || f.team_a === teamId))
@@ -95,6 +95,59 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
   const nextEvent = events.find(e => e.is_next) || events.find(e => e.is_current) || events[0];
   const [selectedEvent, setSelectedEvent] = useState<number>(nextEvent ? nextEvent.id : 1);
 
+  // --- Month Logic ---
+  const months = useMemo(() => {
+    const uniqueMonths = new Set<string>();
+    const monthMap: Record<string, FPLEvent[]> = {};
+
+    events.forEach(e => {
+        const date = new Date(e.deadline_time);
+        const key = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+        uniqueMonths.add(key);
+        if (!monthMap[key]) monthMap[key] = [];
+        monthMap[key].push(e);
+    });
+
+    return Array.from(uniqueMonths).map(m => ({
+        name: m,
+        events: monthMap[m]
+    }));
+  }, [events]);
+
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
+
+  // Initialize selectedMonth based on selectedEvent on mount or when events change
+  useEffect(() => {
+      const evt = events.find(e => e.id === selectedEvent);
+      if (evt) {
+          const date = new Date(evt.deadline_time);
+          const key = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+          setSelectedMonth(key);
+      }
+  }, [selectedEvent, events]);
+
+  const handleMonthChange = (monthName: string) => {
+    setSelectedMonth(monthName);
+    const monthData = months.find(m => m.name === monthName);
+    if (monthData && monthData.events.length > 0) {
+        setSelectedEvent(monthData.events[0].id);
+    }
+  };
+
+  const handleGwChange = (gwId: number) => {
+      setSelectedEvent(gwId);
+      // Month state will auto-update via useEffect
+  };
+
+  const handleNextGw = () => {
+      if (selectedEvent < 38) handleGwChange(selectedEvent + 1);
+  };
+
+  const handlePrevGw = () => {
+      if (selectedEvent > 1) handleGwChange(selectedEvent - 1);
+  };
+
+
   const currentFixtures = fixturesByEvent[selectedEvent] || [];
 
   // --- Statistics Calculation ---
@@ -104,6 +157,7 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
       let cleanSheets = 0;
       let homeWins = 0;
       let totalMatches = 0;
+      let correctPreds = 0;
 
       const eventFixtures = fixturesByEvent[selectedEvent] || [];
       const finishedFixtures = eventFixtures.filter(f => f.finished);
@@ -119,15 +173,22 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
           if ((f.team_h_score || 0) === 0) cleanSheets++;
 
           if (h > a) homeWins++;
+
+          // Calc Predictions
+          const homeDiff = getDifficulty(f.team_a);
+          const awayDiff = getDifficulty(f.team_h);
+          const check = getFdrCheck(h, a, homeDiff, awayDiff);
+          if (check?.label === 'Expected') correctPreds++;
       });
       
       return {
           totalGoals,
           cleanSheets,
           homeWinPct: totalMatches > 0 ? Math.round((homeWins / totalMatches) * 100) : 0,
-          count: totalMatches
+          count: totalMatches,
+          correctPreds
       };
-  }, [fixturesByEvent, selectedEvent]);
+  }, [fixturesByEvent, selectedEvent, players, teams]); // Added players/teams deps for safety
 
 
   // --- Render Components ---
@@ -157,7 +218,7 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       {/* Gameweek Stats Dashboard */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow flex items-center gap-4">
               <div className="p-3 bg-blue-500/20 rounded-full text-blue-400">
                   <Trophy size={24} />
@@ -186,6 +247,16 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                   <h3 className="text-xs text-slate-400 uppercase font-bold">Home Dominance</h3>
                   <div className="text-2xl font-bold text-white">{gwStats.homeWinPct}%</div>
                   <p className="text-[10px] text-slate-500">Home wins ratio</p>
+              </div>
+          </div>
+          <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow flex items-center gap-4">
+               <div className="p-3 bg-pink-500/20 rounded-full text-pink-400">
+                  <BrainCircuit size={24} />
+              </div>
+              <div>
+                  <h3 className="text-xs text-slate-400 uppercase font-bold">FDR Accuracy</h3>
+                  <div className="text-2xl font-bold text-white">{gwStats.correctPreds} / {gwStats.count}</div>
+                  <p className="text-[10px] text-slate-500">Matches following form</p>
               </div>
           </div>
       </div>
@@ -275,7 +346,7 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
 
   const renderPlanner = () => {
     // Show next 5 Gameweeks starting from selectedEvent
-    const startGw = nextEvent ? nextEvent.id : 1;
+    const startGw = selectedEvent; // Use selected event as start of planner
     const lookahead = 5;
     const planningGws = Array.from({length: lookahead}, (_, i) => startGw + i).filter(id => id <= 38);
 
@@ -374,6 +445,59 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                     <LayoutGrid size={16} /> FDR Matrix
                 </button>
             </div>
+        </div>
+
+        {/* Filter Controls Row */}
+        <div className="mt-6 flex flex-col sm:flex-row gap-4 items-center bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+             
+             {/* Month Selector */}
+             <div className="relative w-full sm:w-auto">
+                <select 
+                    value={selectedMonth}
+                    onChange={(e) => handleMonthChange(e.target.value)}
+                    className="w-full sm:w-48 appearance-none bg-slate-800 text-white text-sm font-bold border border-slate-600 rounded px-4 py-2 pr-8 focus:ring-2 focus:ring-purple-500 outline-none"
+                >
+                    {months.map(m => (
+                        <option key={m.name} value={m.name}>{m.name}</option>
+                    ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+             </div>
+
+             {/* Navigation Buttons */}
+             <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
+                 <button 
+                    onClick={handlePrevGw}
+                    disabled={selectedEvent <= 1}
+                    className="p-2 bg-slate-800 rounded border border-slate-600 text-white hover:bg-slate-700 disabled:opacity-50 transition-colors"
+                 >
+                     <ChevronLeft size={16} />
+                 </button>
+                 
+                 {/* Gameweek Selector */}
+                 <div className="relative flex-1 sm:flex-none">
+                     <select 
+                        value={selectedEvent}
+                        onChange={(e) => handleGwChange(Number(e.target.value))}
+                        className="w-full sm:w-64 appearance-none bg-slate-800 text-white text-sm font-bold border border-slate-600 rounded px-4 py-2 pr-8 focus:ring-2 focus:ring-purple-500 outline-none text-center"
+                     >
+                        {months.find(m => m.name === selectedMonth)?.events.map(e => (
+                             <option key={e.id} value={e.id}>
+                                 {e.name} {e.is_current ? '(Current)' : e.is_next ? '(Next)' : ''}
+                             </option>
+                         ))}
+                     </select>
+                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                 </div>
+
+                 <button 
+                    onClick={handleNextGw}
+                    disabled={selectedEvent >= 38}
+                    className="p-2 bg-slate-800 rounded border border-slate-600 text-white hover:bg-slate-700 disabled:opacity-50 transition-colors"
+                 >
+                     <ChevronRight size={16} />
+                 </button>
+             </div>
         </div>
         
         {/* Explanation Dropdown */}
