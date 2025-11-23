@@ -113,29 +113,17 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
           const h = f.team_h_score || 0;
           const a = f.team_a_score || 0;
           totalGoals += (h + a);
-          if (h === 0 || a === 0) cleanSheets++; // Rough estimation (one team kept CS)
-          if (h === 0) cleanSheets++; // Actually check both
-          if (a === 0) cleanSheets--; // Adjust double count if needed, but simplistic check:
           
           // Re-calc Clean Sheets properly
-          let csInMatch = 0;
-          if (a === 0) csInMatch++;
-          if (h === 0) csInMatch++;
-          cleanSheets = cleanSheets - (cleanSheets) + (cleanSheets + csInMatch); // Just accum
+          if ((f.team_a_score || 0) === 0) cleanSheets++;
+          if ((f.team_h_score || 0) === 0) cleanSheets++;
 
           if (h > a) homeWins++;
       });
       
-      // Fix CS accumulation logic simply
-      let csCount = 0;
-      finishedFixtures.forEach(f => {
-          if ((f.team_a_score || 0) === 0) csCount++;
-          if ((f.team_h_score || 0) === 0) csCount++;
-      });
-
       return {
           totalGoals,
-          cleanSheets: csCount,
+          cleanSheets,
           homeWinPct: totalMatches > 0 ? Math.round((homeWins / totalMatches) * 100) : 0,
           count: totalMatches
       };
@@ -406,4 +394,25 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                         </p>
                     </div>
                     <div>
-                        <h4 className
+                        <h4 className="font-bold text-white mb-2 flex items-center gap-2">
+                            <Activity size={14} className="text-blue-400"/> Difficulty Legend
+                        </h4>
+                        <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-white text-center">
+                            <div className="bg-green-600 rounded py-1 border border-green-700">Easy (1)</div>
+                            <div className="bg-green-500 rounded py-1 border border-green-600">Good (2)</div>
+                            <div className="bg-slate-500 rounded py-1 border border-slate-600">Moderate (3)</div>
+                            <div className="bg-orange-500 rounded py-1 border border-orange-600">Hard (4)</div>
+                            <div className="bg-red-600 rounded py-1 border border-red-700 col-span-2">Very Hard (5)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+      </div>
+
+      {activeTab === 'schedule' ? renderSchedule() : renderPlanner()}
+    </div>
+  );
+};
+
+export default Fixtures;
