@@ -1,10 +1,20 @@
-import React, { useMemo, useState } from 'react';
-import { FPLTeam, FPLFixture } from '../types';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Trophy, Minus, Check, X } from 'lucide-react';
+import { FPLTeam, FPLFixture } from '../types';
 
 interface LeagueTableProps {
   teams: FPLTeam[];
   fixtures: FPLFixture[];
+}
+
+type TableMode = 'basic' | 'results' | 'advanced' | 'form';
+type FormResult = 'W' | 'D' | 'L';
+
+interface FormMatch {
+  result: FormResult;
+  opponent: number;
+  score: string;
+  date?: string | null;
 }
 
 interface TeamStats {
@@ -16,53 +26,82 @@ interface TeamStats {
   gf: number;
   ga: number;
   pts: number;
-  form: { result: 'W' | 'D' | 'L'; opponent: number; score: string; date: string }[];
+  form: FormMatch[];
 }
 
-type TableMode = 'basic' | 'results' | 'advanced';
+type SelectedForm = { teamId: number; idx: number; match: FormMatch };
+
+function useIsDesktop(breakpointPx = 768) {
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(min-width:${breakpointPx}px)`);
+    const onChange = () => setIsDesktop(mq.matches);
+    onChange();
+    mq.addEventListener?.('change', onChange);
+    return () => mq.removeEventListener?.('change', onChange);
+  }, [breakpointPx]);
+
+  return isDesktop;
+}
 
 const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
+  const isDesktop = useIsDesktop(768);
+
   const [activeHighlight, setActiveHighlight] = useState<{ source: number; target: number } | null>(null);
   const [mode, setMode] = useState<TableMode>('results');
+  const [selectedForm, setSelectedForm] = useState<SelectedForm | null>(null);
 
-  const tableData = useMemo(() => {
+  const tableData = useMemo<TeamStats[]>(() => {
     const stats: Record<number, TeamStats> = {};
-
     teams.forEach((t) => {
-      stats[t.id] = { id: t.id, played: 0, win: 0, draw: 0, loss: 0, gf: 0, ga: 0, pts: 0, form: [] };
+      stats[t.id] = {
+        id: t.id,
+        played: 0,
+        win: 0,
+        draw: 0,
+        loss: 0,
+        gf: 0,
+        ga: 0,
+        pts: 0,
+        form: [],
+      };
     });
 
+    // CRITICAL: Sort fixtures by date to ensure form is chronological
     const finishedFixtures = fixtures
-      .filter((f) => f.finished)
+      .filter((f) => f.finished && f.team_h_score != null && f.team_a_score != null)
       .sort((a, b) => new Date(a.kickoff_time).getTime() - new Date(b.kickoff_time).getTime());
 
     finishedFixtures.forEach((f) => {
-      const hScore = f.team_h_score ?? 0;
-      const aScore = f.team_a_score ?? 0;
-
       const home = stats[f.team_h];
       const away = stats[f.team_a];
-
       if (!home || !away) return;
+
+      const hScore = f.team_h_score!;
+      const aScore = f.team_a_score!;
 
       home.played++;
       away.played++;
 
       home.gf += hScore;
       home.ga += aScore;
+
       away.gf += aScore;
       away.ga += hScore;
 
       if (hScore > aScore) {
         home.win++;
-        home.pts += 3;
         away.loss++;
+        home.pts += 3;
+
         home.form.push({ result: 'W', opponent: f.team_a, score: `${hScore}-${aScore}`, date: f.kickoff_time });
         away.form.push({ result: 'L', opponent: f.team_h, score: `${aScore}-${hScore}`, date: f.kickoff_time });
       } else if (hScore < aScore) {
         away.win++;
-        away.pts += 3;
         home.loss++;
+        away.pts += 3;
+
         away.form.push({ result: 'W', opponent: f.team_h, score: `${aScore}-${hScore}`, date: f.kickoff_time });
         home.form.push({ result: 'L', opponent: f.team_a, score: `${hScore}-${aScore}`, date: f.kickoff_time });
       } else {
@@ -70,268 +109,424 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
         away.draw++;
         home.pts += 1;
         away.pts += 1;
+
         home.form.push({ result: 'D', opponent: f.team_a, score: `${hScore}-${aScore}`, date: f.kickoff_time });
         away.form.push({ result: 'D', opponent: f.team_h, score: `${aScore}-${hScore}`, date: f.kickoff_time });
       }
     });
 
-    return Object.values(stats).sort((a, b) => {
+    const arr = Object.values(stats);
+    arr.sort((a, b) => {
       if (b.pts !== a.pts) return b.pts - a.pts;
-      const gdA = a.gf - a.ga;
       const gdB = b.gf - b.ga;
+      const gdA = a.gf - a.ga;
       if (gdB !== gdA) return gdB - gdA;
-      return b.gf - a.gf;
+      if (b.gf !== a.gf) return b.gf - a.gf;
+      return a.id - b.id;
     });
+
+    return arr;
   }, [teams, fixtures]);
 
   const getTeamName = (id: number) => teams.find((t) => t.id === id);
 
-  // sticky offsets: # (40px) + Team (64px on <md, 224px on md+)
-  // left for PTS: 40 + 64 = 104; md: 40 + 224 = 264
-  const minWidth = mode === 'basic' ? 760 : mode === 'results' ? 920 : 1040;
+  const topCut = 5;
+  const bottomCut = 3;
+  const showSeparators = tableData.length >= topCut + bottomCut + 1;
 
-  const ModePill = ({ value, label }: { value: TableMode; label: string }) => (
-    <button
-      type="button"
-      onClick={() => setMode(value)}
-      className={[
-        'px-2.5 py-1 rounded-md text-xs font-semibold border transition',
-        mode === value
-          ? 'bg-slate-700 text-white border-slate-500'
-          : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800',
-      ].join(' ')}
-    >
-      {label}
-    </button>
-  );
+  const formatDate = (d?: string | null) => {
+    if (!d) return 'N/A';
+    const dt = new Date(d);
+    if (Number.isNaN(dt.getTime())) return 'N/A';
+    return dt.toLocaleDateString('en-GB');
+  };
+
+  // ===== Sticky widths (ONE SOURCE OF TRUTH) =====
+  const W_NUM = isDesktop ? 48 : 32; // #
+  const W_TEAM =
+    isDesktop ? 224 :
+    mode === 'basic' ? 78 :
+    mode === 'results' ? 92 :
+    mode === 'form' ? 108 :
+    88;
+
+  const W_PTS = isDesktop ? 64 : 56;
+
+  const LEFT_NUM = 0;
+  const LEFT_TEAM = W_NUM;
+  const LEFT_PTS = W_NUM + W_TEAM;
+
+  // Table min width per tab
+  const minWidth =
+    mode === 'basic' ? 420 :
+    mode === 'results' ? 640 :
+    mode === 'form' ? 520 :
+    920;
+
+  const ModePill = ({ value, label }: { value: TableMode; label: string }) => {
+    const isActive = mode === value;
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setMode(value);
+          if (value !== 'form') setSelectedForm(null);
+        }}
+        className={[
+          'px-4 py-2 rounded-lg text-xs font-bold tracking-wide transition-all duration-200',
+          isActive
+            ? 'bg-slate-100 text-slate-900 shadow-[0_0_0_1px_rgba(255,255,255,0.25)]'
+            : 'bg-slate-900/30 text-slate-200 border border-slate-700/60 hover:bg-slate-800/40',
+        ].join(' ')}
+      >
+        {label}
+      </button>
+    );
+  };
+
+  const selectedTeam = selectedForm ? getTeamName(selectedForm.teamId) : null;
+  const selectedOpp = selectedForm ? getTeamName(selectedForm.match.opponent) : null;
+
+  // Calculate colspan dynamically based on mode
+  const colSpan = useMemo(() => {
+    let count = 3; // Always: #, Team, Pts (sticky columns)
+    
+    if (mode === 'basic') {
+      count += 1; // GD
+    } else if (mode === 'results') {
+      count += 1; // MP
+      count += 3; // W, D, L
+      if (isDesktop) count += 2; // GF, GA (desktop only)
+      count += 1; // GD
+    } else if (mode === 'form') {
+      count += 1; // GD
+      count += 1; // Form
+    } else if (mode === 'advanced') {
+      count += 1; // MP
+      count += 3; // W, D, L
+      count += 2; // GF, GA
+      count += 1; // GD
+    }
+    
+    return count;
+  }, [mode, isDesktop]);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2 px-2">
-            <Trophy className="text-yellow-400 w-5 h-5" /> Premier League Table
+    <div className="bg-slate-900/40 rounded-2xl border border-slate-700/40 shadow-xl p-5">
+      {/* Header: mobile wraps, so it never makes page wider */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Trophy className="w-6 h-6 text-yellow-400 flex-shrink-0" />
+          <h2 className="text-xl sm:text-2xl font-bold text-white leading-tight break-words min-w-0">
+            Premier League Table
           </h2>
-
-          {/* Mode toggles */}
-          <div className="flex gap-2 px-2">
-            <ModePill value="basic" label="BASIC" />
-            <ModePill value="results" label="RESULTS" />
-            <ModePill value="advanced" label="ADV" />
-          </div>
         </div>
 
-        {/* Both-direction scroll like 3.5 */}
-        <div className="overflow-auto pt-6 max-h-[70vh] isolate rounded-lg border border-slate-700/60 bg-slate-950/20">
-          <table className="w-full text-left border-collapse" style={{ minWidth }}>
-            <thead>
-              {/* Solid header bg (no transparency) -> prevents bleed under sticky cols */}
-              <tr className="bg-slate-900 text-slate-400 text-[10px] md:text-xs uppercase tracking-wider border-b border-slate-700 sticky top-0 z-40">
-                <th className="px-2 py-2 w-10 min-w-[40px] text-center sticky left-0 top-0 z-[90] bg-slate-900 border-r border-slate-700/50">
-                  #
-                </th>
+        <div className="flex flex-wrap gap-2">
+          <ModePill value="basic" label="BASIC" />
+          <ModePill value="results" label="RESULTS" />
+          <ModePill value="advanced" label="ADV" />
+          <ModePill value="form" label="FORM" />
+        </div>
+      </div>
 
-                {/* TEAM narrower on mobile, wider on md */}
-                <th className="px-3 py-2 w-16 md:w-56 min-w-[64px] sticky left-[40px] top-0 z-[90] bg-slate-900 border-r border-slate-700/50 shadow-[6px_0_10px_rgba(0,0,0,0.35)]">
-                  Team
-                </th>
+      <div className="mt-6 overflow-auto max-h-[70vh] isolate rounded-lg border border-slate-700/60 bg-slate-950/20">
+        <table className="w-full table-fixed text-left border-collapse" style={{ minWidth }}>
+          <thead>
+            <tr className="bg-slate-900 text-slate-400 text-[10px] md:text-xs uppercase tracking-wider border-b border-slate-700 sticky top-0 z-40">
+              {/* # */}
+              <th
+                className="py-2 text-center sticky top-0 bg-slate-900 border-r border-slate-700/50"
+                style={{ width: W_NUM, minWidth: W_NUM, left: LEFT_NUM, zIndex: 90 }}
+              >
+                #
+              </th>
 
-                {/* PTS frozen always */}
-                <th className="px-2 py-2 w-12 min-w-[48px] text-center font-bold text-white sticky left-[104px] md:left-[264px] top-0 z-[90] bg-slate-900 border-r border-slate-700/50 shadow-[6px_0_10px_rgba(0,0,0,0.25)]">
-                  Pts
-                </th>
+              {/* TEAM */}
+              <th
+                className="py-2 px-2 sticky top-0 bg-slate-900 border-r border-slate-700/50 shadow-[6px_0_10px_rgba(0,0,0,0.35)]"
+                style={{ width: W_TEAM, minWidth: W_TEAM, left: LEFT_TEAM, zIndex: 80 }}
+              >
+                Team
+              </th>
 
-                {/* NON-sticky header cells */}
-                {mode !== 'basic' && <th className="px-3 py-2 text-center w-8 bg-slate-900">MP</th>}
+              {/* PTS */}
+              <th
+                className="py-2 text-center sticky top-0 bg-slate-900 border-r border-slate-700/50 shadow-[6px_0_10px_rgba(0,0,0,0.25)]"
+                style={{ width: W_PTS, minWidth: W_PTS, left: LEFT_PTS, zIndex: 70 }}
+              >
+                Pts
+              </th>
 
-                {mode === 'results' && (
-                  <>
-                    <th className="px-3 py-2 text-center w-8 text-green-400 bg-slate-900">W</th>
-                    <th className="px-3 py-2 text-center w-8 text-slate-400 bg-slate-900">D</th>
-                    <th className="px-3 py-2 text-center w-8 text-red-400 bg-slate-900">L</th>
-                  </>
-                )}
+              {/* RESULTS columns */}
+              {mode === 'results' && (
+                <>
+                  <th className="px-2 py-2 text-center w-12 bg-slate-900">MP</th>
+                  <th className="px-2 py-2 text-center w-10 text-green-400 bg-slate-900">W</th>
+                  <th className="px-2 py-2 text-center w-10 text-slate-400 bg-slate-900">D</th>
+                  <th className="px-2 py-2 text-center w-10 text-red-400 bg-slate-900">L</th>
+                  {isDesktop && (
+                    <>
+                      <th className="px-2 py-2 text-center w-12 bg-slate-900">GF</th>
+                      <th className="px-2 py-2 text-center w-12 bg-slate-900">GA</th>
+                    </>
+                  )}
+                  <th className="px-2 py-2 text-center w-12 bg-slate-900">GD</th>
+                </>
+              )}
 
-                {mode === 'advanced' && (
-                  <>
-                    <th className="px-3 py-2 text-center w-8 text-green-400 bg-slate-900">W</th>
-                    <th className="px-3 py-2 text-center w-8 text-slate-400 bg-slate-900">D</th>
-                    <th className="px-3 py-2 text-center w-8 text-red-400 bg-slate-900">L</th>
-                    <th className="px-3 py-2 text-center w-12 bg-slate-900">GF</th>
-                    <th className="px-3 py-2 text-center w-12 bg-slate-900">GA</th>
-                  </>
-                )}
+              {/* ADVANCED columns */}
+              {mode === 'advanced' && (
+                <>
+                  <th className="px-2 py-2 text-center w-12 bg-slate-900">MP</th>
+                  <th className="px-2 py-2 text-center w-10 text-green-400 bg-slate-900">W</th>
+                  <th className="px-2 py-2 text-center w-10 text-slate-400 bg-slate-900">D</th>
+                  <th className="px-2 py-2 text-center w-10 text-red-400 bg-slate-900">L</th>
+                  <th className="px-2 py-2 text-center w-12 bg-slate-900">GF</th>
+                  <th className="px-2 py-2 text-center w-12 bg-slate-900">GA</th>
+                  <th className="px-2 py-2 text-center w-12 bg-slate-900">GD</th>
+                </>
+              )}
 
-                <th className="px-3 py-2 text-center w-12 bg-slate-900">GD</th>
+              {/* BASIC/FORM show GD */}
+              {(mode === 'basic' || mode === 'form') && (
+                <th className="px-2 py-2 text-center w-12 bg-slate-900">GD</th>
+              )}
 
-                {/* Form in BASIC + RESULTS (hide in ADV to avoid huge width) */}
-                {mode !== 'advanced' && <th className="px-2 py-2 w-24 text-center bg-slate-900">Form</th>}
-              </tr>
-            </thead>
+              {/* FORM tab */}
+              {mode === 'form' && <th className="px-2 py-2 w-28 text-center bg-slate-900">Form</th>}
+            </tr>
+          </thead>
 
-            <tbody className="divide-y divide-slate-700/50 text-sm">
-              {tableData.map((row, index) => {
-                const team = getTeamName(row.id);
-                const last5 = row.form.slice(-5);
+          <tbody className="divide-y divide-slate-700/50 text-sm">
+            {tableData.flatMap((row, index) => {
+              const nodes: React.ReactNode[] = [];
 
-                const isSource = activeHighlight?.source === row.id;
-                const isTarget = activeHighlight?.target === row.id;
-                const isHighlighted = isSource || isTarget;
+              if (showSeparators && index === topCut) {
+                nodes.push(
+                  <tr key="sep-top5">
+                    <td
+                      colSpan={colSpan}
+                      className="px-3 py-2 bg-slate-900/50 text-[10px] md:text-xs uppercase tracking-wider text-emerald-300 border-y border-emerald-500/25"
+                    >
+                      Top 5 (UCL / Europe)
+                    </td>
+                  </tr>,
+                );
+              }
 
-                // Sticky cells must stay SOLID to avoid seeing columns underneath.
-                const stickyBg = isHighlighted ? 'bg-purple-950' : 'bg-slate-800 group-hover:bg-slate-700';
+              if (showSeparators && index === tableData.length - bottomCut) {
+                nodes.push(
+                  <tr key="sep-relegation">
+                    <td
+                      colSpan={colSpan}
+                      className="px-3 py-2 bg-slate-900/50 text-[10px] md:text-xs uppercase tracking-wider text-red-300 border-y border-red-500/25"
+                    >
+                      Relegation zone
+                    </td>
+                  </tr>,
+                );
+              }
 
-                return (
-                  <tr
-                    key={row.id}
+              const team = getTeamName(row.id);
+              const last5 = row.form.slice(-5);
+              const pos = index + 1;
+
+              const isSource = activeHighlight?.source === row.id;
+              const isTarget = activeHighlight?.target === row.id;
+              const isSelectedSource = selectedForm?.teamId === row.id;
+              const isSelectedTarget = selectedForm ? selectedForm.match.opponent === row.id : false;
+              const isHighlighted = isSource || isTarget || isSelectedSource || isSelectedTarget;
+
+              const isTop5 = pos <= topCut;
+              const isRelegation = pos > tableData.length - bottomCut;
+
+              const stickyBg = isHighlighted ? 'bg-purple-950' : 'bg-slate-800 group-hover:bg-slate-700';
+              const rowClass = isHighlighted
+                ? 'bg-purple-900/40 border-l-2 border-l-purple-400'
+                : isTop5
+                  ? 'hover:bg-slate-700/30 border-l-2 border-l-emerald-400/60'
+                  : isRelegation
+                    ? 'hover:bg-slate-700/30 border-l-2 border-l-red-400/60'
+                    : 'hover:bg-slate-700/30 border-l-2 border-l-transparent';
+
+              nodes.push(
+                <tr key={row.id} className={['group transition-all duration-200', rowClass].join(' ')}>
+                  {/* # */}
+                  <td
                     className={[
-                      'group transition-all duration-200',
-                      isHighlighted
-                        ? 'bg-purple-900/40 border-l-2 border-l-purple-400'
-                        : 'hover:bg-slate-700/30 border-l-2 border-l-transparent',
+                      'py-2 text-center font-bold text-slate-300 border-r border-slate-700/50 text-xs sticky',
+                      stickyBg,
                     ].join(' ')}
+                    style={{ width: W_NUM, minWidth: W_NUM, left: LEFT_NUM, zIndex: 60 }}
                   >
-                    {/* # sticky */}
-                    <td
-                      className={[
-                        'px-2 py-2 w-10 min-w-[40px] text-center font-bold text-slate-400 border-r border-slate-700/50 text-xs sticky left-0 z-30',
-                        stickyBg,
-                      ].join(' ')}
-                    >
-                      {index + 1}
+                    {pos}
+                  </td>
+
+                  {/* TEAM */}
+                  <td
+                    className={[
+                      'py-2 px-2 font-semibold text-white border-r border-slate-700/50 sticky shadow-[6px_0_10px_rgba(0,0,0,0.35)]',
+                      stickyBg,
+                    ].join(' ')}
+                    style={{ width: W_TEAM, minWidth: W_TEAM, left: LEFT_TEAM, zIndex: 50 }}
+                  >
+                    <span className="block truncate">{team?.short_name || 'N/A'}</span>
+                  </td>
+
+                  {/* PTS */}
+                  <td
+                    className={[
+                      'py-2 text-center font-bold text-white border-r border-slate-700/50 sticky shadow-[6px_0_10px_rgba(0,0,0,0.25)]',
+                      stickyBg,
+                    ].join(' ')}
+                    style={{ width: W_PTS, minWidth: W_PTS, left: LEFT_PTS, zIndex: 40 }}
+                  >
+                    {row.pts}
+                  </td>
+
+                  {/* RESULTS mode */}
+                  {mode === 'results' && (
+                    <>
+                      <td className="px-2 py-2 text-center w-12">{row.played}</td>
+                      <td className="px-2 py-2 text-center w-10 text-green-400">{row.win}</td>
+                      <td className="px-2 py-2 text-center w-10 text-slate-200">{row.draw}</td>
+                      <td className="px-2 py-2 text-center w-10 text-red-400">{row.loss}</td>
+                      {isDesktop && (
+                        <>
+                          <td className="px-2 py-2 text-center w-12">{row.gf}</td>
+                          <td className="px-2 py-2 text-center w-12">{row.ga}</td>
+                        </>
+                      )}
+                      <td className="px-2 py-2 text-center w-12">
+                        <span className={row.gf - row.ga >= 0 ? 'text-green-300' : 'text-red-300'}>
+                          {row.gf - row.ga >= 0 ? '+' : ''}
+                          {row.gf - row.ga}
+                        </span>
+                      </td>
+                    </>
+                  )}
+
+                  {/* ADVANCED mode */}
+                  {mode === 'advanced' && (
+                    <>
+                      <td className="px-2 py-2 text-center w-12">{row.played}</td>
+                      <td className="px-2 py-2 text-center w-10 text-green-400">{row.win}</td>
+                      <td className="px-2 py-2 text-center w-10 text-slate-200">{row.draw}</td>
+                      <td className="px-2 py-2 text-center w-10 text-red-400">{row.loss}</td>
+                      <td className="px-2 py-2 text-center w-12">{row.gf}</td>
+                      <td className="px-2 py-2 text-center w-12">{row.ga}</td>
+                      <td className="px-2 py-2 text-center w-12">
+                        <span className={row.gf - row.ga >= 0 ? 'text-green-300' : 'text-red-300'}>
+                          {row.gf - row.ga >= 0 ? '+' : ''}
+                          {row.gf - row.ga}
+                        </span>
+                      </td>
+                    </>
+                  )}
+
+                  {/* BASIC mode */}
+                  {mode === 'basic' && (
+                    <td className="px-2 py-2 text-center w-12">
+                      <span className={row.gf - row.ga >= 0 ? 'text-green-300' : 'text-red-300'}>
+                        {row.gf - row.ga >= 0 ? '+' : ''}
+                        {row.gf - row.ga}
+                      </span>
                     </td>
+                  )}
 
-                    {/* Team sticky */}
-                    <td
-                      className={[
-                        'px-3 py-2 w-16 md:w-56 min-w-[64px] font-semibold text-white border-r border-slate-700/50 sticky left-[40px] z-30',
-                        stickyBg,
-                      ].join(' ')}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="truncate">{team?.short_name || 'N/A'}</span>
-                        {isSource && (
-                          <span className="text-[10px] text-purple-200 border border-purple-500/40 px-1.5 py-0.5 bg-purple-900/50 rounded-full hidden md:inline">
-                            Current
-                          </span>
-                        )}
-                        {isTarget && (
-                          <span className="text-[10px] text-purple-200 border border-purple-500/40 px-1.5 py-0.5 bg-purple-900/50 rounded-full hidden md:inline">
-                            Opponent
-                          </span>
-                        )}
-                      </div>
-                    </td>
+                  {/* FORM mode */}
+                  {mode === 'form' && (
+                    <>
+                      <td className="px-2 py-2 text-center w-12">
+                        <span className={row.gf - row.ga >= 0 ? 'text-green-300' : 'text-red-300'}>
+                          {row.gf - row.ga >= 0 ? '+' : ''}
+                          {row.gf - row.ga}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 w-28">
+                        <div className="flex items-center justify-center gap-1">
+                          {last5.length === 0 && <span className="text-slate-500 text-xs">—</span>}
 
-                    {/* Pts sticky (ALWAYS) */}
-                    <td
-                      className={[
-                        'px-2 py-2 w-12 min-w-[48px] text-center font-bold text-white border-r border-slate-700/50 shadow-[6px_0_10px_rgba(0,0,0,0.35)] sticky left-[104px] md:left-[264px] z-30',
-                        stickyBg,
-                      ].join(' ')}
-                    >
-                      {row.pts}
-                    </td>
-
-                    {/* non-sticky cells by mode */}
-                    {mode !== 'basic' && <td className="px-3 py-2 text-center text-slate-300">{row.played}</td>}
-
-                    {mode === 'results' && (
-                      <>
-                        <td className="px-3 py-2 text-center text-slate-300">{row.win}</td>
-                        <td className="px-3 py-2 text-center text-slate-300">{row.draw}</td>
-                        <td className="px-3 py-2 text-center text-slate-300">{row.loss}</td>
-                      </>
-                    )}
-
-                    {mode === 'advanced' && (
-                      <>
-                        <td className="px-3 py-2 text-center text-slate-300">{row.win}</td>
-                        <td className="px-3 py-2 text-center text-slate-300">{row.draw}</td>
-                        <td className="px-3 py-2 text-center text-slate-300">{row.loss}</td>
-                        <td className="px-3 py-2 text-center text-slate-300">{row.gf}</td>
-                        <td className="px-3 py-2 text-center text-slate-300">{row.ga}</td>
-                      </>
-                    )}
-
-                    <td className="px-3 py-2 text-center text-slate-300 font-mono">
-                      {row.gf - row.ga > 0 ? `+${row.gf - row.ga}` : row.gf - row.ga}
-                    </td>
-
-                    {/* Form in BASIC + RESULTS */}
-                    {mode !== 'advanced' && (
-                      <td className="px-2 py-2">
-                        <div className="flex items-center justify-center gap-0.5">
                           {last5.map((match, i) => {
-                            let colorClass = 'bg-slate-600 border-slate-500';
-                            let Icon = Minus;
-                            if (match.result === 'W') {
-                              colorClass = 'bg-green-500 border-green-400';
-                              Icon = Check;
-                            } else if (match.result === 'L') {
-                              colorClass = 'bg-red-500 border-red-400';
-                              Icon = X;
-                            }
+                            const Icon = match.result === 'W' ? Check : match.result === 'L' ? X : Minus;
+
+                            const colorClass =
+                              match.result === 'W'
+                                ? 'bg-green-500 border-green-400'
+                                : match.result === 'L'
+                                  ? 'bg-red-500 border-red-400'
+                                  : 'bg-slate-600 border-slate-500';
+
+                            const isSelected = selectedForm?.teamId === row.id && selectedForm?.idx === i;
 
                             return (
-                              <div
+                              <button
                                 key={i}
-                                className={`relative group/match w-5 h-5 rounded-sm border ${colorClass} flex items-center justify-center cursor-pointer transition-transform hover:scale-110`}
+                                type="button"
+                                className={[
+                                  'relative w-5 h-5 rounded-sm border flex items-center justify-center cursor-pointer',
+                                  'transition-transform hover:scale-110',
+                                  colorClass,
+                                  isSelected ? 'ring-2 ring-sky-400 ring-offset-2 ring-offset-slate-900' : '',
+                                ].join(' ')}
                                 onMouseEnter={() => setActiveHighlight({ source: row.id, target: match.opponent })}
                                 onMouseLeave={() => setActiveHighlight(null)}
+                                onClick={() => setSelectedForm({ teamId: row.id, idx: i, match })}
                               >
                                 <Icon className="w-3 h-3 text-white" />
-                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 group-hover/match:opacity-100 pointer-events-none transition-opacity duration-200 z-50">
-                                  <div className="bg-slate-900 text-white text-xs rounded-md px-2 py-1 whitespace-nowrap shadow-lg border border-slate-700">
-                                    <div className="font-semibold">
-                                      vs {getTeamName(match.opponent)?.short_name || 'N/A'}
-                                    </div>
-                                    <div className="flex justify-between gap-3">
-                                      <span className="text-slate-300">{new Date(match.date).toLocaleDateString()}</span>
-                                      <span
-                                        className={`font-bold ${
-                                          match.result === 'W'
-                                            ? 'text-green-400'
-                                            : match.result === 'L'
-                                            ? 'text-red-400'
-                                            : 'text-slate-400'
-                                        }`}
-                                      >
-                                        Result: {match.score}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
+                              </button>
                             );
                           })}
                         </div>
                       </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </>
+                  )}
+                </tr>,
+              );
 
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4 gap-3 px-2">
-          <p className="text-slate-400 text-sm">
-            {fixtures.filter((f) => f.finished).length} games played
-          </p>
+              return nodes;
+            })}
+          </tbody>
+        </table>
+      </div>
 
-          <div className="flex flex-wrap gap-4 text-xs text-slate-400">
-            <div className="flex items-center gap-1">
-              <div className="w-2.5 h-2.5 bg-green-500 rounded-sm"></div> Win
+      {/* FORM details panel */}
+      {mode === 'form' && selectedForm && (
+        <div className="mt-4 rounded-lg border border-slate-700/60 bg-slate-950/30 p-3">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-slate-200 font-semibold">
+                {selectedTeam?.short_name || 'N/A'} vs {selectedOpp?.short_name || 'N/A'}
+              </div>
+              <div className="text-slate-400 text-sm">{formatDate(selectedForm.match.date)}</div>
+              <div
+                className={[
+                  'text-sm font-semibold',
+                  selectedForm.match.result === 'W'
+                    ? 'text-green-400'
+                    : selectedForm.match.result === 'L'
+                      ? 'text-red-400'
+                      : 'text-slate-200',
+                ].join(' ')}
+              >
+                Result: {selectedForm.match.score}
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2.5 h-2.5 bg-slate-600 rounded-sm"></div> Draw
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2.5 h-2.5 bg-red-500 rounded-sm"></div> Loss
-            </div>
+
+            <button
+              type="button"
+              className="text-xs px-2 py-1 rounded-md border border-slate-700 text-slate-300 hover:bg-slate-800"
+              onClick={() => setSelectedForm(null)}
+            >
+              Close
+            </button>
           </div>
         </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4 gap-3 px-2">
+        <p className="text-slate-400 text-sm">{fixtures.filter((f) => f.finished).length} games played</p>
       </div>
     </div>
   );
