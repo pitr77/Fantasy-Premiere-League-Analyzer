@@ -141,27 +141,17 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
     return dt.toLocaleDateString('en-GB');
   };
 
-  // ===== Sticky widths (ONE SOURCE OF TRUTH) =====
-  const W_NUM = isDesktop ? 48 : 32; // #
-  const W_TEAM =
-    isDesktop ? 224 :
-    mode === 'basic' ? 78 :
-    mode === 'results' ? 92 :
-    mode === 'form' ? 108 :
-    88;
+  // ===== Column widths - Mobile-friendly, no sticky =====
+  const W_NUM = isDesktop ? 48 : 40; // #
+  const W_TEAM = isDesktop ? 224 : 80; // Team - wider on mobile for readability
+  const W_PTS = isDesktop ? 64 : 50; // Points
 
-  const W_PTS = isDesktop ? 64 : 56;
-
-  const LEFT_NUM = 0;
-  const LEFT_TEAM = W_NUM;
-  const LEFT_PTS = W_NUM + W_TEAM;
-
-  // Table min width per tab
+  // Table min width per tab - reduced for mobile
   const minWidth =
-    mode === 'basic' ? 420 :
-    mode === 'results' ? 640 :
-    mode === 'form' ? 520 :
-    920;
+    mode === 'basic' ? (isDesktop ? 420 : 280) :
+    mode === 'results' ? (isDesktop ? 640 : 500) :
+    mode === 'form' ? (isDesktop ? 520 : 380) :
+    (isDesktop ? 920 : 680);
 
   const ModePill = ({ value, label }: { value: TableMode; label: string }) => {
     const isActive = mode === value;
@@ -231,29 +221,35 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
       </div>
 
       <div className="mt-6 overflow-auto max-h-[70vh] isolate rounded-lg border border-slate-700/60 bg-slate-950/20">
-        <table className="w-full table-fixed text-left border-collapse" style={{ minWidth }}>
+        <table className="w-full text-left border-collapse" style={{ minWidth }}>
           <thead>
             <tr className="bg-slate-900 text-slate-400 text-[10px] md:text-xs uppercase tracking-wider border-b border-slate-700 sticky top-0 z-40">
               {/* # */}
               <th
-                className="py-2 text-center sticky top-0 bg-slate-900 border-r border-slate-700/50"
-                style={{ width: W_NUM, minWidth: W_NUM, left: LEFT_NUM, zIndex: 90 }}
+                className="py-2 text-center bg-slate-900 border-r border-slate-700/50"
+                style={{ width: W_NUM, minWidth: W_NUM }}
               >
                 #
               </th>
 
               {/* TEAM */}
               <th
-                className="py-2 px-2 sticky top-0 bg-slate-900 border-r border-slate-700/50 shadow-[6px_0_10px_rgba(0,0,0,0.35)]"
-                style={{ width: W_TEAM, minWidth: W_TEAM, left: LEFT_TEAM, zIndex: 80 }}
+                className="py-2 px-2 border-r border-slate-700/50 bg-slate-900"
+                style={{ 
+                  width: W_TEAM, 
+                  minWidth: W_TEAM
+                }}
               >
                 Team
               </th>
 
               {/* PTS */}
               <th
-                className="py-2 text-center sticky top-0 bg-slate-900 border-r border-slate-700/50 shadow-[6px_0_10px_rgba(0,0,0,0.25)]"
-                style={{ width: W_PTS, minWidth: W_PTS, left: LEFT_PTS, zIndex: 70 }}
+                className="py-2 text-center border-r border-slate-700/50 bg-slate-900"
+                style={{ 
+                  width: W_PTS, 
+                  minWidth: W_PTS
+                }}
               >
                 Pts
               </th>
@@ -271,7 +267,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                       <th className="px-2 py-2 text-center w-12 bg-slate-900">GA</th>
                     </>
                   )}
-                  <th className="px-2 py-2 text-center w-12 bg-slate-900">GD</th>
+                  <th className="px-2 py-2 text-center w-8 bg-slate-900">GD</th>
                 </>
               )}
 
@@ -290,7 +286,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
 
               {/* BASIC/FORM show GD */}
               {(mode === 'basic' || mode === 'form') && (
-                <th className="px-2 py-2 text-center w-12 bg-slate-900">GD</th>
+                <th className="px-2 py-2 text-center w-8 bg-slate-900">GD</th>
               )}
 
               {/* FORM tab */}
@@ -341,7 +337,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
               const isTop5 = pos <= topCut;
               const isRelegation = pos > tableData.length - bottomCut;
 
-              const stickyBg = isHighlighted ? 'bg-purple-950' : 'bg-slate-800 group-hover:bg-slate-700';
+              const rowBg = isHighlighted ? 'bg-purple-950' : 'bg-slate-800 group-hover:bg-slate-700';
               const rowClass = isHighlighted
                 ? 'bg-purple-900/40 border-l-2 border-l-purple-400'
                 : isTop5
@@ -355,10 +351,10 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                   {/* # */}
                   <td
                     className={[
-                      'py-2 text-center font-bold text-slate-300 border-r border-slate-700/50 text-xs sticky',
-                      stickyBg,
+                      'py-2 text-center font-bold text-slate-300 border-r border-slate-700/50 text-xs',
+                      rowBg,
                     ].join(' ')}
-                    style={{ width: W_NUM, minWidth: W_NUM, left: LEFT_NUM, zIndex: 60 }}
+                    style={{ width: W_NUM, minWidth: W_NUM }}
                   >
                     {pos}
                   </td>
@@ -366,10 +362,13 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                   {/* TEAM */}
                   <td
                     className={[
-                      'py-2 px-2 font-semibold text-white border-r border-slate-700/50 sticky shadow-[6px_0_10px_rgba(0,0,0,0.35)]',
-                      stickyBg,
+                      'py-2 px-2 font-semibold text-white border-r border-slate-700/50',
+                      rowBg,
                     ].join(' ')}
-                    style={{ width: W_TEAM, minWidth: W_TEAM, left: LEFT_TEAM, zIndex: 50 }}
+                    style={{ 
+                      width: W_TEAM, 
+                      minWidth: W_TEAM
+                    }}
                   >
                     <span className="block truncate">{team?.short_name || 'N/A'}</span>
                   </td>
@@ -377,10 +376,13 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                   {/* PTS */}
                   <td
                     className={[
-                      'py-2 text-center font-bold text-white border-r border-slate-700/50 sticky shadow-[6px_0_10px_rgba(0,0,0,0.25)]',
-                      stickyBg,
+                      'py-2 text-center font-bold text-white border-r border-slate-700/50',
+                      rowBg,
                     ].join(' ')}
-                    style={{ width: W_PTS, minWidth: W_PTS, left: LEFT_PTS, zIndex: 40 }}
+                    style={{ 
+                      width: W_PTS, 
+                      minWidth: W_PTS
+                    }}
                   >
                     {row.pts}
                   </td>
@@ -427,7 +429,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
 
                   {/* BASIC mode */}
                   {mode === 'basic' && (
-                    <td className="px-2 py-2 text-center w-12">
+                    <td className="px-2 py-2 text-center w-8">
                       <span className={row.gf - row.ga >= 0 ? 'text-green-300' : 'text-red-300'}>
                         {row.gf - row.ga >= 0 ? '+' : ''}
                         {row.gf - row.ga}
