@@ -162,11 +162,31 @@ const TeamAnalysis: React.FC<TeamAnalysisProps> = ({ teams, fixtures }) => {
                   <p>
                      <strong>{activeTab === 'ATTACK' ? 'Goal Scoring Potential' : 'Defensive Solidity'}</strong>
                   </p>
-                  <p>
-                     We calculate stats based on the last 5 matches played by each team.
-                     <br />
-                     <span className="text-green-400 font-bold">Green numbers</span> indicate elite performance (e.g., Scoring &gt; 2.0 per game or Conceding &lt; 0.8).
-                  </p>
+                  {activeTab === 'ATTACK' ? (
+                     <p>
+                        <strong>Attacking metrics calculation:</strong>
+                        <br />
+                        • <strong>Goals Scored (GS)</strong>: Total goals scored in last 5 matches
+                        <br />
+                        • <strong>GS / Game</strong>: Goals Scored ÷ Games Played (higher is better)
+                        <br />
+                        • <strong>Failed to Score</strong>: Number of matches with 0 goals scored
+                        <br />
+                        <span className="text-green-400 font-bold">Green numbers</span> indicate elite attacking (GS/Game &gt; 2.0)
+                     </p>
+                  ) : (
+                     <p>
+                        <strong>Defensive metrics calculation:</strong>
+                        <br />
+                        • <strong>Goals Conceded (GC)</strong>: Total goals conceded in last 5 matches
+                        <br />
+                        • <strong>GC / Game</strong>: Goals Conceded ÷ Games Played (lower is better)
+                        <br />
+                        • <strong>Clean Sheets</strong>: Number of matches with 0 goals conceded
+                        <br />
+                        <span className="text-green-400 font-bold">Green numbers</span> indicate elite defense (GC/Game &lt; 0.8)
+                     </p>
+                  )}
                </div>
             </div>
          </div>
