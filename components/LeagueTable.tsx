@@ -401,14 +401,18 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                                 type="button"
                                 className={[
                                   'relative flex items-center justify-center rounded-md text-[10px] md:text-xs font-semibold',
-                                  'px-1.5 md:px-2.5 py-0.5 border cursor-pointer',
-                                  'transition-all hover:scale-105 active:scale-95',
+                                  'px-1.5 md:px-2.5 py-0.5 border cursor-pointer transition-all',
+                                  'hover:scale-105 active:scale-95',
                                   colorClass,
-                                  isSelected ? 'ring-2 ring-sky-400 ring-offset-2 ring-offset-slate-900 shadow-xl z-20 scale-105' : '',
+                                  match.result === 'W' ? 'hover:bg-green-400' : match.result === 'L' ? 'hover:bg-red-400' : 'hover:bg-slate-500',
+                                  isSelected
+                                    ? 'ring-1 ring-slate-100/70 ring-offset-[1px] ring-offset-slate-900 z-10 shadow-lg scale-105'
+                                    : 'border-transparent',
                                 ].join(' ')}
                                 onMouseEnter={() => setActiveHighlight({ source: row.id, target: match.opponent })}
                                 onMouseLeave={() => setActiveHighlight(null)}
                                 onClick={() => setSelectedForm({ teamId: row.id, idx: i, match })}
+                                title={`vs ${getTeamName(match.opponent)?.name || 'Opponent'}`}
                               >
                                 <Icon className="w-2.5 h-2.5 md:w-3 md:h-3 text-white" />
                               </button>
@@ -462,7 +466,14 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
       )}
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4 gap-4 px-2">
-        <p className="text-slate-400 text-sm font-medium">{fixtures.filter((f) => f.finished).length} games played</p>
+        <div className="flex flex-col">
+          <p className="text-slate-400 text-sm font-medium">{fixtures.filter((f) => f.finished).length} games played</p>
+          {mode === 'form' && (
+            <p className="mt-1 text-xs text-slate-400/80 italic">
+              Tip: Click a form pill to see the match details.
+            </p>
+          )}
+        </div>
 
         {mode === 'form' && (
           <div className="flex items-center gap-4 text-[10px] md:text-xs">
