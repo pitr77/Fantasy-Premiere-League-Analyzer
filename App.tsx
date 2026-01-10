@@ -41,6 +41,11 @@ function App() {
   const [view, setView] = useState<View>(View.DASHBOARD);
   // Later: set to true when Stripe/paywall is ready
   const PRO_PAYWALL_ENABLED = false;
+  // DEV bypass for local testing (Period Analysis, Player Stats, etc.)
+  const DEV_AUTH_BYPASS =
+    process.env.NODE_ENV === 'development' &&
+    (process.env.NEXT_PUBLIC_AUTH_BYPASS === '1' ||
+      (typeof window !== 'undefined' && window.location.hostname === 'localhost'));
   const [data, setData] = useState<BootstrapStatic | null>(null);
   const [fixtures, setFixtures] = useState<FPLFixture[]>([]);
   const [loading, setLoading] = useState(true);
@@ -173,9 +178,8 @@ function App() {
   }) => (
     <button
       onClick={() => {
-        const isAuthed = Boolean(userEmail);
+        const isAuthed = Boolean(userEmail) || DEV_AUTH_BYPASS;
         const isPro = tier === 'pro';
-
         // 1) Not signed in → require login
         if (requiresAuth && !isAuthed) {
           setLockedReason(`Sign in required to access ${label}.`);
@@ -204,7 +208,7 @@ function App() {
     >
       <Icon size={20} />
       <span className="text-sm font-medium truncate">{label}</span>
-      {requiresAuth && tier !== 'pro' && (
+      {PRO_PAYWALL_ENABLED && requiresAuth && tier !== 'pro' && (
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
           PRO
         </span>
@@ -225,7 +229,7 @@ function App() {
       {/* Sidebar - Updated Flex Layout */}
       <aside className={`fixed md:relative z-40 w-72 h-full bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex flex-col`}>
         <div className="p-6 border-b border-slate-800 shrink-0">
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400">FPL Master</h1>
+          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400">FPL STUDIO</h1>
         </div>
 
         <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto custom-scrollbar">

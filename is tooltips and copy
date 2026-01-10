@@ -1,0 +1,177 @@
+warning: in the working copy of 'App.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/LeagueTable.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/supabaseClient.ts', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/.gitignore b/.gitignore[m
+[1mindex daac14e..2149513 100644[m
+[1m--- a/.gitignore[m
+[1m+++ b/.gitignore[m
+[36m@@ -26,3 +26,4 @@[m [mdist-ssr[m
+ [m
+ # Next.js build output[m
+ .next/[m
+[41m+[m
+[1mdiff --git a/App.tsx b/App.tsx[m
+[1mindex 9d82eeb..9b5390c 100644[m
+[1m--- a/App.tsx[m
+[1m+++ b/App.tsx[m
+[36m@@ -18,6 +18,7 @@[m [mimport PeriodAnalysis from './components/PeriodAnalysis';[m
+ import CompareMode from './components/CompareMode';[m
+ // import ScoutChat from './components/ScoutChat'; // Temporarily disabled[m
+ import { LayoutDashboard, Calendar, Shirt, BarChart2, BrainCircuit, Menu, X, RefreshCw, Users, Trophy, ArrowLeftRight, Activity, Zap, Search, CalendarRange, Split } from 'lucide-react';[m
+[32m+[m[32mimport { getActiveGameweekId } from "./lib/getActiveGameweek"; // uprav path podľa umiestnenia[m
+ [m
+ enum View {[m
+   DASHBOARD,[m
+[36m@@ -39,6 +40,8 @@[m [menum View {[m
+ [m
+ function App() {[m
+   const [view, setView] = useState<View>(View.DASHBOARD);[m
+[32m+[m[32m  const [, setSelectedGw] = useState<number | null>(null); // Fix: provide the missing setter used in fetchData()[m
+[32m+[m
+   // Later: set to true when Stripe/paywall is ready[m
+   const PRO_PAYWALL_ENABLED = false;[m
+   const [data, setData] = useState<BootstrapStatic | null>(null);[m
+[36m@@ -65,6 +68,43 @@[m [mfunction App() {[m
+       ]);[m
+       setData(bootstrap);[m
+       setFixtures(fixturesData);[m
+[32m+[m
+[32m+[m[32m      const activeGwId = getActiveGameweekId(bootstrap.events);[m
+[32m+[m[41m      [m
+[32m+[m[41m      [m
+[32m+[m[41m      [m
+[32m+[m[41m      [m
+[32m+[m[41m      [m
+[32m+[m
+[32m+[m
+[32m+[m
+[32m+[m
+[32m+[m[41m      [m
+[32m+[m[41m      [m
+[32m+[m[41m      [m
+[32m+[m[41m      [m
+[32m+[m[41m      [m
+[32m+[m[41m      [m
+[32m+[m[32m      setSelectedGw(activeGwId);[m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+[32m+[m[41m    [m
+     } catch (err) {[m
+       console.error(err);[m
+       setError("Failed to load FPL Data. This is often due to public proxy limitations. Please try again.");[m
+[1mdiff --git a/components/LeagueTable.tsx b/components/LeagueTable.tsx[m
+[1mindex 28c5a3c..dac3545 100644[m
+[1m--- a/components/LeagueTable.tsx[m
+[1m+++ b/components/LeagueTable.tsx[m
+[36m@@ -143,14 +143,14 @@[m [mconst LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {[m
+ [m
+   // ===== Column widths - Mobile-friendly, no sticky =====[m
+   const W_NUM = isDesktop ? 48 : 40; // #[m
+[31m-  const W_TEAM = isDesktop ? 224 : 80; // Team - wider on mobile for readability[m
+[32m+[m[32m  const W_TEAM = isDesktop ? 224 : 60; // Team - wider on mobile for readability[m
+   const W_PTS = isDesktop ? 64 : 50; // Points[m
+ [m
+   // Table min width per tab - reduced for mobile[m
+   const minWidth =[m
+     mode === 'basic' ? (isDesktop ? 420 : 280) :[m
+     mode === 'results' ? (isDesktop ? 640 : 500) :[m
+[31m-    mode === 'form' ? (isDesktop ? 520 : 380) :[m
+[32m+[m[32m    mode === 'form' ? (isDesktop ? 520 : 320) :[m
+     (isDesktop ? 920 : 680);[m
+ [m
+   const ModePill = ({ value, label }: { value: TableMode; label: string }) => {[m
+[36m@@ -189,7 +189,7 @@[m [mconst LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {[m
+       if (isDesktop) count += 2; // GF, GA (desktop only)[m
+       count += 1; // GD[m
+     } else if (mode === 'form') {[m
+[31m-      count += 1; // GD[m
+[32m+[m[32m      if (isDesktop) count += 1; // GD (desktop only)[m
+       count += 1; // Form[m
+     } else if (mode === 'advanced') {[m
+       count += 1; // MP[m
+[36m@@ -226,7 +226,7 @@[m [mconst LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {[m
+             <tr className="bg-slate-900 text-slate-400 text-[10px] md:text-xs uppercase tracking-wider border-b border-slate-700 sticky top-0 z-40">[m
+               {/* # */}[m
+               <th[m
+[31m-                className="py-2 text-center bg-slate-900 border-r border-slate-700/50"[m
+[32m+[m[32m                className="py-2 text-center bg-slate-900 border-r border-slate-700/50 sticky left-0 z-50"[m
+                 style={{ width: W_NUM, minWidth: W_NUM }}[m
+               >[m
+                 #[m
+[36m@@ -234,10 +234,11 @@[m [mconst LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {[m
+ [m
+               {/* TEAM */}[m
+               <th[m
+[31m-                className="py-2 px-2 border-r border-slate-700/50 bg-slate-900"[m
+[32m+[m[32m                className="py-2 px-2 border-r border-slate-700/50 bg-slate-900 sticky z-40"[m
+                 style={{ [m
+                   width: W_TEAM, [m
+[31m-                  minWidth: W_TEAM[m
+[32m+[m[32m                  minWidth: W_TEAM,[m
+[32m+[m[32m                  left: W_NUM[m
+                 }}[m
+               >[m
+                 Team[m
+[36m@@ -284,8 +285,13 @@[m [mconst LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {[m
+                 </>[m
+               )}[m
+ [m
+[31m-              {/* BASIC/FORM show GD */}[m
+[31m-              {(mode === 'basic' || mode === 'form') && ([m
+[32m+[m[32m              {/* BASIC show GD */}[m
+[32m+[m[32m              {mode === 'basic' && ([m
+[32m+[m[32m                <th className="px-2 py-2 text-center w-8 bg-slate-900">GD</th>[m
+[32m+[m[32m              )}[m
+[32m+[m
+[32m+[m[32m              {/* FORM show GD (desktop only) */}[m
+[32m+[m[32m              {mode === 'form' && isDesktop && ([m
+                 <th className="px-2 py-2 text-center w-8 bg-slate-900">GD</th>[m
+               )}[m
+ [m
+[36m@@ -351,7 +357,7 @@[m [mconst LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {[m
+                   {/* # */}[m
+                   <td[m
+                     className={[[m
+[31m-                      'py-2 text-center font-bold text-slate-300 border-r border-slate-700/50 text-xs',[m
+[32m+[m[32m                      'py-2 text-center font-bold text-slate-300 border-r border-slate-700/50 text-xs sticky left-0 z-30',[m
+                       rowBg,[m
+                     ].join(' ')}[m
+                     style={{ width: W_NUM, minWidth: W_NUM }}[m
+[36m@@ -362,12 +368,13 @@[m [mconst LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {[m
+                   {/* TEAM */}[m
+                   <td[m
+                     className={[[m
+[31m-                      'py-2 px-2 font-semibold text-white border-r border-slate-700/50',[m
+[32m+[m[32m                      'py-2 px-2 font-semibold text-white border-r border-slate-700/50 sticky z-20',[m
+                       rowBg,[m
+                     ].join(' ')}[m
+                     style={{ [m
+                       width: W_TEAM, [m
+[31m-                      minWidth: W_TEAM[m
+[32m+[m[32m                      minWidth: W_TEAM,[m
+[32m+[m[32m                      left: W_NUM[m
+                     }}[m
+                   >[m
+                     <span className="block truncate">{team?.short_name || 'N/A'}</span>[m
+[36m@@ -440,12 +447,14 @@[m [mconst LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {[m
+                   {/* FORM mode */}[m
+                   {mode === 'form' && ([m
+                     <>[m
+[31m-                      <td className="px-2 py-2 text-center w-12">[m
+[31m-    

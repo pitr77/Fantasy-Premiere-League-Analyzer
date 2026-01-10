@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import Script from 'next/script';
 
 export const metadata = {
-  title: 'FPL Mastermind',
+  title: 'FPL STUDIO',
   description: 'FPL analytics portal',
 };
 
