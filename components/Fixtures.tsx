@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { FPLFixture, FPLTeam, FPLEvent, FPLPlayer } from '../types';
-import { Calendar, LayoutGrid, Activity, AlertTriangle, CheckCircle2, Info, ChevronDown, ChevronUp, HelpCircle, Trophy, Shield, Home, ChevronLeft, ChevronRight, BrainCircuit } from 'lucide-react';
+import { Calendar, LayoutGrid, Activity, AlertTriangle, CheckCircle2, Info, ChevronDown, ChevronUp, HelpCircle, Trophy, Shield, Home, ChevronLeft, ChevronRight, BrainCircuit, User } from 'lucide-react';
+import { calculateLeaguePositions, getDynamicDifficulty } from '../lib/fdrModel';
+import { computeTransferIndexForPlayers, TransferIndexResult } from '../lib/transferIndex';
 
 interface FixturesProps {
     fixtures: FPLFixture[];
@@ -13,6 +15,7 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
     const [activeTab, setActiveTab] = useState<'schedule' | 'planner'>('schedule');
     const [showInfo, setShowInfo] = useState(false);
     const [plannerSortMode, setPlannerSortMode] = useState<'none' | 'asc' | 'desc'>('none');
+    const [expandedTeamId, setExpandedTeamId] = useState<number | null>(null);
 
     // --- Helper Functions ---
 
@@ -23,82 +26,9 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
      * Calculate current league positions from finished fixtures
      * Returns a map of teamId -> position (1-20)
      */
-    const getLeaguePositions = useMemo(() => {
-        const stats: Record<number, { pts: number; gd: number; gf: number; id: number }> = {};
+    const getLeaguePositions = useMemo(() => calculateLeaguePositions(teams, fixtures), [teams, fixtures]);
 
-        // Initialize all teams
-        teams.forEach(t => {
-            stats[t.id] = { pts: 0, gd: 0, gf: 0, id: t.id };
-        });
-
-        // Calculate points from finished fixtures
-        fixtures
-            .filter(f => f.finished && f.team_h_score != null && f.team_a_score != null)
-            .forEach(f => {
-                const hScore = f.team_h_score!;
-                const aScore = f.team_a_score!;
-
-                stats[f.team_h].gf += hScore;
-                stats[f.team_h].gd += (hScore - aScore);
-                stats[f.team_a].gf += aScore;
-                stats[f.team_a].gd += (aScore - hScore);
-
-                if (hScore > aScore) {
-                    stats[f.team_h].pts += 3;
-                } else if (hScore < aScore) {
-                    stats[f.team_a].pts += 3;
-                } else {
-                    stats[f.team_h].pts += 1;
-                    stats[f.team_a].pts += 1;
-                }
-            });
-
-        // Sort teams by points, then GD, then GF
-        const sorted = Object.values(stats).sort((a, b) => {
-            if (b.pts !== a.pts) return b.pts - a.pts;
-            if (b.gd !== a.gd) return b.gd - a.gd;
-            if (b.gf !== a.gf) return b.gf - a.gf;
-            return a.id - b.id;
-        });
-
-        // Create position map
-        const positionMap: Record<number, number> = {};
-        sorted.forEach((team, index) => {
-            positionMap[team.id] = index + 1;
-        });
-
-        return positionMap;
-    }, [teams, fixtures]);
-
-    const getTeamThreatLevel = (teamId: number): number => {
-        const teamPlayers = players
-            .filter(p => p.team === teamId)
-            .sort((a, b) => parseFloat(b.form) - parseFloat(a.form))
-            .slice(0, 12);
-
-        const totalForm = teamPlayers.reduce((acc, p) => acc + parseFloat(p.form), 0);
-        return totalForm;
-    };
-
-    const getDifficulty = (opponentId: number) => {
-        // Get form-based score (existing calculation)
-        const formScore = getTeamThreatLevel(opponentId);
-
-        // Get league position adjustment
-        const position = getLeaguePositions[opponentId] || 10; // Default to mid-table if not found
-        const tableStrength = (20 - position) + 1; // 1st place = 20, 20th place = 1
-        const tableAdjustment = (tableStrength - 10) * 1.0; // Range: -9 to +10
-
-        // Combine form score with small table adjustment
-        const finalScore = formScore + tableAdjustment;
-
-        // Apply existing thresholds to final score
-        if (finalScore > 55) return { bg: 'bg-red-600', text: 'text-white', border: 'border-red-700', label: 'Very Hard', score: 5, threat: formScore };
-        if (finalScore > 45) return { bg: 'bg-orange-500', text: 'text-white', border: 'border-orange-600', label: 'Hard', score: 4, threat: formScore };
-        if (finalScore > 35) return { bg: 'bg-slate-500', text: 'text-white', border: 'border-slate-600', label: 'Moderate', score: 3, threat: formScore };
-        if (finalScore > 25) return { bg: 'bg-green-500', text: 'text-white', border: 'border-green-600', label: 'Good', score: 2, threat: formScore };
-        return { bg: 'bg-green-600', text: 'text-white', border: 'border-green-700', label: 'Easy', score: 1, threat: formScore };
-    };
+    const getDifficulty = (opponentId: number) => getDynamicDifficulty(opponentId, players, getLeaguePositions);
 
     // Get Last 5 Form for a team
     const getTeamForm = (teamId: number) => {
@@ -277,15 +207,43 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
     const sortedTeams = useMemo(() => {
         const teamsWithScores = teams.map(team => {
             let diffScore = 0;
+            const fixtureDifficulties: number[] = [];
+
             planningGws.forEach(gw => {
                 const gwFixtures = fixturesByEvent[gw] || [];
                 const match = gwFixtures.find(f => f.team_h === team.id || f.team_a === team.id);
                 if (match) {
                     const opponentId = match.team_h === team.id ? match.team_a : match.team_h;
-                    diffScore += getDifficulty(opponentId).score;
+                    const score = getDifficulty(opponentId).score;
+                    diffScore += score;
+                    fixtureDifficulties.push(score);
+                } else {
+                    fixtureDifficulties.push(6); // Treat as blank for calc
                 }
             });
-            return { ...team, diffScore };
+
+            // Compute easy runs (3+ consecutive fixtures with difficulty <= 2)
+            const isInEasyRun = new Array(fixtureDifficulties.length).fill(false);
+            let hasEasyRun = false;
+            let currentStreak: number[] = [];
+
+            for (let i = 0; i < fixtureDifficulties.length; i++) {
+                if (fixtureDifficulties[i] <= 2) {
+                    currentStreak.push(i);
+                } else {
+                    if (currentStreak.length >= 3) {
+                        currentStreak.forEach(idx => isInEasyRun[idx] = true);
+                        hasEasyRun = true;
+                    }
+                    currentStreak = [];
+                }
+            }
+            if (currentStreak.length >= 3) {
+                currentStreak.forEach(idx => isInEasyRun[idx] = true);
+                hasEasyRun = true;
+            }
+
+            return { ...team, diffScore, isInEasyRun, hasEasyRun };
         });
 
         if (plannerSortMode === 'none') return teamsWithScores;
@@ -300,6 +258,33 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
         if (plannerSortMode === 'none') setPlannerSortMode('asc');
         else if (plannerSortMode === 'asc') setPlannerSortMode('desc');
         else setPlannerSortMode('none');
+    };
+
+    const topPlayersByTeam = useMemo(() => {
+        const allStats = computeTransferIndexForPlayers({
+            players,
+            fixtures,
+            teams,
+            events,
+            lookahead: 5
+        });
+
+        const map = new Map<number, TransferIndexResult[]>();
+        teams.forEach(team => {
+            const teamPlayers = allStats
+                .filter(p => p.team === team.id)
+                .sort((a, b) => b.transferIndex - a.transferIndex)
+                .slice(0, 3);
+            map.set(team.id, teamPlayers);
+        });
+        return map;
+    }, [players, fixtures, teams, events]);
+
+    const getPositionLabel = (type: number) => {
+        if (type === 1) return 'GKP';
+        if (type === 2) return 'DEF';
+        if (type === 3) return 'MID';
+        return 'FWD';
     };
 
 
@@ -492,45 +477,114 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700/50">
-                        {sortedTeams.map(team => (
-                            <tr key={team.id} className="hover:bg-slate-700/30 group/row">
-                                <td className="p-2 md:p-3 font-bold text-slate-200 sticky left-0 bg-slate-800 z-10 border-r border-slate-700 shadow-xl text-xs md:text-sm whitespace-nowrap">
-                                    <span className="sm:hidden">{team.short_name}</span>
-                                    <span className="hidden sm:block">{team.name}</span>
-                                </td>
-                                {planningGws.map(gw => {
-                                    const gwFixtures = fixturesByEvent[gw] || [];
-                                    const match = gwFixtures.find(f => f.team_h === team.id || f.team_a === team.id);
+                        {sortedTeams.map(team => {
+                            const isExpanded = expandedTeamId === team.id;
+                            const playersForTeam = topPlayersByTeam.get(team.id) || [];
 
-                                    if (!match) return <td key={gw} className="p-2 bg-slate-900/50"></td>;
-
-                                    const isHome = match.team_h === team.id;
-                                    const opponentId = isHome ? match.team_a : match.team_h;
-                                    const opponentShort = getTeamShort(opponentId);
-                                    const difficulty = getDifficulty(opponentId);
-
-                                    return (
-                                        <td key={gw} className="p-0.5 md:p-1 border-r border-slate-700/50 relative group">
-                                            <div
-                                                className={`w-full h-9 md:h-12 rounded flex flex-col items-center justify-center ${difficulty.bg} ${difficulty.text} shadow-sm cursor-default border-b-2 ${difficulty.border} hover:brightness-110 transition-all`}
-                                                title={`${getTeamName(opponentId)} | FDR: ${difficulty.label} (${difficulty.score}/5) | Form: ${difficulty.threat.toFixed(0)}`}
-                                            >
-                                                <span className="text-[10px] md:text-xs font-bold leading-tight">{opponentShort} ({isHome ? 'H' : 'A'})</span>
-                                                <span className="text-[8px] md:text-[10px] font-mono opacity-80">{difficulty.score}</span>
+                            return (
+                                <React.Fragment key={team.id}>
+                                    <tr
+                                        className={`hover:bg-slate-700/30 transition-all cursor-pointer group/row ${isExpanded ? 'bg-slate-700/20' : ''}`}
+                                        onClick={() => setExpandedTeamId(isExpanded ? null : team.id)}
+                                    >
+                                        <td className="p-2 md:p-3 font-bold text-slate-200 sticky left-0 bg-slate-800 z-10 border-r border-slate-700 shadow-xl text-xs md:text-sm whitespace-nowrap">
+                                            <div className="flex items-center gap-2">
+                                                <ChevronRight size={14} className={`text-slate-500 transition-transform duration-200 ${isExpanded ? 'rotate-90 text-purple-400' : ''}`} />
+                                                <span className="sm:hidden">{team.short_name}</span>
+                                                <span className="hidden sm:block">{team.name}</span>
                                             </div>
                                         </td>
-                                    );
-                                })}
-                                <td className="p-2 md:p-4 text-right">
-                                    <span className={`text-sm md:text-base font-black font-mono ${team.diffScore <= 10 ? 'text-green-400' :
-                                        team.diffScore >= 18 ? 'text-red-400' :
-                                            'text-slate-200'
-                                        }`}>
-                                        {team.diffScore}
-                                    </span>
-                                </td>
-                            </tr>
-                        ))}
+                                        {planningGws.map((gw, index) => {
+                                            const gwFixtures = fixturesByEvent[gw] || [];
+                                            const match = gwFixtures.find(f => f.team_h === team.id || f.team_a === team.id);
+
+                                            const isEasyStreakCell = (team as any).isInEasyRun[index];
+
+                                            if (!match) return (
+                                                <td key={gw} className="p-2 bg-slate-900/50 relative">
+                                                    {isEasyStreakCell && <div className="absolute inset-x-1 -bottom-1 h-0.5 rounded-full bg-emerald-400/70 pointer-events-none z-10" />}
+                                                </td>
+                                            );
+
+                                            const isHome = match.team_h === team.id;
+                                            const opponentId = isHome ? match.team_a : match.team_h;
+                                            const opponentShort = getTeamShort(opponentId);
+                                            const difficulty = getDifficulty(opponentId);
+
+                                            return (
+                                                <td key={gw} className="p-0.5 md:p-1 border-r border-slate-700/50 relative group">
+                                                    <div
+                                                        className={`w-full h-9 md:h-12 rounded flex flex-col items-center justify-center ${difficulty.bg} ${difficulty.text} shadow-sm cursor-default border-b-2 ${difficulty.border} hover:brightness-110 transition-all relative`}
+                                                        title={`${getTeamName(opponentId)} | FDR: ${difficulty.label} (${difficulty.score}/5) | Form: ${difficulty.threat.toFixed(0)}`}
+                                                    >
+                                                        {isEasyStreakCell && <div className="absolute inset-x-1 -bottom-1 h-0.5 rounded-full bg-emerald-400/70 pointer-events-none z-10" />}
+                                                        <span className="text-[10px] md:text-xs font-bold leading-tight">{opponentShort} ({isHome ? 'H' : 'A'})</span>
+                                                        <span className="text-[8px] md:text-[10px] font-mono opacity-80">{difficulty.score}</span>
+                                                    </div>
+                                                </td>
+                                            );
+                                        })}
+                                        <td className="p-2 md:p-4 text-right">
+                                            <span className={`text-sm md:text-base font-black font-mono ${team.diffScore <= 10 ? 'text-green-400' :
+                                                team.diffScore >= 18 ? 'text-red-400' :
+                                                    'text-slate-200'
+                                                }`}>
+                                                {team.diffScore}
+                                            </span>
+                                            {(team as any).hasEasyRun && (
+                                                <span className="ml-2 inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 border border-emerald-500/40 whitespace-nowrap">
+                                                    3× EASY
+                                                </span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                    {isExpanded && (
+                                        <tr className="bg-slate-950/40 border-l-2 border-purple-500/50 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <td colSpan={planningGws.length + 2} className="p-3 md:p-4">
+                                                <div className="flex flex-col gap-3">
+                                                    <div className="flex items-center gap-2 text-slate-400 text-[10px] md:text-xs uppercase font-bold tracking-wider mb-1">
+                                                        <User size={14} className="text-purple-400" />
+                                                        Top Assets by Transfer Index
+                                                    </div>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                        {playersForTeam.map(p => (
+                                                            <div key={p.id} className="bg-slate-900/80 rounded-xl border border-slate-700/50 p-3 flex flex-col gap-2 hover:border-slate-500 transition-colors shadow-lg">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div>
+                                                                        <div className="font-bold text-slate-100 text-sm">{p.web_name}</div>
+                                                                        <div className="text-[10px] text-slate-500 uppercase font-medium">
+                                                                            {getPositionLabel(p.element_type)} · £{p.now_cost / 10}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="bg-purple-500/10 text-purple-400 text-[10px] font-black px-1.5 py-0.5 rounded border border-purple-500/20">
+                                                                        TI {p.transferIndex.toFixed(2)}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex justify-between items-end mt-1">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-[8px] text-slate-500 uppercase font-bold leading-none mb-1">Recent Form</span>
+                                                                        <span className="text-lg font-black text-white leading-none">{p.form}</span>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <div className="text-[8px] text-slate-500 uppercase font-bold leading-none mb-1">Next 5 Diff</div>
+                                                                        <div className={`text-xs font-mono font-bold ${p.fixtureDifficultySum <= 10 ? 'text-green-400' :
+                                                                            p.fixtureDifficultySum >= 18 ? 'text-red-400' :
+                                                                                'text-slate-300'
+                                                                            }`}>
+                                                                            {p.fixtureDifficultySum}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
