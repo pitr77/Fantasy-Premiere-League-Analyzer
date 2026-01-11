@@ -167,6 +167,29 @@ function App() {
 
   if (!data) return null;
 
+  const handleNavigate = (v: View, label: string, requiresAuth = false) => {
+    const isAuthed = Boolean(userEmail) || DEV_AUTH_BYPASS;
+    const isPro = tier === 'pro';
+
+    if (requiresAuth && !isAuthed) {
+      setLockedReason(`Sign in required to access ${label}.`);
+      setView(View.LOCKED);
+      setIsSidebarOpen(false);
+      return;
+    }
+
+    if (requiresAuth && PRO_PAYWALL_ENABLED && !isPro) {
+      setLockedReason(`${label} is a PRO feature. Upgrade to access.`);
+      setView(View.LOCKED);
+      setIsSidebarOpen(false);
+      return;
+    }
+
+    setLockedReason(null);
+    setView(v);
+    setIsSidebarOpen(false);
+  };
+
   const NavItem = ({
     v,
     label,
@@ -179,31 +202,8 @@ function App() {
     requiresAuth?: boolean;
   }) => (
     <button
-      onClick={() => {
-        const isAuthed = Boolean(userEmail) || DEV_AUTH_BYPASS;
-        const isPro = tier === 'pro';
-        // 1) Not signed in → require login
-        if (requiresAuth && !isAuthed) {
-          setLockedReason(`Sign in required to access ${label}.`);
-          setView(View.LOCKED);
-          setIsSidebarOpen(false);
-          return;
-        }
-
-        // 2) Signed in but not Pro → only when paywall is enabled
-        if (requiresAuth && PRO_PAYWALL_ENABLED && !isPro) {
-          setLockedReason(`${label} is a PRO feature. Upgrade to access.`);
-          setView(View.LOCKED);
-          setIsSidebarOpen(false);
-          return;
-        }
-
-        // Allowed
-        setLockedReason(null);
-        setView(v);
-        setIsSidebarOpen(false);
-      }}
-      className={`w-full relative flex items-center gap-3 px-4 py-3 pr-14 rounded-lg transition-all min-w-0 ${view === v
+      onClick={() => handleNavigate(v, label, requiresAuth)}
+      className={`w-full relative flex items-center gap-3 px-4 py-3 rounded-lg transition-all min-w-0 ${view === v
         ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
         : 'text-slate-400 hover:bg-slate-800 hover:text-white'
         }`}
@@ -218,171 +218,228 @@ function App() {
     </button>
   );
 
+  const HeaderNavItem = ({
+    v,
+    label,
+    requiresAuth = false,
+  }: {
+    v: View;
+    label: string;
+    requiresAuth?: boolean;
+  }) => (
+    <button
+      onClick={() => handleNavigate(v, label, requiresAuth)}
+      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all relative ${view === v
+        ? 'text-white bg-purple-600/20 shadow-[0_0_0_1px_rgba(168,85,247,0.4)]'
+        : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+        }`}
+    >
+      {label}
+      {PRO_PAYWALL_ENABLED && requiresAuth && tier !== 'pro' && (
+        <span className="absolute -top-1 -right-2 text-[8px] px-1 rounded-full bg-purple-600 text-white font-bold scale-75">
+          PRO
+        </span>
+      )}
+    </button>
+  );
+
+  const AccountBar = () => (
+    <div className="flex items-center">
+      {userEmail ? (
+        <div className="flex items-center gap-3 bg-slate-900/60 border border-slate-800 rounded-lg px-2.5 py-1.5">
+          <span className="hidden lg:inline text-[11px] text-slate-400">
+            Signed in as <span className="text-slate-200 font-semibold">{userEmail}</span>
+          </span>
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="text-xs font-bold bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded px-3 py-1.5 transition-colors"
+          >
+            Sign out
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <a
+            href="/login"
+            className="text-xs font-bold bg-purple-600 hover:bg-purple-500 rounded px-4 py-2 transition-colors shadow-lg shadow-purple-600/20"
+          >
+            Log in
+          </a>
+          <a
+            href="/login?mode=signup"
+            className="hidden sm:inline-block text-xs font-bold bg-slate-900/60 hover:bg-slate-800 border border-slate-800 rounded px-4 py-2 transition-colors"
+          >
+            Create account
+          </a>
+        </div>
+      )}
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-slate-950 text-gray-100 flex overflow-hidden">
+    <div className="min-h-screen bg-slate-950 text-gray-100 flex flex-col">
 
-      {/* Mobile Menu Toggle */}
-      <div className="md:hidden fixed top-4 left-4 z-50">
-        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 bg-slate-800 rounded-lg border border-slate-700 text-white shadow-lg">
-          {isSidebarOpen ? <X /> : <Menu />}
-        </button>
-      </div>
+      {/* Top Header - Desktop only */}
+      <header className="hidden md:flex sticky top-0 z-50 h-14 w-full bg-slate-900/80 backdrop-blur-md border-b border-white/5 items-center px-6 justify-between">
+        <div className="flex items-center gap-8">
+          <button
+            onClick={() => handleNavigate(View.DASHBOARD, 'Dashboard')}
+            className="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400 tracking-tighter hover:opacity-80 transition-opacity"
+          >
+            FPL STUDIO
+          </button>
 
-      {/* Sidebar - Updated Flex Layout */}
-      <aside className={`fixed md:relative z-40 w-72 h-full bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex flex-col`}>
-        <div className="p-6 border-b border-slate-800 shrink-0">
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400">FPL STUDIO</h1>
+          <nav className="flex items-center gap-1">
+            <HeaderNavItem v={View.DASHBOARD} label="Dashboard" />
+            <HeaderNavItem v={View.LEAGUE_TABLE} label="League Table" />
+            <HeaderNavItem v={View.TEAM_ANALYSIS} label="Team Analysis" />
+            <HeaderNavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" requiresAuth />
+            <HeaderNavItem v={View.FIXTURES} label="Fixtures" />
+            <HeaderNavItem v={View.TRANSFER_PICKS} label="Transfer Picks" />
+            {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.OPTIMAL_SQUAD} label="Optimal 11" />}
+            {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.TEAM} label="My Team" />}
+            <HeaderNavItem v={View.STATS} label="Player Stats" requiresAuth />
+          </nav>
         </div>
 
-        <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto custom-scrollbar">
-          <NavItem v={View.DASHBOARD} label="Dashboard" icon={LayoutDashboard} />
-          <NavItem v={View.LEAGUE_TABLE} label="League Table" icon={Trophy} />
-          <NavItem v={View.TEAM_ANALYSIS} label="Team Analysis" icon={Search} />
-          <NavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" icon={CalendarRange} requiresAuth />
-          <NavItem v={View.FIXTURES} label="Fixtures" icon={Calendar} />
-          <NavItem v={View.TRANSFER_PICKS} label="Transfer Picks" icon={ArrowLeftRight} />
-          {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.OPTIMAL_SQUAD} label="Optimal 11" icon={Zap} />}
-          {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.TEAM} label="My Team" icon={Shirt} />}
-          <NavItem v={View.STATS} label="Player Stats" icon={BarChart2} requiresAuth />
-          <NavItem v={View.DETAILED_STATS} label="Detailed Analyses" icon={Activity} />
-          {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.TOP_MANAGERS} label="Top 100 Managers" icon={Users} />}
-          {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.COMPARE_MODE} label="Compare Mode" icon={Split} />}
-          {/* <NavItem v={View.SCOUT} label="AI Scout" icon={BrainCircuit} /> */}
-        </nav>
+        <AccountBar />
+      </header>
 
-        <div className="p-6 border-t border-slate-800 shrink-0 bg-slate-900">
-          <div className="text-xs text-slate-500">
-            Data provided by Fantasy Premier League. <br /> Not affiliated with PL.
+      <div className="flex-1 flex overflow-hidden">
+        {/* Mobile Menu Toggle & Compact Header */}
+        <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-slate-900/90 backdrop-blur-sm border-b border-slate-800 z-50 flex items-center justify-between px-4">
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-2 bg-slate-800 rounded-lg border border-slate-700 text-white shadow-lg transition-transform active:scale-95"
+          >
+            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+          <span className="text-lg font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400">FPL STUDIO</span>
+          <AccountBar />
+        </div>
+
+        {/* Sidebar - MOBILE ONLY */}
+        <div
+          className={`fixed inset-0 z-40 md:hidden transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+          onClick={() => setIsSidebarOpen(false)}
+        >
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+        </div>
+
+        <aside className={`fixed top-0 left-0 z-50 w-72 h-full bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:hidden flex flex-col`}>
+          <div className="p-6 border-b border-slate-800 shrink-0 flex items-center justify-between">
+            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400 tracking-tighter">FPL STUDIO</h1>
+            <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-white">
+              <X size={24} />
+            </button>
           </div>
-        </div>
-      </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 h-screen overflow-y-auto p-4 md:p-8 pt-20 md:pt-8 scroll-smooth">
-        {/* Account bar */}
-        <div className="mb-4 flex items-center justify-end">
-          {userEmail ? (
-            <div className="flex items-center gap-3 bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2">
-              <span className="text-xs text-slate-300">
-                Signed in as <span className="font-bold text-white">{userEmail}</span>
-              </span>
-              <button
-                onClick={() => supabase.auth.signOut()}
-                className="text-xs font-bold bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded px-3 py-1.5"
-              >
-                Sign out
-              </button>
+          <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto custom-scrollbar">
+            <NavItem v={View.DASHBOARD} label="Dashboard" icon={LayoutDashboard} />
+            <NavItem v={View.LEAGUE_TABLE} label="League Table" icon={Trophy} />
+            <NavItem v={View.TEAM_ANALYSIS} label="Team Analysis" icon={Search} />
+            <NavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" icon={CalendarRange} requiresAuth />
+            <NavItem v={View.FIXTURES} label="Fixtures" icon={Calendar} />
+            <NavItem v={View.TRANSFER_PICKS} label="Transfer Picks" icon={ArrowLeftRight} />
+            <NavItem v={View.STATS} label="Player Stats" icon={BarChart2} requiresAuth />
+            <NavItem v={View.DETAILED_STATS} label="Detailed Analyses" icon={Activity} />
+            {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.OPTIMAL_SQUAD} label="Optimal 11" icon={Zap} />}
+            {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.TEAM} label="My Team" icon={Shirt} />}
+            {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.TOP_MANAGERS} label="Top 100 Managers" icon={Users} />}
+            {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.COMPARE_MODE} label="Compare Mode" icon={Split} />}
+          </nav>
+
+          <div className="p-6 border-t border-slate-800 shrink-0 bg-slate-900">
+            <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
+              Data by FPL API <br /> Not PL Affiliated
             </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <a
-                href="/login"
-                className="text-xs font-bold bg-purple-600 hover:bg-purple-500 rounded px-3 py-2"
-              >
-                Log in
-              </a>
-              <a
-                href="/login?mode=signup"
-                className="text-xs font-bold bg-slate-900/60 hover:bg-slate-800 border border-slate-800 rounded px-3 py-2"
-              >
-                Create account
-              </a>
-            </div>
-          )}
-        </div>
+          </div>
+        </aside>
 
-        <div className={`${view === View.COMPARE_MODE ? 'w-full' : 'max-w-7xl'} mx-auto h-full`}>
-          {view === View.DASHBOARD && <Dashboard data={data} myTeam={myTeam} fixtures={fixtures} />}
+        {/* Main Content */}
+        <main className="flex-1 h-[calc(100vh-3.5rem)] md:h-screen overflow-y-auto p-4 md:p-8 pt-20 md:pt-8 scroll-smooth custom-scrollbar">
+          <div className={`${view === View.COMPARE_MODE ? 'w-full' : 'max-w-7xl'} mx-auto h-full`}>
+            {view === View.DASHBOARD && <Dashboard data={data} myTeam={myTeam} fixtures={fixtures} />}
 
-          {view === View.LOCKED && (
-            <div className="max-w-xl mx-auto bg-slate-800 border border-slate-700 rounded-xl p-6">
-              <h2 className="text-xl font-bold text-white mb-2">Locked</h2>
-              <p className="text-slate-300 mb-4">
-                {lockedReason ?? (userEmail ? 'This feature is not available on your plan.' : 'Please sign in.')}
-              </p>
-
-              {!userEmail ? (
-                <div className="flex items-center gap-2">
-                  <a
-                    href="/login"
-                    className="inline-block bg-purple-600 hover:bg-purple-500 text-white font-bold px-4 py-2 rounded-lg"
-                  >
-                    Log in
-                  </a>
-                  <a
-                    href="/login?mode=signup"
-                    className="inline-block bg-slate-700 hover:bg-slate-600 text-white font-bold px-4 py-2 rounded-lg"
-                  >
-                    Create account
-                  </a>
+            {view === View.LOCKED && (
+              <div className="max-w-xl mx-auto bg-slate-900/60 border border-slate-800 rounded-2xl p-8 shadow-2xl backdrop-blur-sm">
+                <div className="w-16 h-16 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-400 mb-6">
+                  <Zap size={32} />
                 </div>
-              ) : (
-                <button
-                  onClick={() => setView(View.DASHBOARD)}
-                  className="bg-slate-700 hover:bg-slate-600 text-white font-bold px-4 py-2 rounded-lg"
-                >
-                  Back to Dashboard
-                </button>
-              )}
-            </div>
-          )}
+                <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">Access Locked</h2>
+                <p className="text-slate-400 mb-8 leading-relaxed">
+                  {lockedReason ?? (userEmail ? 'This feature is not available on your plan.' : 'Please sign in to access this premium analysis.')}
+                </p>
 
-          {view === View.LEAGUE_TABLE && <LeagueTable teams={data.teams} fixtures={fixtures} />}
+                {!userEmail ? (
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <a
+                      href="/login"
+                      className="w-full sm:w-auto text-center bg-purple-600 hover:bg-purple-500 text-white font-black px-8 py-3 rounded-xl transition-all shadow-lg shadow-purple-600/20"
+                    >
+                      Log in
+                    </a>
+                    <a
+                      href="/login?mode=signup"
+                      className="w-full sm:w-auto text-center bg-slate-800 hover:bg-slate-700 text-white font-black px-8 py-3 rounded-xl transition-all border border-slate-700"
+                    >
+                      Create account
+                    </a>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setView(View.DASHBOARD)}
+                    className="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white font-black px-8 py-3 rounded-xl transition-all border border-slate-700"
+                  >
+                    Back to Dashboard
+                  </button>
+                )}
+              </div>
+            )}
 
-          {view === View.TEAM_ANALYSIS && <TeamAnalysis teams={data.teams} fixtures={fixtures} />}
+            {view === View.LEAGUE_TABLE && <LeagueTable teams={data.teams} fixtures={fixtures} />}
 
-          {view === View.PERIOD_ANALYSIS && (
-            <PeriodAnalysis players={data.elements} teams={data.teams} events={data.events} />
-          )}
+            {view === View.TEAM_ANALYSIS && <TeamAnalysis teams={data.teams} fixtures={fixtures} />}
 
-          {view === View.FIXTURES && (
-            <Fixtures
-              fixtures={fixtures}
-              teams={data.teams}
-              events={data.events}
-              players={data.elements}
-            />
-          )}
+            {view === View.PERIOD_ANALYSIS && (
+              <PeriodAnalysis players={data.elements} teams={data.teams} events={data.events} />
+            )}
 
-          {view === View.TRANSFER_PICKS && (
-            <TransferPicks players={data.elements} teams={data.teams} fixtures={fixtures} events={data.events} />
-          )}
+            {view === View.FIXTURES && (
+              <Fixtures
+                fixtures={fixtures}
+                teams={data.teams}
+                events={data.events}
+                players={data.elements}
+              />
+            )}
 
-          {view === View.OPTIMAL_SQUAD && <OptimalSquad players={data.elements} teams={data.teams} />}
+            {view === View.TRANSFER_PICKS && (
+              <TransferPicks players={data.elements} teams={data.teams} fixtures={fixtures} events={data.events} />
+            )}
 
-          {view === View.TEAM && (
-            <TeamBuilder
-              allPlayers={data.elements}
-              teams={data.teams}
-              events={data.events}
-              myTeam={myTeam}
-              setMyTeam={setMyTeam}
-            />
-          )}
+            {view === View.OPTIMAL_SQUAD && <OptimalSquad players={data.elements} teams={data.teams} />}
 
-          {view === View.STATS && <PlayerStats players={data.elements} teams={data.teams} />}
+            {view === View.TEAM && (
+              <TeamBuilder
+                allPlayers={data.elements}
+                teams={data.teams}
+                events={data.events}
+                myTeam={myTeam}
+                setMyTeam={setMyTeam}
+              />
+            )}
 
-          {view === View.DETAILED_STATS && <DetailedStats players={data.elements} teams={data.teams} />}
+            {view === View.STATS && <PlayerStats players={data.elements} teams={data.teams} />}
 
-          {view === View.TOP_MANAGERS && <TopManagers players={data.elements} teams={data.teams} />}
+            {view === View.DETAILED_STATS && <DetailedStats players={data.elements} teams={data.teams} />}
 
-          {view === View.COMPARE_MODE && <CompareMode data={data} fixtures={fixtures} />}
+            {view === View.TOP_MANAGERS && <TopManagers players={data.elements} teams={data.teams} />}
 
-
-
-          {/* {view === View.SCOUT && (
-            <ScoutChat 
-              players={data.elements}
-              teams={data.teams}
-              fixtures={fixtures}
-              events={data.events}
-              myTeam={myTeam}
-            />
-          )} */}
-        </div>
-      </main>
-
-
+            {view === View.COMPARE_MODE && <CompareMode data={data} fixtures={fixtures} />}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
