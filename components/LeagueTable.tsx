@@ -187,53 +187,47 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
       </div>
 
       <div className="mt-6 overflow-x-auto max-h-[70vh] isolate rounded-lg border border-slate-700/60 bg-slate-950/20 custom-scrollbar">
-        <table className="w-full text-left border-collapse table-fixed md:table-auto">
+        <table className="w-full text-left border-collapse table-auto">
           <thead>
             <tr className="bg-slate-900 text-slate-400 text-[10px] md:text-xs uppercase tracking-wider border-b border-slate-700 sticky top-0 z-40">
               <th
                 className={[
                   'py-2 text-center bg-slate-900',
-                  stickyLeft ? 'sticky left-0 z-50 bg-slate-900 shadow-[2px_0_5px_rgba(0,0,0,0.3)] backdrop-blur' : 'border-r border-slate-700/50',
-                  mode === 'adv' ? 'w-[6%]' : 'w-[8%]',
+                  stickyLeft ? 'sticky left-0 z-50' : 'border-r border-slate-700/50',
                 ].join(' ')}
+                style={stickyLeft ? { width: '32px', minWidth: '32px' } : { width: '40px' }}
               >
                 #
               </th>
               <th
                 className={[
-                  'py-2 px-2 bg-slate-900',
-                  stickyLeft ? 'sticky z-40 bg-slate-900 shadow-[2px_0_5px_rgba(0,0,0,0.3)] backdrop-blur' : 'border-r border-slate-700/50',
-                  mode === 'basic' ? 'w-[50%]' : mode === 'adv' ? 'w-[25%]' : 'w-[22%]',
+                  'py-2 px-2 bg-slate-900 text-left',
+                  stickyLeft ? 'sticky z-40 shadow-[2px_0_5px_rgba(0,0,0,0.3)]' : 'border-r border-slate-700/50',
                 ].join(' ')}
-                style={stickyLeft ? { left: 40 } : undefined}
+                style={stickyLeft ? { left: '32px', width: '80px', minWidth: '80px' } : undefined}
               >
                 Team
               </th>
-              <th
-                className={`py-2 text-center border-r border-slate-700/50 bg-slate-900 ${mode === 'basic' ? 'w-[22%]' : mode === 'adv' ? 'w-[9%]' : 'w-[10%]'
-                  }`}
-              >
-                Pts
-              </th>
+              <th className="py-2 text-center border-r border-slate-700/50 bg-slate-900">Pts</th>
 
               {mode === 'adv' && (
                 <>
-                  <th className="md:px-4 py-2 text-center text-xs md:text-sm text-slate-400 w-[8%] bg-slate-900">MP</th>
-                  <th className="md:px-4 py-2 text-center text-xs md:text-sm text-green-400 w-[7%] bg-slate-900">W</th>
-                  <th className="md:px-4 py-2 text-center text-xs md:text-sm text-slate-400 w-[7%] bg-slate-900">D</th>
-                  <th className="md:px-4 py-2 text-center text-xs md:text-sm text-red-400 w-[7%] bg-slate-900">L</th>
-                  <th className="md:px-4 py-2 text-center text-xs md:text-sm text-slate-400 w-[10%] bg-slate-900">GF</th>
-                  <th className="md:px-4 py-2 text-center text-xs md:text-sm text-slate-400 w-[10%] bg-slate-900">GA</th>
-                  <th className="md:px-4 py-2 text-center text-xs md:text-sm text-slate-400 w-[11%] bg-slate-900">GD</th>
+                  <th className="px-1 py-2 text-center text-xs md:text-sm text-slate-400 bg-slate-900">MP</th>
+                  <th className="px-1 py-2 text-center text-xs md:text-sm text-green-400 bg-slate-900">W</th>
+                  <th className="px-1 py-2 text-center text-xs md:text-sm text-slate-400 bg-slate-900">D</th>
+                  <th className="px-1 py-2 text-center text-xs md:text-sm text-red-400 bg-slate-900">L</th>
+                  <th className="px-1 py-2 text-center text-xs md:text-sm text-slate-400 bg-slate-900">GF</th>
+                  <th className="px-1 py-2 text-center text-xs md:text-sm text-slate-400 bg-slate-900">GA</th>
+                  <th className="px-1 py-2 text-center text-xs md:text-sm text-slate-400 bg-slate-900">GD</th>
                 </>
               )}
 
               {(mode === 'basic' || mode === 'form') && (
-                <th className={`px-2 py-2 text-center bg-slate-900 ${mode === 'basic' ? 'w-[20%]' : 'w-[10%]'}`}>GD</th>
+                <th className="px-2 py-2 text-center bg-slate-900">GD</th>
               )}
 
               {mode === 'form' && (
-                <th className="px-2 md:px-4 py-2 text-center text-xs md:text-sm text-slate-400 w-[52%] bg-slate-900">Form</th>
+                <th className="px-2 md:px-4 py-2 text-center text-xs md:text-sm text-slate-400 bg-slate-900">Form</th>
               )}
             </tr>
           </thead>
@@ -293,22 +287,23 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                 <tr key={row.id} className={['group transition-all duration-200', rowClass].join(' ')}>
                   <td
                     className={[
-                      'py-2 text-center font-bold text-slate-300 text-xs',
+                      'py-2 px-1 text-center text-slate-400 font-mono text-[10px] md:text-sm',
                       rowBg,
-                      stickyLeft ? 'sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.3)] backdrop-blur' : 'border-r border-slate-700/50',
+                      stickyLeft ? 'sticky left-0 z-30' : 'border-r border-slate-700/50',
                     ].join(' ')}
+                    style={stickyLeft ? { width: '32px', minWidth: '32px' } : undefined}
                   >
                     {pos}
                   </td>
                   <td
                     className={[
-                      'py-2 px-2 font-semibold text-white',
+                      'py-2 px-2 font-semibold text-white text-left',
                       rowBg,
-                      stickyLeft ? 'sticky z-30 shadow-[2px_0_5px_rgba(0,0,0,0.3)] backdrop-blur' : 'border-r border-slate-700/50',
+                      stickyLeft ? 'sticky z-20 shadow-[2px_0_5px_rgba(0,0,0,0.3)]' : 'border-r border-slate-700/50',
                     ].join(' ')}
-                    style={stickyLeft ? { left: 40 } : undefined}
+                    style={stickyLeft ? { left: '32px', width: '80px', minWidth: '80px' } : undefined}
                   >
-                    <span className="md:hidden truncate block">{team?.short_name || 'N/A'}</span>
+                    <span className="md:hidden truncate block text-[11px]">{team?.short_name || 'N/A'}</span>
                     <span className="hidden md:block truncate">{team?.name || 'N/A'}</span>
                   </td>
                   <td className={['py-2 text-center font-bold text-white border-r border-slate-700/50', rowBg].join(' ')}>

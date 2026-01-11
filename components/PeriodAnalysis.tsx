@@ -308,7 +308,12 @@ const PeriodAnalysis: React.FC<PeriodAnalysisProps> = ({ players, teams, events 
         <div className="flex flex-col gap-6">
           <div>
             <h2 className="text-2xl font-bold text-white flex items-center gap-2 mb-2">
-              <CalendarRange className="text-purple-400" /> Period Analysis
+              <img
+                src="/icons/period_kalendar.png"
+                alt=""
+                aria-hidden="true"
+                className="w-6 h-6"
+              /> Period Analysis
             </h2>
             <p className="text-slate-400 text-sm mb-4">Analyze player performance over a specific range of Gameweeks.</p>
 
