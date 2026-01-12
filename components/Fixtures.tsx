@@ -2,6 +2,10 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { FPLFixture, FPLTeam, FPLEvent, FPLPlayer } from '../types';
 import { Calendar, LayoutGrid, Activity, AlertTriangle, CheckCircle2, Info, ChevronDown, ChevronUp, HelpCircle, Trophy, Shield, Home, ChevronLeft, ChevronRight, BrainCircuit, User, TrendingUp, History } from 'lucide-react';
 import { TeamIcon } from './TeamIcon';
+import TwoPanelTable from './TwoPanelTable';
+import ResultChip from './ResultChip';
+
+
 import { calculateLeaguePositions, getDynamicDifficulty } from '../lib/fdrModel';
 import { computeTransferIndexForPlayers, TransferIndexResult } from '../lib/transferIndex';
 
@@ -337,142 +341,196 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
 
     const renderPlanner = () => {
         return (
-            <div className="overflow-x-auto bg-slate-800 rounded-lg shadow-lg border border-slate-700 animate-in fade-in zoom-in duration-300 pb-20">
-                <table className="w-full text-left border-collapse md:min-w-full">
-                    <thead>
-                        <tr className="bg-slate-900 text-slate-400 text-[10px] md:text-xs uppercase tracking-wider">
-                            <th
-                                className="p-0.5 md:p-2 text-center w-9 md:w-16 sticky left-0 bg-slate-900 z-30 border-r border-slate-700 shadow-xl cursor-pointer hover:text-white transition-colors group"
-                                onClick={togglePlannerSort}
-                            >
-                                <div className="flex flex-col items-center justify-center">
-                                    <span className="leading-tight hidden md:block text-[10px] md:text-xs">DIFF</span>
-                                    <span className="leading-tight hidden md:block text-[10px] md:text-xs">SCORE</span>
-                                    <span className="leading-tight md:hidden text-[9px] font-black">DIFF</span>
-                                    <span className="text-purple-400 text-[8px] mt-0.5">
-                                        {plannerSortMode === 'asc' ? '↑' : plannerSortMode === 'desc' ? '↓' : ''}
-                                    </span>
-                                </div>
-                            </th>
-                            <th className="p-1 md:p-3 sticky left-[36px] md:left-[64px] bg-slate-900 z-20 border-r border-slate-700 shadow-xl text-[9px] md:text-xs w-16 md:w-48">Team</th>
-                            {planningGws.map(gw => (
-                                <th key={gw} className="p-0.5 md:p-2 text-center w-10 md:w-24 border-r border-slate-800 whitespace-nowrap text-[8px] md:text-xs">GW {gw}</th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-700/50">
-                        {sortedTeams.map(team => {
-                            const isExpanded = expandedTeamId === team.id;
-                            const playersForTeam = topPlayersByTeam.get(team.id) || [];
+            <div className="space-y-4">
+                {/* Desktop/Tablet Table (Hidden on small screens) */}
+                <div className="hidden md:block overflow-x-auto bg-slate-800 rounded-lg shadow-lg border border-slate-700 animate-in fade-in zoom-in duration-300 pb-20">
+                    <table className="w-full text-left border-collapse min-w-full">
+                        <thead>
+                            <tr className="bg-slate-900 text-slate-400 text-xs uppercase tracking-wider">
+                                <th
+                                    className="p-2 text-center w-16 sticky left-0 bg-slate-900 z-30 border-r border-slate-700 shadow-xl cursor-pointer hover:text-white transition-colors group"
+                                    onClick={togglePlannerSort}
+                                >
+                                    <div className="flex flex-col items-center justify-center">
+                                        <span className="leading-tight text-xs">DIFF</span>
+                                        <span className="leading-tight text-xs">SCORE</span>
+                                        <span className="text-purple-400 text-[8px] mt-0.5">
+                                            {plannerSortMode === 'asc' ? '↑' : plannerSortMode === 'desc' ? '↓' : ''}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th className="p-3 sticky left-[64px] bg-slate-900 z-20 border-r border-slate-700 shadow-xl text-xs w-48">Team</th>
+                                {planningGws.map(gw => (
+                                    <th key={gw} className="p-2 text-center w-24 border-r border-slate-800 whitespace-nowrap text-xs">GW {gw}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-700/50">
+                            {sortedTeams.map(team => {
+                                const isExpanded = expandedTeamId === team.id;
+                                const playersForTeam = topPlayersByTeam.get(team.id) || [];
 
-                            return (
-                                <React.Fragment key={team.id}>
-                                    <tr
-                                        className={`hover:bg-slate-700/30 transition-all cursor-pointer group/row ${isExpanded ? 'bg-slate-700/20' : ''}`}
-                                        onClick={() => setExpandedTeamId(isExpanded ? null : team.id)}
-                                    >
-                                        <td className="p-1 md:p-3 text-center sticky left-0 bg-slate-800 z-10 border-r border-slate-700 shadow-xl w-9 md:w-16">
-                                            <span className={`text-xs md:text-base font-black font-mono ${team.diffScore <= 10 ? 'text-green-400' :
-                                                team.diffScore >= 18 ? 'text-red-400' :
-                                                    'text-slate-200'
-                                                }`}>
-                                                {team.diffScore}
-                                            </span>
-                                        </td>
-                                        <td className="p-1 md:p-3 font-bold text-slate-200 sticky left-[36px] md:left-[64px] bg-slate-800 z-10 border-r border-slate-700 shadow-xl text-[10px] md:text-sm whitespace-nowrap w-16 md:w-48">
-                                            <div className="flex items-center gap-1 md:gap-1.5 overflow-hidden">
-                                                <ChevronRight size={12} className={`shrink-0 text-slate-500 transition-transform duration-200 ${isExpanded ? 'rotate-90 text-purple-400' : ''} hidden md:block`} />
-                                                <span className="sm:hidden truncate max-w-[32px]">{team.short_name}</span>
-                                                <span className="hidden sm:block truncate">{team.name}</span>
-                                                {(team as any).hasEasyRun && (
-                                                    <span className="shrink-0 flex items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold text-[8px] md:text-[10px] w-3.5 h-3.5 md:w-auto md:h-auto md:px-2 md:py-0.5 whitespace-nowrap shadow-[0_0_8px_rgba(16,185,129,0.1)]">
-                                                        <span className="md:hidden">3</span>
-                                                        <span className="hidden md:inline">3× EASY</span>
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        {planningGws.map((gw, index) => {
-                                            const gwFixtures = fixturesByEvent[gw] || [];
-                                            const match = gwFixtures.find(f => f.team_h === team.id || f.team_a === team.id);
-
-                                            const isEasyStreakCell = (team as any).isInEasyRun[index];
-
-                                            if (!match) return (
-                                                <td key={gw} className="p-2 bg-slate-900/50 relative">
-                                                </td>
-                                            );
-
-                                            const isHome = match.team_h === team.id;
-                                            const opponentId = isHome ? match.team_a : match.team_h;
-                                            const opponentShort = getTeamShort(opponentId);
-                                            const difficulty = getDifficulty(opponentId);
-
-                                            return (
-                                                <td key={gw} className="p-0.5 md:p-1 border-r border-slate-700/50 relative group">
-                                                    <div
-                                                        className={`w-full rounded-lg flex flex-col items-center justify-center px-2.5 py-1.5 md:px-3 md:py-2 text-[10px] md:text-[11px] font-semibold ${difficulty.bg} ${difficulty.text} shadow-sm cursor-default border-b-2 ${difficulty.border} hover:brightness-110 transition-all relative`}
-                                                        title={`${getTeamName(opponentId)} | FDR: ${difficulty.label} (${difficulty.score}/5) | Form: ${difficulty.threat.toFixed(0)}`}
-                                                    >
-                                                        <span className="leading-tight">
-                                                            {opponentShort}
-                                                            <span className="hidden sm:inline"> ({isHome ? 'H' : 'A'})</span>
+                                return (
+                                    <React.Fragment key={team.id}>
+                                        <tr
+                                            className={`hover:bg-slate-700/30 transition-all cursor-pointer group/row ${isExpanded ? 'bg-slate-700/20' : ''}`}
+                                            onClick={() => setExpandedTeamId(isExpanded ? null : team.id)}
+                                        >
+                                            <td className="p-3 text-center sticky left-0 bg-slate-800 z-10 border-r border-slate-700 shadow-xl w-16">
+                                                <span className={`text-base font-black font-mono ${team.diffScore <= 10 ? 'text-green-400' :
+                                                    team.diffScore >= 18 ? 'text-red-400' :
+                                                        'text-slate-200'
+                                                    }`}>
+                                                    {team.diffScore}
+                                                </span>
+                                            </td>
+                                            <td className="p-3 font-bold text-slate-200 sticky left-[64px] bg-slate-800 z-10 border-r border-slate-700 shadow-xl text-sm whitespace-nowrap w-48">
+                                                <div className="flex items-center gap-1.5 overflow-hidden">
+                                                    <ChevronRight size={12} className={`shrink-0 text-slate-500 transition-transform duration-200 ${isExpanded ? 'rotate-90 text-purple-400' : ''}`} />
+                                                    <span className="truncate">{team.name}</span>
+                                                    {(team as any).hasEasyRun && (
+                                                        <span className="shrink-0 flex items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold text-[10px] px-2 py-0.5 whitespace-nowrap shadow-[0_0_8px_rgba(16,185,129,0.1)]">
+                                                            3× EASY
                                                         </span>
-                                                        <span className="text-[6px] md:text-[9px] font-mono opacity-80 leading-none">{difficulty.score}</span>
-                                                    </div>
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
-                                    {isExpanded && (
-                                        <tr className="bg-slate-950/40 border-l-2 border-purple-500/50 animate-in fade-in slide-in-from-top-2 duration-300">
-                                            <td colSpan={planningGws.length + 2} className="p-1.5 md:p-3">
-                                                <div className="flex flex-col gap-1">
-                                                    <div className="flex items-center gap-1.5 text-slate-500 text-[9px] md:text-[10px] uppercase font-black tracking-tight mb-0.5">
-                                                        <History size={12} className="text-purple-400" />
-                                                        Key Assets
-                                                    </div>
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5 md:gap-3">
-                                                        {playersForTeam.map(p => (
-                                                            <div key={p.id} className="bg-slate-900/40 rounded md:rounded-xl border border-slate-700/30 p-1.5 md:p-3 flex flex-col gap-0.5 md:gap-2 hover:border-slate-500 transition-colors">
-                                                                <div className="font-bold text-slate-100 text-[11px] md:text-sm truncate">{p.web_name}</div>
-                                                                <div className="flex items-center text-[9px] md:text-[11px]">
-                                                                    <div className="flex items-center gap-2 md:gap-4 truncate font-medium">
-                                                                        <div className="flex items-center gap-1.5">
-                                                                            <span className="uppercase text-slate-500 text-[7px] md:text-[8px]">Pos</span>
-                                                                            <span className="text-slate-200 font-bold uppercase">{getPositionLabel(p.element_type)}</span>
-                                                                        </div>
-                                                                        <div className="flex items-center gap-1.5 border-l border-white/10 pl-2 md:pl-4">
-                                                                            <span className="text-[7px] md:text-[8px] text-slate-500 uppercase">Cost</span>
-                                                                            <span className="text-slate-200 font-bold">£{p.now_cost / 10}</span>
-                                                                        </div>
-                                                                        <div className="flex items-center gap-1.5 border-l border-white/10 pl-2 md:pl-4">
-                                                                            <span className="text-[7px] md:text-[8px] text-slate-500 uppercase">Form</span>
-                                                                            <span className="text-slate-100 font-bold">{p.form}</span>
-                                                                        </div>
-                                                                        <div className="flex items-center gap-1.5 border-l border-white/10 pl-2 md:pl-4">
-                                                                            <span className="text-[7px] md:text-[8px] text-slate-500 uppercase">Diff</span>
-                                                                            <span className={`font-mono font-bold ${p.fixtureDifficultySum <= 10 ? 'text-green-400' :
-                                                                                p.fixtureDifficultySum >= 18 ? 'text-red-400' :
-                                                                                    'text-slate-100'
-                                                                                }`}>
-                                                                                {p.fixtureDifficultySum}
-                                                                            </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            {planningGws.map((gw, index) => {
+                                                const gwFixtures = fixturesByEvent[gw] || [];
+                                                const match = gwFixtures.find(f => f.team_h === team.id || f.team_a === team.id);
+
+                                                if (!match) return <td key={gw} className="p-2 bg-slate-900/50 relative"></td>;
+
+                                                const isHome = match.team_h === team.id;
+                                                const opponentId = isHome ? match.team_a : match.team_h;
+                                                const opponentShort = getTeamShort(opponentId);
+                                                const difficulty = getDifficulty(opponentId);
+
+                                                return (
+                                                    <td key={gw} className="p-1 border-r border-slate-700/50 relative group">
+                                                        <ResultChip
+                                                            label={`${opponentShort}${isHome ? 'H' : 'A'}`}
+                                                            value={String(difficulty.score)}
+                                                            bgClass={difficulty.bg}
+                                                            borderClass={`border-b-2 ${difficulty.border}`}
+                                                            textClass={difficulty.text}
+                                                            title={`${getTeamName(opponentId)} | FDR: ${difficulty.label} (${difficulty.score}/5)`}
+                                                            className="w-full hover:brightness-110"
+                                                        />
+                                                    </td>
+                                                );
+                                            })}
+                                        </tr>
+                                        {isExpanded && (
+                                            <tr className="bg-slate-950/40 border-l-2 border-purple-500/50 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                <td colSpan={planningGws.length + 2} className="p-3">
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center gap-1.5 text-slate-500 text-[10px] uppercase font-black tracking-tight mb-0.5">
+                                                            <History size={12} className="text-purple-400" />
+                                                            Key Assets
+                                                        </div>
+                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                            {playersForTeam.map(p => (
+                                                                <div key={p.id} className="bg-slate-900/40 rounded-xl border border-slate-700/30 p-3 flex flex-col gap-2 hover:border-slate-500 transition-colors">
+                                                                    <div className="font-bold text-slate-100 text-sm truncate">{p.web_name}</div>
+                                                                    <div className="flex items-center text-[11px]">
+                                                                        <div className="flex items-center gap-4 truncate font-medium">
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <span className="uppercase text-slate-500 text-[8px]">Pos</span>
+                                                                                <span className="text-slate-200 font-bold uppercase">{getPositionLabel(p.element_type)}</span>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-4 border-l border-white/10 pl-4">
+                                                                                <span className="text-[8px] text-slate-500 uppercase">Cost</span>
+                                                                                <span className="text-slate-200 font-bold">£{p.now_cost / 10}</span>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-4 border-l border-white/10 pl-4">
+                                                                                <span className="text-[8px] text-slate-500 uppercase">Form</span>
+                                                                                <span className="text-slate-100 font-bold">{p.form}</span>
+                                                                            </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                            </div>
-                                                        ))}
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </React.Fragment>
-                            );
-                        })}
-                    </tbody>
-                </table>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Mobile/Tablet 2-Panel Layout */}
+                <div className="md:hidden">
+                    <TwoPanelTable
+                        leftHeader={
+                            <div className="flex items-center gap-2 cursor-pointer" onClick={togglePlannerSort}>
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[8px] font-black">FDR</span>
+                                    <span className="text-purple-400 text-[8px]">
+                                        {plannerSortMode === 'asc' ? '↑' : plannerSortMode === 'desc' ? '↓' : ''}
+                                    </span>
+                                </div>
+                                <span>Team</span>
+                            </div>
+                        }
+                        rightHeader="FDR Matrix (Next 5 GWs)"
+                        leftWidthClass="w-[100px] sm:w-[130px]"
+                        rows={sortedTeams.map(team => ({
+                            key: team.id,
+                            left: (
+                                <div className="flex items-center gap-2 w-full min-w-0">
+                                    <span className={`text-[10px] font-black font-mono shrink-0 w-4 text-center ${team.diffScore <= 10 ? 'text-green-400' :
+                                        team.diffScore >= 18 ? 'text-red-400' :
+                                            'text-slate-200'
+                                        }`}>
+                                        {team.diffScore}
+                                    </span>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="font-bold text-white text-[11px] truncate uppercase leading-tight">
+                                            {team.short_name}
+                                        </span>
+                                        {(team as any).hasEasyRun && (
+                                            <span className="text-[7px] text-emerald-400 font-black tracking-tighter uppercase leading-none mt-0.5">
+                                                3x Easy
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            ),
+                            right: (
+                                <div className="flex items-center gap-1 h-full">
+                                    {planningGws.map((gw) => {
+                                        const gwFixtures = fixturesByEvent[gw] || [];
+                                        const match = gwFixtures.find(f => f.team_h === team.id || f.team_a === team.id);
+
+                                        if (!match) return <div key={gw} className="w-11 h-9 bg-slate-900/40 rounded-md border border-slate-700/30"></div>;
+
+                                        const isHome = match.team_h === team.id;
+                                        const opponentId = isHome ? match.team_a : match.team_h;
+                                        const opponentShort = getTeamShort(opponentId);
+                                        const difficulty = getDifficulty(opponentId);
+
+                                        return (
+                                            <ResultChip
+                                                key={gw}
+                                                label={opponentShort}
+                                                value={`${difficulty.score}${isHome ? 'H' : 'A'}`}
+                                                bgClass={difficulty.bg}
+                                                borderClass={`border-b-2 ${difficulty.border}`}
+                                                textClass={difficulty.text}
+                                                className="w-11"
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            )
+                        }))}
+                    />
+                </div>
             </div>
         );
     };
