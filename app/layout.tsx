@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Tailwind via CDN (kept to avoid a full styling migration today). */}
         <Script src="https://cdn.tailwindcss.com" strategy="beforeInteractive" />
@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           }}
         />
       </head>
-      <body className="bg-slate-900 text-gray-100">
+      <body className="bg-slate-900 text-gray-100" suppressHydrationWarning>
         {children}
       </body>
     </html>
