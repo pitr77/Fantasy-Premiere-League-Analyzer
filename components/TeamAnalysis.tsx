@@ -1,6 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { FPLTeam, FPLFixture } from '../types';
-import { TrendingUp, Shield, Info, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { TrendingUp, Shield, Info, ArrowUp, ArrowDown, Minus, ChevronDown, ChevronUp } from 'lucide-react';
+import TwoPanelTable from './TwoPanelTable';
+import ResultChip from './ResultChip';
+
+
 
 interface TeamAnalysisProps {
    teams: FPLTeam[];
@@ -21,6 +25,9 @@ interface TeamPeriodStats {
 
 const TeamAnalysis: React.FC<TeamAnalysisProps> = ({ teams, fixtures }) => {
    const [activeTab, setActiveTab] = useState<'ATTACK' | 'DEFENSE'>('ATTACK');
+   const [mobileView, setMobileView] = useState<'STATS' | 'FORM'>('STATS');
+   const [infoExpanded, setInfoExpanded] = useState(false); // Collapsed by default on mobile, but we can detect screen size or just default to false for simplicity.
+
 
    // 1. Calculate Stats for Last 5 Matches
    const stats = useMemo(() => {
@@ -155,121 +162,182 @@ const TeamAnalysis: React.FC<TeamAnalysisProps> = ({ teams, fixtures }) => {
                </div>
             </div>
 
-            {/* Info Box */}
-            <div className="bg-blue-900/20 border border-blue-500/20 p-4 rounded-lg flex gap-3 text-sm text-slate-300">
-               <Info className="text-blue-400 shrink-0" size={18} />
-               <div>
-                  <p>
-                     <strong>{activeTab === 'ATTACK' ? 'Goal Scoring Potential' : 'Defensive Solidity'}</strong>
-                  </p>
-                  <p>
-                     We calculate stats based on the last 5 matches played by each team.
-                     <br />
-                     <span className="text-green-400 font-bold">Green numbers</span> indicate elite performance (e.g., Scoring &gt; 2.0 per game or Conceding &lt; 0.8).
-                  </p>
-               </div>
+            {/* Info Box - Collapsible */}
+            <div className="mt-4">
+               <button
+                  onClick={() => setInfoExpanded(!infoExpanded)}
+                  className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-medium mb-2 group"
+               >
+                  <Info size={16} className="text-blue-400" />
+                  <span>About these metrics</span>
+                  {infoExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+               </button>
+
+               {infoExpanded && (
+                  <div className="bg-blue-900/20 border border-blue-500/20 p-4 rounded-lg flex gap-3 text-sm text-slate-300 animate-in slide-in-from-top-2 duration-200">
+                     <div className="hidden md:block">
+                        <Info className="text-blue-400 shrink-0" size={18} />
+                     </div>
+                     <div>
+                        <p className="font-bold text-white mb-1">
+                           {activeTab === 'ATTACK' ? 'Goal Scoring Potential' : 'Defensive Solidity'}
+                        </p>
+                        <p className="leading-relaxed">
+                           We calculate stats based on the last 5 matches played by each team.
+                           <br />
+                           <span className="text-green-400 font-bold">Green numbers</span> indicate elite performance (e.g., Scoring &gt; 2.0 per game or Conceding &lt; 0.8).
+                        </p>
+                     </div>
+                  </div>
+               )}
             </div>
          </div>
 
-         {/* Main Table */}
-         <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-lg overflow-hidden">
-            <div className="overflow-x-auto">
-               <table className="w-full text-left border-collapse">
-                  <thead>
-                     <tr className="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700">
-                        <th className="p-4 w-12 text-center">Rank</th>
-                        <th className="p-4 w-48">Team</th>
-                        <th className="p-4 text-center">Games</th>
-
-                        {/* Dynamic Columns based on Tab */}
-                        {activeTab === 'ATTACK' ? (
-                           <>
-                              <th className="p-4 text-right">Goals Scored</th>
-                              <th className="p-4 text-right text-white font-bold">GS / Game</th>
-                              <th className="p-4 text-right">Failed to Score</th>
-                           </>
-                        ) : (
-                           <>
-                              <th className="p-4 text-right">Goals Conceded</th>
-                              <th className="p-4 text-right text-white font-bold">GC / Game</th>
-                              <th className="p-4 text-right">Clean Sheets</th>
-                           </>
-                        )}
-
-                        <th className="p-4 text-center">Goal Diff</th>
-                        <th className="p-4 text-left pl-8">Match History (Oldest → Newest)</th>
-                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-700/50 text-sm">
-                     {sortedData.map((team, idx) => {
-                        const perGame = activeTab === 'ATTACK'
-                           ? (team.scored / team.played)
-                           : (team.conceded / team.played);
-
-                        // Color coding logic
-                        let statColor = "text-white";
-                        if (activeTab === 'ATTACK') {
-                           if (perGame >= 2.0) statColor = "text-green-400 font-bold";
-                           else if (perGame <= 0.8) statColor = "text-red-400";
-                        } else {
-                           if (perGame <= 0.8) statColor = "text-green-400 font-bold";
-                           else if (perGame >= 2.0) statColor = "text-red-400";
-                        }
-
-                        return (
-                           <tr key={team.id} className="hover:bg-slate-700/30 transition-colors group">
-                              <td className="p-4 text-center text-slate-500 font-mono">#{idx + 1}</td>
-                              <td className="p-4 font-bold text-white text-base">
-                                 {team.name}
-                              </td>
-                              <td className="p-4 text-center text-slate-300">{team.played}</td>
-
-                              {activeTab === 'ATTACK' ? (
-                                 <>
-                                    <td className="p-4 text-right text-slate-300">{team.scored}</td>
-                                    <td className={`p-4 text-right text-lg font-mono ${statColor}`}>
-                                       {perGame.toFixed(2)}
-                                    </td>
-                                    <td className="p-4 text-right text-slate-400">{team.failedToScore}</td>
-                                 </>
-                              ) : (
-                                 <>
-                                    <td className="p-4 text-right text-slate-300">{team.conceded}</td>
-                                    <td className={`p-4 text-right text-lg font-mono ${statColor}`}>
-                                       {perGame.toFixed(2)}
-                                    </td>
-                                    <td className="p-4 text-right text-slate-400">{team.cleanSheets}</td>
-                                 </>
-                              )}
-
-                              <td className="p-4 text-center font-mono text-slate-400">
-                                 <span className={team.scored - team.conceded > 0 ? "text-green-400" : team.scored - team.conceded < 0 ? "text-red-400" : ""}>
-                                    {team.scored - team.conceded > 0 ? '+' : ''}{team.scored - team.conceded}
-                                 </span>
-                              </td>
-
-                              <td className="p-4 pl-8">
-                                 <div className="flex items-center gap-1.5">
-                                    {/* Sort oldest to newest for the timeline view */}
-                                    {[...team.results].reverse().map((res, i) => (
-                                       <div key={i} className="relative group/tooltip">
-                                          <div className={`
-                                          w-12 h-8 rounded flex flex-col items-center justify-center border shadow-sm cursor-help
-                                          ${res.result === 'W' ? 'bg-green-600 border-green-500' : res.result === 'D' ? 'bg-slate-600 border-slate-500' : 'bg-red-600 border-red-500'}
-                                       `}>
-                                             <span className="text-[10px] font-bold text-white leading-none mb-0.5">{getTeamShort(res.opponent)}</span>
-                                             <span className="text-[9px] text-white/90 leading-none font-mono">{res.score}</span>
-                                          </div>
-                                       </div>
-                                    ))}
-                                 </div>
-                              </td>
-                           </tr>
-                        );
-                     })}
-                  </tbody>
-               </table>
+         {/* Mobile View Toggle */}
+         <div className="md:hidden flex justify-center mb-2">
+            <div className="bg-slate-900 p-1 rounded-lg border border-slate-700 flex w-full max-w-[300px]">
+               <button
+                  onClick={() => setMobileView('STATS')}
+                  className={`flex-1 px-4 py-1.5 rounded text-sm font-bold transition-all ${mobileView === 'STATS' ? 'bg-slate-700 text-white shadow' : 'text-slate-400'}`}
+               >
+                  Stats
+               </button>
+               <button
+                  onClick={() => setMobileView('FORM')}
+                  className={`flex-1 px-4 py-1.5 rounded text-sm font-bold transition-all ${mobileView === 'FORM' ? 'bg-slate-700 text-white shadow' : 'text-slate-400'}`}
+               >
+                  Form
+               </button>
             </div>
+         </div>
+
+         {/* Main Table Container */}
+         <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-lg overflow-hidden">
+            {mobileView === 'STATS' ? (
+               <div className="w-full overflow-x-hidden md:overflow-x-auto">
+                  <table className="w-full text-left border-separate border-spacing-0 md:table-auto">
+                     <thead>
+                        <tr className="bg-slate-900 text-slate-400 text-[10px] md:text-sm uppercase tracking-wider font-bold">
+                           <th className="p-3 md:p-5 w-10 sm:w-12 md:w-20 text-center sticky left-0 z-20 bg-slate-900 border-b border-slate-700">Rank</th>
+                           <th className="p-3 md:p-5 w-20 sm:w-24 md:w-64 sticky left-10 sm:left-12 md:left-20 z-20 bg-slate-900 border-b border-slate-700 border-r border-slate-700">Team</th>
+                           <th className="p-3 md:p-5 text-center hidden md:table-cell border-b border-slate-700">Games</th>
+                           {activeTab === 'ATTACK' ? (
+                              <>
+                                 <th className="p-3 md:p-5 text-right border-b border-slate-700 w-[22%] sm:w-auto">Scored</th>
+                                 <th className="p-3 md:p-5 text-right border-b border-slate-700 text-white font-bold w-[28%] sm:w-auto">GS/G</th>
+                                 <th className="p-3 md:p-5 text-right border-b border-slate-700 hidden md:table-cell">FTS</th>
+                              </>
+                           ) : (
+                              <>
+                                 <th className="p-3 md:p-5 text-right border-b border-slate-700 w-[22%] sm:w-auto">Conceded</th>
+                                 <th className="p-3 md:p-5 text-right border-b border-slate-700 text-white font-bold w-[28%] sm:w-auto">GC/G</th>
+                                 <th className="p-3 md:p-5 text-right border-b border-slate-700 hidden md:table-cell">CS</th>
+                              </>
+                           )}
+                           <th className="p-3 md:p-5 text-center hidden md:table-cell border-b border-slate-700 font-mono">GD</th>
+                           <th className="p-3 md:p-5 text-left pl-8 hidden md:table-cell border-b border-slate-700">Match History</th>
+                        </tr>
+                     </thead>
+                     <tbody className="divide-y divide-slate-700/50">
+                        {sortedData.map((team, idx) => {
+                           const perGame = team.played > 0
+                              ? (activeTab === 'ATTACK' ? team.scored / team.played : team.conceded / team.played)
+                              : 0;
+
+                           let statColor = "text-white";
+                           if (activeTab === 'ATTACK') {
+                              if (perGame >= 2.0) statColor = "text-green-400 font-bold";
+                              else if (perGame <= 0.8 && team.played > 0) statColor = "text-red-400";
+                           } else {
+                              if (perGame <= 0.8 && team.played > 0) statColor = "text-green-400 font-bold";
+                              else if (perGame >= 2.0) statColor = "text-red-400";
+                           }
+
+                           return (
+                              <tr key={team.id} className="hover:bg-slate-700/30 transition-colors group text-[11px] md:text-base">
+                                 <td className="p-3 md:p-5 text-center text-slate-500 font-mono sticky left-0 z-10 bg-slate-800 transition-colors group-hover:bg-slate-700 border-b border-slate-700/50">#{idx + 1}</td>
+                                 <td className="p-3 md:p-5 font-bold text-white sticky left-10 sm:left-12 md:left-20 z-10 bg-slate-800 transition-colors group-hover:bg-slate-700 border-b border-slate-700/50 truncate border-r border-slate-700">
+                                    <span className="md:hidden">{team.short_name}</span>
+                                    <span className="hidden md:inline">{team.name}</span>
+                                 </td>
+                                 <td className="p-3 md:p-5 text-center text-slate-300 hidden md:table-cell border-b border-slate-700/50 font-medium">{team.played}</td>
+                                 {activeTab === 'ATTACK' ? (
+                                    <>
+                                       <td className="p-3 md:p-5 text-right text-slate-300 border-b border-slate-700/50 font-medium">{team.scored}</td>
+                                       <td className={`p-3 md:p-5 text-right text-sm md:text-xl font-mono border-b border-slate-700/50 ${statColor}`}>
+                                          {perGame.toFixed(2)}
+                                       </td>
+                                       <td className="p-3 md:p-5 text-right text-slate-400 hidden md:table-cell border-b border-slate-700/50">{team.failedToScore}</td>
+                                    </>
+                                 ) : (
+                                    <>
+                                       <td className="p-3 md:p-5 text-right text-slate-300 border-b border-slate-700/50 font-medium">{team.conceded}</td>
+                                       <td className={`p-3 md:p-5 text-right text-sm md:text-xl font-mono border-b border-slate-700/50 ${statColor}`}>
+                                          {perGame.toFixed(2)}
+                                       </td>
+                                       <td className="p-3 md:p-5 text-right text-slate-400 hidden md:table-cell border-b border-slate-700/50">{team.cleanSheets}</td>
+                                    </>
+                                 )}
+                                 <td className="p-3 md:p-5 text-center font-mono text-slate-400 hidden md:table-cell border-b border-slate-700/50">
+                                    <span className={`font-bold ${team.scored - team.conceded > 0 ? "text-green-400" : team.scored - team.conceded < 0 ? "text-red-400" : ""}`}>
+                                       {team.scored - team.conceded > 0 ? '+' : ''}{team.scored - team.conceded}
+                                    </span>
+                                 </td>
+                                 <td className="p-3 md:p-5 pl-8 hidden md:table-cell border-b border-slate-700/50">
+                                    <div className="flex items-center gap-1.5 flex-row">
+                                       {team.results.map((res, i) => (
+                                          <ResultChip
+                                             key={i}
+                                             label={getTeamShort(res.opponent)}
+                                             value={res.score}
+                                             variant={res.result}
+                                          />
+                                       ))}
+                                    </div>
+                                 </td>
+                              </tr>
+                           );
+                        })}
+                     </tbody>
+                  </table>
+               </div>
+            ) : (
+               <TwoPanelTable
+                  leftHeader={
+                     <>
+                        <span className="w-8 sm:w-10 text-center">Rank</span>
+                        <span className="ml-2 sm:ml-4 flex-1">Team</span>
+                     </>
+                  }
+                  rightHeader="Match History (Newest → Oldest)"
+                  rows={sortedData.map((team, idx) => ({
+                     key: team.id,
+                     left: (
+                        <>
+                           <span className="w-8 sm:w-10 text-center text-slate-500 font-mono text-[11px] sm:text-sm">#{idx + 1}</span>
+                           <div className="ml-2 sm:ml-4 flex-1 min-w-0">
+                              <span className="block font-bold text-white text-[11px] sm:text-sm truncate">
+                                 <span className="md:hidden">{team.short_name}</span>
+                                 <span className="hidden md:inline">{team.name}</span>
+                              </span>
+                           </div>
+                        </>
+                     ),
+                     right: (
+                        <div className="flex items-center gap-1.5 h-full">
+                           {team.results.map((res, i) => (
+                              <ResultChip
+                                 key={i}
+                                 label={getTeamShort(res.opponent)}
+                                 value={res.score}
+                                 variant={res.result}
+                              />
+                           ))}
+                        </div>
+                     )
+                  }))}
+               />
+            )}
          </div>
       </div>
    );
