@@ -33,8 +33,9 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
                 );
                 if (teamFixtures.length === 0) return 3;
                 const scores = teamFixtures.map(f => {
-                    const opponentId = f.team_h === team.id ? f.team_a : f.team_h;
-                    return getDynamicDifficulty(opponentId, data.elements, positionMap).score;
+                    const isHome = f.team_h === team.id;
+                    const opponentId = isHome ? f.team_a : f.team_h;
+                    return getDynamicDifficulty(opponentId, data.elements, positionMap, !isHome).score;
                 });
                 return scores.reduce((a, b) => a + b, 0) / scores.length;
             };
@@ -46,8 +47,9 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
             const next5 = next5Ids.map(id => {
                 const f = fixtures.find(fix => fix.event === id && (fix.team_h === team.id || fix.team_a === team.id));
                 if (!f) return { bg: 'bg-slate-700', border: 'border-slate-600', label: 'Blank' };
-                const oppId = f.team_h === team.id ? f.team_a : f.team_h;
-                return getDynamicDifficulty(oppId, data.elements, positionMap);
+                const isHome = f.team_h === team.id;
+                const oppId = isHome ? f.team_a : f.team_h;
+                return getDynamicDifficulty(oppId, data.elements, positionMap, !isHome);
             });
 
             return { team, swing, avgNext5, next5 };
@@ -80,8 +82,8 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
         return upcoming.map(f => {
             const hName = data.teams.find(t => t.id === f.team_h)?.short_name || 'UNK';
             const aName = data.teams.find(t => t.id === f.team_a)?.short_name || 'UNK';
-            const hDiff = getDynamicDifficulty(f.team_a, data.elements, positionMap);
-            const aDiff = getDynamicDifficulty(f.team_h, data.elements, positionMap);
+            const hDiff = getDynamicDifficulty(f.team_a, data.elements, positionMap, false);
+            const aDiff = getDynamicDifficulty(f.team_h, data.elements, positionMap, true);
 
             return [
                 { team: hName, opponent: aName, isHome: true, difficulty: hDiff },

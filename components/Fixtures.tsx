@@ -4,6 +4,7 @@ import { Calendar, LayoutGrid, Activity, AlertTriangle, CheckCircle2, Info, Chev
 import { TeamIcon } from './TeamIcon';
 import TwoPanelTable from './TwoPanelTable';
 import ResultChip from './ResultChip';
+import { track } from '@/lib/ga';
 
 
 import { calculateLeaguePositions, getDynamicDifficulty } from '../lib/fdrModel';
@@ -34,7 +35,7 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
      */
     const getLeaguePositions = useMemo(() => calculateLeaguePositions(teams, fixtures), [teams, fixtures]);
 
-    const getDifficulty = (opponentId: number) => getDynamicDifficulty(opponentId, players, getLeaguePositions);
+    const getDifficulty = (opponentId: number, isAway: boolean = false) => getDynamicDifficulty(opponentId, players, getLeaguePositions, isAway);
 
 
     // --- Logic for FDR Predictability ---
@@ -148,16 +149,42 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
     };
 
     const handleGwChange = (gwId: number) => {
+        const prevGw = selectedEvent;
         setSelectedEvent(gwId);
-        // Month state will auto-update via useEffect
+        track("select_gameweek", {
+            gw: gwId,
+            prev_gw: prevGw,
+            module: "fixtures",
+            method: "dropdown"
+        });
     };
 
     const handleNextGw = () => {
-        if (selectedEvent < 38) handleGwChange(selectedEvent + 1);
+        if (selectedEvent < 38) {
+            const nextGw = selectedEvent + 1;
+            const prevGw = selectedEvent;
+            setSelectedEvent(nextGw);
+            track("select_gameweek", {
+                gw: nextGw,
+                prev_gw: prevGw,
+                module: "fixtures",
+                method: "arrows"
+            });
+        }
     };
 
     const handlePrevGw = () => {
-        if (selectedEvent > 1) handleGwChange(selectedEvent - 1);
+        if (selectedEvent > 1) {
+            const prevGwVal = selectedEvent - 1;
+            const currentGw = selectedEvent;
+            setSelectedEvent(prevGwVal);
+            track("select_gameweek", {
+                gw: prevGwVal,
+                prev_gw: currentGw,
+                module: "fixtures",
+                method: "arrows"
+            });
+        }
     };
 
 
@@ -266,8 +293,8 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                 {currentFixtures.length > 0 ? (
                     currentFixtures.map((fixture) => {
                         // Use dynamic difficulty with actual fixture data
-                        const homeDiff = getDifficulty(fixture.team_a);
-                        const awayDiff = getDifficulty(fixture.team_h);
+                        const homeDiff = getDifficulty(fixture.team_a, false); // Home team is home
+                        const awayDiff = getDifficulty(fixture.team_h, true);  // Away team is away
 
                         const fdrCheck = fixture.finished
                             ? getFdrCheck(fixture.team_h_score, fixture.team_a_score, homeDiff, awayDiff)
@@ -405,9 +432,10 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                                                 if (!match) return <td key={gw} className="p-4 md:p-5 bg-slate-900/50 relative"></td>;
 
                                                 const isHome = match.team_h === team.id;
+                                                const isAway = !isHome;
                                                 const opponentId = isHome ? match.team_a : match.team_h;
                                                 const opponentShort = getTeamShort(opponentId);
-                                                const difficulty = getDifficulty(opponentId);
+                                                const difficulty = getDifficulty(opponentId, isAway);
 
                                                 return (
                                                     <td key={gw} className="p-2 md:p-3 border-r border-slate-700/50 relative group">
@@ -511,9 +539,10 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                                         if (!match) return <div key={gw} className="w-11 h-9 bg-slate-900/40 rounded-md border border-slate-700/30"></div>;
 
                                         const isHome = match.team_h === team.id;
+                                        const isAway = !isHome;
                                         const opponentId = isHome ? match.team_a : match.team_h;
                                         const opponentShort = getTeamShort(opponentId);
-                                        const difficulty = getDifficulty(opponentId);
+                                        const difficulty = getDifficulty(opponentId, isAway);
 
                                         return (
                                             <ResultChip

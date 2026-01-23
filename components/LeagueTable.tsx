@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Trophy, TrendingUp, Activity, Check, X, Minus, ShieldCheck } from 'lucide-react';
 import { FPLTeam, FPLFixture } from '../types';
+import { track } from '@/lib/ga';
 
 interface LeagueTableProps {
   teams: FPLTeam[];
@@ -140,6 +141,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
         onClick={() => {
           setMode(value);
           if (value !== 'form') setSelectedForm(null);
+          track("league_table_interaction", { action: "sort", sort_by: value });
         }}
         className={[
           'px-4 py-2 rounded-lg text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-2',

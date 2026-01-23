@@ -3,6 +3,7 @@ import { FPLTeam, FPLFixture } from '../types';
 import { TrendingUp, Shield, Info, ArrowUp, ArrowDown, Minus, ChevronDown, ChevronUp } from 'lucide-react';
 import TwoPanelTable from './TwoPanelTable';
 import ResultChip from './ResultChip';
+import { track } from '@/lib/ga';
 
 
 
@@ -148,13 +149,19 @@ const TeamAnalysis: React.FC<TeamAnalysisProps> = ({ teams, fixtures }) => {
                {/* Tab Switcher */}
                <div className="bg-slate-900 p-1 rounded-lg border border-slate-700 flex">
                   <button
-                     onClick={() => setActiveTab('ATTACK')}
+                     onClick={() => {
+                        setActiveTab('ATTACK');
+                        track("team_analysis_interaction", { action: "select_tab", tab: "ATTACK" });
+                     }}
                      className={`px-4 py-2 rounded text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'ATTACK' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
                   >
                      <TrendingUp size={16} /> Attacking
                   </button>
                   <button
-                     onClick={() => setActiveTab('DEFENSE')}
+                     onClick={() => {
+                        setActiveTab('DEFENSE');
+                        track("team_analysis_interaction", { action: "select_tab", tab: "DEFENSE" });
+                     }}
                      className={`px-4 py-2 rounded text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'DEFENSE' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
                   >
                      <Shield size={16} /> Defensive

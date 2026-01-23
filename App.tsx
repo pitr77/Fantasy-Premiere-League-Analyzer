@@ -84,7 +84,6 @@ function App() {
 
   useEffect(() => {
     fetchData();
-    initGA();
   }, []);
 
   const loadProfileTier = async () => {
@@ -169,6 +168,140 @@ function App() {
   }
 
   if (!data) return null;
+
+  // === DEBUG: Compare OLD vs NEW FDR for ARS upcoming fixtures ===
+  (() => {
+    const teams = data.teams;
+    const players = data.elements;
+    const arsenalId = teams.find(t => t.name === "Arsenal")?.id;
+    if (!arsenalId) return console.warn("Arsenal not found");
+
+    // --- helpers ---
+    const teamShort = (id: number) => teams.find(t => t.id === id)?.short_name ?? String(id);
+
+    // your existing logic (OLD)
+    const calculateLeaguePositions = () => {
+      const stats: Record<number, { pts: number; gd: number; gf: number; id: number }> = {};
+      teams.forEach(t => (stats[t.id] = { pts: 0, gd: 0, gf: 0, id: t.id }));
+
+      fixtures
+        .filter(f => f.finished && f.team_h_score != null && f.team_a_score != null)
+        .forEach(f => {
+          const h = f.team_h_score!;
+          const a = f.team_a_score!;
+          stats[f.team_h].gf += h; stats[f.team_h].gd += (h - a);
+          stats[f.team_a].gf += a; stats[f.team_a].gd += (a - h);
+          if (h > a) stats[f.team_h].pts += 3;
+          else if (h < a) stats[f.team_a].pts += 3;
+          else { stats[f.team_h].pts += 1; stats[f.team_a].pts += 1; }
+        });
+
+      const sorted = Object.values(stats).sort((x, y) => {
+        if (y.pts !== x.pts) return y.pts - x.pts;
+        if (y.gd !== x.gd) return y.gd - x.gd;
+        if (y.gf !== x.gf) return y.gf - x.gf;
+        return x.id - y.id;
+      });
+
+      const pos: Record<number, number> = {};
+      sorted.forEach((t, i) => (pos[t.id] = i + 1));
+      return pos;
+    };
+
+    const top12Forms = (teamId: number) => {
+      const arr = players
+        .filter(p => p.team === teamId)
+        .map(p => Number.parseFloat(p.form || "0"))
+        .sort((a, b) => b - a)
+        .slice(0, 12);
+
+      const sum = arr.reduce((s, v) => s + v, 0);
+      const avg = arr.length ? sum / arr.length : 0;
+      return { sum, avg, arr };
+    };
+
+    const posMap = calculateLeaguePositions();
+
+    // OLD scoring (exactly your current model)
+    const oldModel = (opponentId: number) => {
+      const { sum } = top12Forms(opponentId);
+      const position = posMap[opponentId] || 10;
+      const tableStrength = (20 - position) + 1;     // 1..20
+      const tableAdj = (tableStrength - 10) * 1.0;   // -9..+10
+      const final = sum + tableAdj;
+
+      let score = 1;
+      if (final > 55) score = 5;
+      else if (final > 45) score = 4;
+      else if (final > 35) score = 3;
+      else if (final > 25) score = 2;
+
+      return { score, formSum: sum, position, tableAdj, final };
+    };
+
+    // NEW scoring (proposal: avg form + gentler table + H/A impact)
+    const newModel = (opponentId: number, isAway: boolean) => {
+      const { avg } = top12Forms(opponentId);
+      const position = posMap[opponentId] || 10;
+      const tableStrength = (20 - position) + 1;   // 1..20
+      const tableAdj = (tableStrength - 10) * 0.15; // gentle: about -1.35..+1.5
+      const haAdj = isAway ? 0.15 : -0.10;          // small bump for away
+      const final = avg + tableAdj + haAdj;
+
+      // thresholds tuned for avg-form scale (~2.0–4.5)
+      let score = 1;
+      if (final > 4.2) score = 5;
+      else if (final > 3.7) score = 4;
+      else if (final > 3.2) score = 3;
+      else if (final > 2.7) score = 2;
+
+      return { score, formAvg: avg, position, tableAdj, haAdj, final };
+    };
+
+    // take ARS next fixtures from your earlier table: GW23..26 (not finished)
+    const arsFixtures = fixtures
+      .filter(f => !f.finished && f.event != null && (f.team_h === arsenalId || f.team_a === arsenalId))
+      .sort((a, b) => (a.kickoff_time ?? "").localeCompare(b.kickoff_time ?? ""))
+      .slice(0, 6); // just in case DGW later
+
+    const rows = arsFixtures.map(f => {
+      const isHome = f.team_h === arsenalId;
+      const oppId = isHome ? f.team_a : f.team_h;
+      const isAway = !isHome;
+
+      const old = oldModel(oppId);
+      const neu = newModel(oppId, isAway);
+
+      return {
+        GW: f.event,
+        Opp: teamShort(oppId),
+        H_A: isHome ? "H" : "A",
+        KickoffUTC: f.kickoff_time,
+        // OLD details
+        OLD_score: old.score,
+        OLD_formSumTop12: Number(old.formSum.toFixed(2)),
+        OLD_pos: old.position,
+        OLD_tableAdj: Number(old.tableAdj.toFixed(2)),
+        OLD_final: Number(old.final.toFixed(2)),
+        // NEW details
+        NEW_score: neu.score,
+        NEW_formAvgTop12: Number(neu.formAvg.toFixed(2)),
+        NEW_pos: neu.position,
+        NEW_tableAdj: Number(neu.tableAdj.toFixed(2)),
+        NEW_haAdj: Number(neu.haAdj.toFixed(2)),
+        NEW_final: Number(neu.final.toFixed(2)),
+        // official FPL diff (for reference)
+        FPL_diff: isHome ? f.team_h_difficulty : f.team_a_difficulty,
+      };
+    });
+
+    console.log("=== ARS OLD vs NEW FDR compare ===");
+    console.log("=== ARS OLD vs NEW FDR compare ===");
+    console.table(rows);
+    console.log(rows);
+
+  })();
+
 
   const handleNavigate = (v: View, label: string, requiresAuth = false) => {
     const isAuthed = Boolean(userEmail) || DEV_AUTH_BYPASS;

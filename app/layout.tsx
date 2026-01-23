@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import Script from 'next/script';
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import ModuleViewTracker from "@/components/ModuleViewTracker";
 
 export const metadata = {
   title: 'FPL STUDIO',
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="bg-slate-900 text-gray-100" suppressHydrationWarning>
+        <ModuleViewTracker />
         {children}
       </body>
     </html>

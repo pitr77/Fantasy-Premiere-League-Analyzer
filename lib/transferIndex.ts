@@ -43,7 +43,7 @@ export function computeTransferIndexForPlayers(args: {
 
                 const match = fixtureMap[`${p.team}-${gw}`];
                 if (match) {
-                    const difficultyData = getDynamicDifficulty(match.opponent, players, leaguePositions);
+                    const difficultyData = getDynamicDifficulty(match.opponent, players, leaguePositions, !match.isHome);
                     const diffScore = difficultyData.score;
                     difficultySum += diffScore;
                     nextFixtures.push({ event: gw, opponent: match.opponent, difficulty: diffScore, isHome: match.isHome });
