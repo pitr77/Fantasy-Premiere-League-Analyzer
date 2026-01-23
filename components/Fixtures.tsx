@@ -35,8 +35,8 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
      */
     const getLeaguePositions = useMemo(() => calculateLeaguePositions(teams, fixtures), [teams, fixtures]);
 
-    const getDifficulty = (opponentId: number, isAway: boolean = false) => getDynamicDifficulty(opponentId, players, getLeaguePositions, isAway);
 
+    const getDifficulty = (opponentId: number, isAway: boolean = false) => getDynamicDifficulty(opponentId, players, getLeaguePositions, isAway);
 
     // --- Logic for FDR Predictability ---
     const getFdrCheck = (homeScore: number | null, awayScore: number | null, homeDiff: any, awayDiff: any) => {
@@ -96,6 +96,8 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
         if (lower.includes('easy')) return "bg-emerald-500/90 text-slate-950";
         return "bg-slate-500/90 text-slate-50";
     };
+
+
 
     const getShortDiffLabel = (label: string) => {
         const lower = label.toLowerCase();
@@ -207,8 +209,9 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                 const gwFixtures = fixturesByEvent[gw] || [];
                 const match = gwFixtures.find(f => f.team_h === team.id || f.team_a === team.id);
                 if (match) {
-                    const opponentId = match.team_h === team.id ? match.team_a : match.team_h;
-                    const score = getDifficulty(opponentId).score;
+                    const isHome = match.team_h === team.id;
+                    const opponentId = isHome ? match.team_a : match.team_h;
+                    const score = getDifficulty(opponentId, !isHome).score;
                     diffScore += score;
                     fixtureDifficulties.push(score);
                 } else {
