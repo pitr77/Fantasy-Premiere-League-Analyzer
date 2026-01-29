@@ -1,3 +1,29 @@
+/**
+ * Dynamic FDR model (FPL STUDIO)
+ *
+ * Purpose:
+ * - Rate fixture difficulty dynamically (not official FPL 2–5)
+ * - Primary signal: opponent key-player form (avg of top 12 player "form")
+ * - Supporting: league table position (small stabilizer)
+ * - Small Home/Away adjustment (away slightly harder)
+ *
+ * Formula (conceptual):
+ *   final = avgFormTop12(opponent) + tableAdj(position)*0.15 + haAdj
+ *   haAdj: home = -0.10, away = +0.15
+ *
+ * Thresholds (avg-form scale):
+ *   final > 4.2 => 5 (Very Hard)
+ *   final > 3.7 => 4 (Hard)
+ *   final > 3.2 => 3 (Moderate)
+ *   final > 2.7 => 2 (Good)
+ *   else        => 1 (Easy)
+ *
+ * Notes:
+ * - 'details' is returned for debugging / transparency
+ * - Call sites should pass isAway when fixture context exists
+ */
+
+
 import { FPLPlayer, FPLTeam, FPLFixture } from '../types';
 
 /**
