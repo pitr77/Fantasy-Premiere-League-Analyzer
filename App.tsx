@@ -430,12 +430,12 @@ function App() {
             <HeaderNavItem v={View.DASHBOARD} label="Dashboard" />
             <HeaderNavItem v={View.LEAGUE_TABLE} label="League Table" />
             <HeaderNavItem v={View.TEAM_ANALYSIS} label="Team Analysis" />
-            <HeaderNavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" requiresAuth />
+            <HeaderNavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" />
             <HeaderNavItem v={View.FIXTURES} label="Fixtures" />
             <HeaderNavItem v={View.TRANSFER_PICKS} label="Transfer Picks" />
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.OPTIMAL_SQUAD} label="Optimal 11" />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.TEAM} label="My Team" />}
-            <HeaderNavItem v={View.STATS} label="Player Stats" requiresAuth />
+            <HeaderNavItem v={View.STATS} label="Player Stats" />
           </nav>
         </div>
 
@@ -475,10 +475,10 @@ function App() {
             <NavItem v={View.DASHBOARD} label="Dashboard" icon={LayoutDashboard} />
             <NavItem v={View.LEAGUE_TABLE} label="League Table" icon={Trophy} />
             <NavItem v={View.TEAM_ANALYSIS} label="Team Analysis" icon={Search} />
-            <NavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" icon={CalendarRange} requiresAuth />
+            <NavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" icon={CalendarRange} />
             <NavItem v={View.FIXTURES} label="Fixtures" icon={Calendar} />
             <NavItem v={View.TRANSFER_PICKS} label="Transfer Picks" icon={ArrowLeftRight} />
-            <NavItem v={View.STATS} label="Player Stats" icon={BarChart2} requiresAuth />
+            <NavItem v={View.STATS} label="Player Stats" icon={BarChart2} />
             <NavItem v={View.DETAILED_STATS} label="Detailed Analyses" icon={Activity} />
             {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.OPTIMAL_SQUAD} label="Optimal 11" icon={Zap} />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.TEAM} label="My Team" icon={Shirt} />}
