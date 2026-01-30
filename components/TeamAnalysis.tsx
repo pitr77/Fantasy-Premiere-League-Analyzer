@@ -225,24 +225,24 @@ const TeamAnalysis: React.FC<TeamAnalysisProps> = ({ teams, fixtures }) => {
                   <table className="w-full text-left border-separate border-spacing-0 md:table-auto">
                      <thead>
                         <tr className="bg-slate-900 text-slate-400 text-[10px] md:text-sm uppercase tracking-wider font-bold">
-                           <th className="p-3 md:p-5 w-10 sm:w-12 md:w-20 text-center sticky left-0 z-20 bg-slate-900 border-b border-slate-700">Rank</th>
-                           <th className="p-3 md:p-5 w-20 sm:w-24 md:w-64 sticky left-10 sm:left-12 md:left-20 z-20 bg-slate-900 border-b border-slate-700 border-r border-slate-700">Team</th>
-                           <th className="p-3 md:p-5 text-center hidden md:table-cell border-b border-slate-700">Games</th>
+                           <th className="py-2 px-3 md:py-3 md:px-5 w-10 sm:w-12 md:w-20 text-center sticky left-0 z-20 bg-slate-900 border-b border-slate-700">Rank</th>
+                           <th className="py-2 px-3 md:py-3 md:px-5 w-20 sm:w-24 md:w-64 sticky left-10 sm:left-12 md:left-20 z-20 bg-slate-900 border-b border-slate-700 border-r border-slate-700">Team</th>
+                           <th className="py-2 px-3 md:py-3 md:px-5 text-center hidden md:table-cell border-b border-slate-700">Games</th>
                            {activeTab === 'ATTACK' ? (
                               <>
-                                 <th className="p-3 md:p-5 text-right border-b border-slate-700 w-[22%] sm:w-auto">Scored</th>
-                                 <th className="p-3 md:p-5 text-right border-b border-slate-700 text-white font-bold w-[28%] sm:w-auto">GS/G</th>
-                                 <th className="p-3 md:p-5 text-right border-b border-slate-700 hidden md:table-cell">FTS</th>
+                                 <th className="py-2 px-3 md:py-3 md:px-5 text-right border-b border-slate-700 w-[22%] sm:w-auto">Scored</th>
+                                 <th className="py-2 px-3 md:py-3 md:px-5 text-right border-b border-slate-700 text-white font-bold w-[28%] sm:w-auto">GS/G</th>
+                                 <th className="py-2 px-3 md:py-3 md:px-5 text-right border-b border-slate-700 hidden md:table-cell">FTS</th>
                               </>
                            ) : (
                               <>
-                                 <th className="p-3 md:p-5 text-right border-b border-slate-700 w-[22%] sm:w-auto">Conceded</th>
-                                 <th className="p-3 md:p-5 text-right border-b border-slate-700 text-white font-bold w-[28%] sm:w-auto">GC/G</th>
-                                 <th className="p-3 md:p-5 text-right border-b border-slate-700 hidden md:table-cell">CS</th>
+                                 <th className="py-2 px-3 md:py-3 md:px-5 text-right border-b border-slate-700 w-[22%] sm:w-auto">Conceded</th>
+                                 <th className="py-2 px-3 md:py-3 md:px-5 text-right border-b border-slate-700 text-white font-bold w-[28%] sm:w-auto">GC/G</th>
+                                 <th className="py-2 px-3 md:py-3 md:px-5 text-right border-b border-slate-700 hidden md:table-cell">CS</th>
                               </>
                            )}
-                           <th className="p-3 md:p-5 text-center hidden md:table-cell border-b border-slate-700 font-mono">GD</th>
-                           <th className="p-3 md:p-5 text-left pl-8 hidden md:table-cell border-b border-slate-700">Match History</th>
+                           <th className="py-2 px-3 md:py-3 md:px-5 text-center hidden md:table-cell border-b border-slate-700 font-mono">GD</th>
+                           <th className="py-2 px-3 md:py-3 md:px-5 text-left pl-8 hidden md:table-cell border-b border-slate-700">Match History</th>
                         </tr>
                      </thead>
                      <tbody className="divide-y divide-slate-700/50">
@@ -262,35 +262,35 @@ const TeamAnalysis: React.FC<TeamAnalysisProps> = ({ teams, fixtures }) => {
 
                            return (
                               <tr key={team.id} className="hover:bg-slate-700/30 transition-colors group text-[11px] md:text-base">
-                                 <td className="p-3 md:p-5 text-center text-slate-500 font-mono sticky left-0 z-10 bg-slate-800 transition-colors group-hover:bg-slate-700 border-b border-slate-700/50">#{idx + 1}</td>
-                                 <td className="p-3 md:p-5 font-bold text-white sticky left-10 sm:left-12 md:left-20 z-10 bg-slate-800 transition-colors group-hover:bg-slate-700 border-b border-slate-700/50 truncate border-r border-slate-700">
+                                 <td className="py-2 px-3 md:py-3 md:px-5 text-center text-slate-500 font-mono sticky left-0 z-10 bg-slate-800 transition-colors group-hover:bg-slate-700 border-b border-slate-700/50">#{idx + 1}</td>
+                                 <td className="py-2 px-3 md:py-3 md:px-5 font-bold text-white sticky left-10 sm:left-12 md:left-20 z-10 bg-slate-800 transition-colors group-hover:bg-slate-700 border-b border-slate-700/50 truncate border-r border-slate-700">
                                     <span className="md:hidden">{team.short_name}</span>
                                     <span className="hidden md:inline">{team.name}</span>
                                  </td>
-                                 <td className="p-3 md:p-5 text-center text-slate-300 hidden md:table-cell border-b border-slate-700/50 font-medium">{team.played}</td>
+                                 <td className="py-2 px-3 md:py-3 md:px-5 text-center text-slate-300 hidden md:table-cell border-b border-slate-700/50 font-medium">{team.played}</td>
                                  {activeTab === 'ATTACK' ? (
                                     <>
-                                       <td className="p-3 md:p-5 text-right text-slate-300 border-b border-slate-700/50 font-medium">{team.scored}</td>
-                                       <td className={`p-3 md:p-5 text-right text-sm md:text-xl font-mono border-b border-slate-700/50 ${statColor}`}>
+                                       <td className="py-2 px-3 md:py-3 md:px-5 text-right text-slate-300 border-b border-slate-700/50 font-medium">{team.scored}</td>
+                                       <td className={`py-2 px-3 md:py-3 md:px-5 text-right text-sm md:text-xl font-mono border-b border-slate-700/50 ${statColor}`}>
                                           {perGame.toFixed(2)}
                                        </td>
-                                       <td className="p-3 md:p-5 text-right text-slate-400 hidden md:table-cell border-b border-slate-700/50">{team.failedToScore}</td>
+                                       <td className="py-2 px-3 md:py-3 md:px-5 text-right text-slate-400 hidden md:table-cell border-b border-slate-700/50">{team.failedToScore}</td>
                                     </>
                                  ) : (
                                     <>
-                                       <td className="p-3 md:p-5 text-right text-slate-300 border-b border-slate-700/50 font-medium">{team.conceded}</td>
-                                       <td className={`p-3 md:p-5 text-right text-sm md:text-xl font-mono border-b border-slate-700/50 ${statColor}`}>
+                                       <td className="py-2 px-3 md:py-3 md:px-5 text-right text-slate-300 border-b border-slate-700/50 font-medium">{team.conceded}</td>
+                                       <td className={`py-2 px-3 md:py-3 md:px-5 text-right text-sm md:text-xl font-mono border-b border-slate-700/50 ${statColor}`}>
                                           {perGame.toFixed(2)}
                                        </td>
-                                       <td className="p-3 md:p-5 text-right text-slate-400 hidden md:table-cell border-b border-slate-700/50">{team.cleanSheets}</td>
+                                       <td className="py-2 px-3 md:py-3 md:px-5 text-right text-slate-400 hidden md:table-cell border-b border-slate-700/50">{team.cleanSheets}</td>
                                     </>
                                  )}
-                                 <td className="p-3 md:p-5 text-center font-mono text-slate-400 hidden md:table-cell border-b border-slate-700/50">
+                                 <td className="py-2 px-3 md:py-3 md:px-5 text-center font-mono text-slate-400 hidden md:table-cell border-b border-slate-700/50">
                                     <span className={`font-bold ${team.scored - team.conceded > 0 ? "text-green-400" : team.scored - team.conceded < 0 ? "text-red-400" : ""}`}>
                                        {team.scored - team.conceded > 0 ? '+' : ''}{team.scored - team.conceded}
                                     </span>
                                  </td>
-                                 <td className="p-3 md:p-5 pl-8 hidden md:table-cell border-b border-slate-700/50">
+                                 <td className="py-2 px-3 md:py-3 md:px-5 pl-8 hidden md:table-cell border-b border-slate-700/50">
                                     <div className="flex items-center gap-1.5 flex-row">
                                        {team.results.map((res, i) => (
                                           <ResultChip
@@ -310,6 +310,7 @@ const TeamAnalysis: React.FC<TeamAnalysisProps> = ({ teams, fixtures }) => {
                </div>
             ) : (
                <TwoPanelTable
+                  rowHeightClass="h-[48px] md:h-[52px]"
                   leftHeader={
                      <>
                         <span className="w-8 sm:w-10 text-center">Rank</span>
