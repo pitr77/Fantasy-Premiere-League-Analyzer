@@ -398,7 +398,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                         <div className="flex justify-between text-[9px] uppercase font-bold text-slate-500">
                                             <span>{horizon === 'next' ? 'Next Fixture' : 'Upcoming Fixtures'}</span>
                                         </div>
-                                        <div className="flex gap-0.5 h-2.5 w-full bg-slate-900 rounded-full overflow-hidden">
+                                        <div className={`flex gap-0.5 h-2.5 ${horizon === 'next' ? 'w-1/2' : 'w-full'} bg-slate-900 rounded-full overflow-hidden`}>
                                             {p.nextFixtures.slice(0, horizon === 'next' ? 1 : 5).map((f, i) => (
                                                 <div
                                                     key={i}
