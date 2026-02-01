@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { FPLPlayer, FPLTeam, FPLEvent, FPLFixture } from '../types';
-import { ArrowLeftRight, TrendingUp, Calendar, DollarSign, Filter, Info, ChevronDown, ChevronUp, Calculator, Activity, HelpCircle, ArrowUpDown, Clock, Users, ChevronRight } from 'lucide-react';
+import { ArrowLeftRight, TrendingUp, Calendar, DollarSign, Filter, Info, ChevronDown, ChevronUp, Calculator, Activity, HelpCircle, ArrowUpDown, Clock, Users, ChevronRight, AlertTriangle } from 'lucide-react';
 import ResultChip from './ResultChip';
 import { calculateLeaguePositions, getDynamicDifficulty } from '../lib/fdrModel';
 import { computeTransferIndexForPlayers, TransferIndexResult } from '../lib/transferIndex';
@@ -166,25 +166,31 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                 {horizon === 'next' ? (
                                     <>
                                         <p className="text-slate-300 leading-relaxed text-[11px]">
-                                            Optimized for the immediate gameweek. Combines next opponent difficulty with individual player form.
+                                            Optimized for the immediate gameweek. Combines fixture difficulty, predicted minutes, and current form.
                                         </p>
-                                        <div className="flex gap-2 text-[10px] text-slate-400 font-mono">
-                                            <span className="bg-slate-900 px-2 py-1 rounded border border-slate-700 text-blue-400">65% Next Fixture</span>
+                                        <div className="flex flex-wrap gap-2 text-[10px] text-slate-400 font-mono">
+                                            <span className="bg-slate-900 px-2 py-1 rounded border border-slate-700 text-blue-400 whitespace-nowrap">50% Next Fixture</span>
                                             <span className="flex items-center">+</span>
-                                            <span className="bg-slate-900 px-2 py-1 rounded border border-slate-700 text-green-400">35% Form</span>
+                                            <span className="bg-slate-900 px-2 py-1 rounded border border-slate-700 text-purple-400 whitespace-nowrap">30% Minutes</span>
+                                            <span className="flex items-center">+</span>
+                                            <span className="bg-slate-900 px-2 py-1 rounded border border-slate-700 text-green-400 whitespace-nowrap">20% Form</span>
                                         </div>
                                         <div className="space-y-1.5 pt-1">
                                             <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                                Easy/Good: 0.85 • Mod: 0.65 • Hard: 0.40 • V.Hard/Blank: 0.25
+                                                Fixture mapping: Easy/Good 0.85 • Moderate 0.65 • Hard 0.40 • Very Hard/Blank 0.25
                                             </p>
                                             <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                                Home Bonus: +0.05 (clamped to 1.0)
+                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500/50"></span>
+                                                Home bonus: +0.05 (max 1.0)
+                                            </p>
+                                            <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                                                Minutes: chance_of_playing_next_round (null =&gt; 100%)
                                             </p>
                                             <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                                Form normalized by 8 (max 1.0)
+                                                Form: form/8 (clamped 0..1)
                                             </p>
                                         </div>
                                     </>
@@ -216,8 +222,12 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                         <p className="text-slate-500">Average points per match over the last 30 days.</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-slate-300 font-medium">Diff Score</p>
-                                        <p className="text-slate-500">Upcoming fixture difficulty sum. Blanks are penalised as 6 points.</p>
+                                        <p className="text-slate-300 font-medium">{horizon === 'next' ? 'Minutes / Availability' : 'Diff Score'}</p>
+                                        <p className="text-slate-500">
+                                            {horizon === 'next'
+                                                ? 'Minutes uses FPL chance_of_playing_next_round (null treated as 100%).'
+                                                : 'Upcoming fixture difficulty sum. Blanks are penalised as 6 points.'}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -317,6 +327,11 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                         </div>
                                         <div className="text-[8px] text-slate-500 uppercase tracking-tighter">{horizon === 'next' ? 'GW SCORE' : 'INDEX'}</div>
                                     </div>
+                                    {horizon === 'next' && (p.chance_of_playing_next_round !== null && p.chance_of_playing_next_round < 75) && (
+                                        <div className="absolute top-2 right-12 bg-red-500/10 text-red-500 text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 uppercase tracking-tighter">
+                                            Risk
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Metrics & Fixtures Grid */}
@@ -348,16 +363,18 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                 />
                                             </div>
                                         </div>
-                                        {/* Diff Score Bar */}
+                                        {/* Dynamic Metric Bar (Diff for 5GW, Minutes for Next GW) */}
                                         <div className="space-y-0.5">
                                             <div className="flex justify-between text-[8px] uppercase font-bold text-slate-500">
-                                                <span>DIFF</span>
-                                                <span className="text-purple-500 font-mono font-black">{diffScore}</span>
+                                                <span>{horizon === 'next' ? 'AVAILABILITY' : 'DIFF'}</span>
+                                                <span className={`${horizon === 'next' ? 'text-purple-400' : 'text-purple-500'} font-mono font-black`}>
+                                                    {horizon === 'next' ? `${p.chance_of_playing_next_round ?? 100}%` : diffScore}
+                                                </span>
                                             </div>
                                             <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
                                                 <div
-                                                    className="h-full bg-purple-500"
-                                                    style={{ width: `${diffWidth}%` }}
+                                                    className={`h-full ${horizon === 'next' ? 'bg-purple-400' : 'bg-purple-500'}`}
+                                                    style={{ width: `${horizon === 'next' ? (p.chance_of_playing_next_round ?? 100) : diffWidth}%` }}
                                                 />
                                             </div>
                                         </div>
@@ -398,12 +415,10 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                             {isExpanded && (
                                 <div className="px-4 pb-4 pt-4 border-t border-slate-700/50 bg-slate-900/30 animate-in slide-in-from-top-2 duration-200">
                                     <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm mb-4">
-                                        {(p as any).minutes !== undefined && (
-                                            <div className="flex justify-between items-center text-slate-400 col-span-2 bg-slate-800/50 px-3 py-2 rounded-lg border border-slate-700/30">
-                                                <span className="flex items-center gap-1.5"><Clock size={14} className="text-blue-400" /> Season Minutes</span>
-                                                <span className="text-white font-bold">{(p as any).minutes}</span>
-                                            </div>
-                                        )}
+                                        <div className="flex justify-between items-center text-slate-400 col-span-2 bg-slate-800/50 px-3 py-2 rounded-lg border border-slate-700/30">
+                                            <span className="flex items-center gap-1.5"><Clock size={14} className="text-blue-400" /> Season Minutes</span>
+                                            <span className="text-white font-bold">{p.minutes}</span>
+                                        </div>
 
                                         <div className="flex flex-col gap-1 bg-slate-800/30 p-2.5 rounded-lg border border-slate-700/20">
                                             <span className="text-[9px] text-slate-500 uppercase tracking-widest flex items-center gap-1">
@@ -485,7 +500,14 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                         <td className="p-4 text-center text-slate-500 font-mono">{idx + 1}</td>
                                         <td className="p-4">
                                             <div className="font-bold text-white">{p.web_name}</div>
-                                            <div className="text-xs text-slate-500">{getTeamShort(p.team)}</div>
+                                            <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                                                {getTeamShort(p.team)}
+                                                {horizon === 'next' && (p.chance_of_playing_next_round !== null && p.chance_of_playing_next_round < 75) && (
+                                                    <span className="text-red-500 flex items-center gap-0.5 font-bold" title={`${p.chance_of_playing_next_round}% chance of playing`}>
+                                                        <AlertTriangle size={10} /> {p.chance_of_playing_next_round}%
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="p-4">
                                             <div className="flex flex-col gap-1 ml-3">

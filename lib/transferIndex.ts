@@ -56,7 +56,8 @@ export function computeTransferIndexForPlayers(args: {
             }
 
             let index = 0;
-            const formVal = parseFloat(p.form);
+            const formValRaw = parseFloat(p.form ?? '0');
+            const formVal = Number.isFinite(formValRaw) ? formValRaw : 0;
 
             if (horizon === 'next') {
                 // --- NEXT GW SCORING LOGIC ---
@@ -77,7 +78,15 @@ export function computeTransferIndexForPlayers(args: {
                 }
 
                 const formNorm = Math.max(0, Math.min(1, formVal / 8));
-                index = (0.65 * fixtureScore + 0.35 * formNorm);
+
+                // Minutes Score (Start likelihood)
+                // Use chance_of_playing_next_round as proxy (0-100 normalized to 0-1)
+                // If null, assume 100% fit
+                const chance = (p.chance_of_playing_next_round ?? 100);
+                const minutesNorm = Math.max(0, Math.min(1, chance / 100));
+
+                // New Next GW score: 50% Fixture + 30% Minutes + 20% Form
+                index = (0.50 * fixtureScore + 0.30 * minutesNorm + 0.20 * formNorm);
             } else {
                 // --- THE ALGORITHM (Next 5 GWs) ---
                 // 1. Normalize Form (0-10 scale usually) -> 0.0 to 1.0
