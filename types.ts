@@ -20,6 +20,9 @@ export interface FPLPlayer {
   saves: number;
   penalties_saved: number;
   bonus: number;
+  minutes: number;
+  chance_of_playing_this_round: number | null;
+  chance_of_playing_next_round: number | null;
 }
 
 export interface FPLTeam {

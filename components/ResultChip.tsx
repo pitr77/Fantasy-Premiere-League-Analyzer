@@ -45,7 +45,7 @@ const ResultChip: React.FC<ResultChipProps> = ({
         <div
             title={title}
             className={`
-        min-w-[44px] h-8 rounded-md flex flex-col items-center justify-center border shadow-sm cursor-help transition-all py-[2px]
+        min-w-[37px] h-[1.8rem] rounded-md flex flex-col items-center justify-center border shadow-sm cursor-help transition-all py-[2px] flex-none
         ${finalBg} ${finalBorder} ${finalText} ${className}
       `}
         >

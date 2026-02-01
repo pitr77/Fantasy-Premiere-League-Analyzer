@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { FPLPlayer, FPLTeam, FPLEvent } from '../types';
 import { getPlayerSummary } from '../services/fplService';
 import { CalendarRange, RefreshCw, AlertCircle, TrendingUp, Activity, Target, Zap, ArrowUpDown, ChevronUp, ChevronDown, Shield } from 'lucide-react';
+import TwoPanelTable from './TwoPanelTable';
 
 interface PeriodAnalysisProps {
   players: FPLPlayer[];
@@ -24,7 +25,7 @@ interface AggregatedStats {
   median_points: number;
   consistency: number; // % of games with > 2 points
   matches_played: number;
-  points_history: number[]; // Array of scores
+  points_history: { points: number; round: number }[]; // Array of scores with rounds
 
   // Start Rate & Availability Metrics
   startRate: number; // % of GWs where player played (minutes > 0)
@@ -37,9 +38,6 @@ interface AggregatedStats {
   // Defensive
   goals_conceded: number;
   def_pts_proxy: number;
-
-  // Risk Adjusted
-  adj_points: number;
 
   // Attacking Underlying
   threat: number;
@@ -70,9 +68,22 @@ const PeriodAnalysis: React.FC<PeriodAnalysisProps> = ({ players, teams, events 
   });
 
   // UX Toggles
-  const [riskPenaltyEnabled, setRiskPenaltyEnabled] = useState(false);
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
   const [showHelpPanel, setShowHelpPanel] = useState(false);
+  const [showLegend, setShowLegend] = useState(false);
+  const [showSwipeHint, setShowSwipeHint] = useState(true);
+  const tableWrapperRef = React.useRef<HTMLDivElement>(null);
+
+  const handleTableScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (e.currentTarget.scrollLeft > 4 && showSwipeHint) {
+      setShowSwipeHint(false);
+    }
+  };
+
+  // Reset expanded row when switching tabs to prevent layout jumping
+  useEffect(() => {
+    setExpandedRow(null);
+  }, [activePos]);
 
   // Helper: safe number parsing
   const toNum = (v: any) => {
@@ -138,7 +149,10 @@ const PeriodAnalysis: React.FC<PeriodAnalysisProps> = ({ players, teams, events 
             creativity: acc.creativity + toNum((match as any).creativity),
           }), { goals: 0, assists: 0, clean_sheets: 0, goals_conceded: 0, bonus: 0, total_points: 0, threat: 0, creativity: 0 });
 
-          const historyChronological = relevantHistory.map(h => h.total_points);
+          const historyNewestFirst = relevantHistory.map(h => ({
+            points: h.total_points,
+            round: h.round
+          })).reverse();
 
           // Started count (using starts field if available, otherwise fallback to minutes >= 60)
           const startsCount = relevantHistory.filter(h => (h as any).starts !== undefined ? (h as any).starts === 1 : h.minutes >= 60).length;
@@ -150,9 +164,6 @@ const PeriodAnalysis: React.FC<PeriodAnalysisProps> = ({ players, teams, events 
           } else if (player.element_type === 3) { // MID
             defPtsProxy = agg.clean_sheets * 1;
           }
-
-          // Risk Adjusted Points
-          const adjPoints = agg.total_points - ((zeroStarts * 1.0) + (zeroPoints * 0.5));
 
           return {
             id: player.id,
@@ -170,9 +181,8 @@ const PeriodAnalysis: React.FC<PeriodAnalysisProps> = ({ players, teams, events 
             starts_count: startsCount,
             goals_conceded: agg.goals_conceded,
             def_pts_proxy: defPtsProxy,
-            adj_points: adjPoints,
             matches_played: relevantHistory.length,
-            points_history: historyChronological,
+            points_history: historyNewestFirst,
             ...agg
           };
         } catch (err) {
@@ -256,15 +266,15 @@ const PeriodAnalysis: React.FC<PeriodAnalysisProps> = ({ players, teams, events 
     const activeKey = sortConfig.key === 'ownership_num' ? 'ownership' : sortConfig.key;
     const targetKey = colKey === 'ownership_num' ? 'ownership' : colKey;
 
-    if (activeKey !== targetKey) return <ArrowUpDown size={14} className="text-slate-600 inline ml-1" />;
+    if (activeKey !== targetKey) return <ArrowUpDown size={12} className="text-slate-600 sm:size-[14px] inline ml-1" />;
     return sortConfig.direction === 'asc'
-      ? <ChevronUp size={14} className="text-purple-400 inline ml-1" />
-      : <ChevronDown size={14} className="text-purple-400 inline ml-1" />;
+      ? <ChevronUp size={12} className="text-purple-400 sm:size-[14px] inline ml-1" />
+      : <ChevronDown size={12} className="text-purple-400 sm:size-[14px] inline ml-1" />;
   };
 
   const InfoIcon = ({ children }: { children: React.ReactNode }) => (
     <div className="relative group inline-block ml-1">
-      <AlertCircle size={14} className="text-slate-500 hover:text-slate-300 transition-colors" />
+      <AlertCircle size={12} className="text-slate-500 hover:text-slate-300 transition-colors sm:size-[14px]" />
       <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 hidden group-hover:block w-56 p-3 bg-slate-900 border border-slate-700 rounded shadow-2xl text-[10px] normal-case tracking-normal text-slate-200 z-[999] ring-1 ring-slate-700 pointer-events-none">
         {children}
       </div>
@@ -302,7 +312,7 @@ const PeriodAnalysis: React.FC<PeriodAnalysisProps> = ({ players, teams, events 
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-20 overflow-x-hidden">
       {/* Header & Controls */}
       <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
         <div className="flex flex-col gap-6">
@@ -317,33 +327,45 @@ const PeriodAnalysis: React.FC<PeriodAnalysisProps> = ({ players, teams, events 
             </h2>
             <p className="text-slate-400 text-sm mb-4">Analyze player performance over a specific range of Gameweeks.</p>
 
-            {/* Legend Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 mt-4">
-              <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/50">
-                <h4 className="text-blue-400 font-bold text-[10px] uppercase tracking-wider mb-1">Median Points</h4>
-                <p className="text-[11px] text-slate-300 leading-tight">Typical points return (middle score).</p>
-                <p className="text-[11px] text-slate-500 leading-tight mt-1">Less affected by one big haul.</p>
-              </div>
-              <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/50">
-                <h4 className="text-green-400 font-bold text-[10px] uppercase tracking-wider mb-1">Points Consistency</h4>
-                <p className="text-[11px] text-slate-300 leading-tight">Percent of played matches with 3+ points.</p>
-                <p className="text-[11px] text-slate-500 leading-tight mt-1">Played = minutes &gt; 0.</p>
-              </div>
-              <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/50">
-                <h4 className="text-orange-400 font-bold text-[10px] uppercase tracking-wider mb-1">Start Rate</h4>
-                <p className="text-[11px] text-slate-300 leading-tight">How often the player gets minutes.</p>
-                <p className="text-[11px] text-slate-500 leading-tight mt-1">Percent of GWs where played (min &gt; 0).</p>
-              </div>
-              <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/50">
-                <h4 className="text-red-400 font-bold text-[10px] uppercase tracking-wider mb-1">Threat</h4>
-                <p className="text-[11px] text-slate-300 leading-tight">Goal threat indicator (proxy for xG).</p>
-                <p className="text-[11px] text-slate-500 leading-tight mt-1">Higher = more scoring chances.</p>
-              </div>
-              <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/50">
-                <h4 className="text-sky-400 font-bold text-[10px] uppercase tracking-wider mb-1">Creativity</h4>
-                <p className="text-[11px] text-slate-300 leading-tight">Chance creation indicator (proxy for xA).</p>
-                <p className="text-[11px] text-slate-500 leading-tight mt-1">Higher = more assist potential.</p>
-              </div>
+            {/* Legend Toggle */}
+            <div className="mt-4">
+              <button
+                onClick={() => setShowLegend(!showLegend)}
+                className="text-xs text-blue-400 hover:text-blue-300 transition-colors font-medium text-left flex items-center gap-1"
+              >
+                {showLegend ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                How to read these metrics? (Legend)
+              </button>
+
+              {showLegend && (
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/50">
+                    <h4 className="text-blue-400 font-bold text-[10px] uppercase tracking-wider mb-1">Median Points</h4>
+                    <p className="text-[11px] text-slate-300 leading-tight">Typical points return (middle score).</p>
+                    <p className="text-[11px] text-slate-500 leading-tight mt-1">Less affected by one big haul.</p>
+                  </div>
+                  <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/50">
+                    <h4 className="text-green-400 font-bold text-[10px] uppercase tracking-wider mb-1">Points Consistency</h4>
+                    <p className="text-[11px] text-slate-300 leading-tight">Percent of played matches with 3+ points.</p>
+                    <p className="text-[11px] text-slate-500 leading-tight mt-1">Played = minutes &gt; 0.</p>
+                  </div>
+                  <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/50">
+                    <h4 className="text-orange-400 font-bold text-[10px] uppercase tracking-wider mb-1">Start Rate</h4>
+                    <p className="text-[11px] text-slate-300 leading-tight">How often the player gets minutes.</p>
+                    <p className="text-[11px] text-slate-500 leading-tight mt-1">Percent of GWs where played (min &gt; 0).</p>
+                  </div>
+                  <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/50">
+                    <h4 className="text-red-400 font-bold text-[10px] uppercase tracking-wider mb-1">Threat</h4>
+                    <p className="text-[11px] text-slate-300 leading-tight">Goal threat indicator (proxy for xG).</p>
+                    <p className="text-[11px] text-slate-500 leading-tight mt-1">Higher = more scoring chances.</p>
+                  </div>
+                  <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/50">
+                    <h4 className="text-sky-400 font-bold text-[10px] uppercase tracking-wider mb-1">Creativity</h4>
+                    <p className="text-[11px] text-slate-300 leading-tight">Chance creation indicator (proxy for xA).</p>
+                    <p className="text-[11px] text-slate-500 leading-tight mt-1">Higher = more assist potential.</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Help Panel */}
@@ -389,19 +411,19 @@ const PeriodAnalysis: React.FC<PeriodAnalysisProps> = ({ players, teams, events 
           </div>
 
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-2 items-center w-full">
               {[3, 5, 10].map(c => (
                 <button
                   key={c}
                   onClick={() => handlePreset(c)}
-                  className={`px-3 py-2 text-xs font-bold rounded transition-colors border ${isPresetActive(c) ? 'bg-purple-600 border-purple-500 text-white shadow' : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600 hover:text-white'}`}
+                  className={`flex-1 md:flex-none px-3 py-2 text-xs font-bold rounded transition-colors border ${isPresetActive(c) ? 'bg-purple-600 border-purple-500 text-white shadow' : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600 hover:text-white'}`}
                 >
                   Last {c}
                 </button>
               ))}
             </div>
 
-            <div className="flex items-end gap-2">
+            <div className="hidden md:flex items-end gap-2">
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-bold text-slate-500 uppercase">From</label>
                 <select value={fromGw} onChange={(e) => setFromGw(Number(e.target.value))} className="bg-slate-800 border border-slate-600 text-white text-sm rounded px-3 py-2 w-32 focus:ring-2 focus:ring-purple-500 outline-none">
@@ -429,267 +451,181 @@ const PeriodAnalysis: React.FC<PeriodAnalysisProps> = ({ players, teams, events 
       </div>
 
       {data.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          <button onClick={() => setActivePos('all')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activePos === 'all' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>All Players</button>
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          <button
+            onClick={() => setActivePos('all')}
+            className={`flex-1 min-w-max px-3 py-2 text-xs sm:px-4 sm:py-2 sm:text-sm rounded-lg font-bold transition-all whitespace-nowrap ${activePos === 'all' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+          >
+            <span className="sm:hidden">All</span>
+            <span className="hidden sm:inline">All Players</span>
+          </button>
           {[1, 2, 3, 4].map(pos => (
-            <button key={pos} onClick={() => setActivePos(pos)} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activePos === pos ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>
-              {pos === 1 ? "Goalkeepers" : pos === 2 ? "Defenders" : pos === 3 ? "Midfielders" : "Forwards"}
+            <button
+              key={pos}
+              onClick={() => setActivePos(pos)}
+              className={`flex-1 min-w-max px-3 py-2 text-xs sm:px-4 sm:py-2 sm:text-sm rounded-lg font-bold transition-all whitespace-nowrap ${activePos === pos ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+            >
+              {pos === 1 ? (
+                <>
+                  <span className="sm:hidden">GK</span>
+                  <span className="hidden sm:inline">Goalkeepers</span>
+                </>
+              ) : pos === 2 ? (
+                <>
+                  <span className="sm:hidden">DEF</span>
+                  <span className="hidden sm:inline">Defenders</span>
+                </>
+              ) : pos === 3 ? (
+                <>
+                  <span className="sm:hidden">MID</span>
+                  <span className="hidden sm:inline">Midfielders</span>
+                </>
+              ) : (
+                <>
+                  <span className="sm:hidden">FWD</span>
+                  <span className="hidden sm:inline">Forwards</span>
+                </>
+              )}
             </button>
           ))}
         </div>
       )}
 
-      <div className="flex flex-wrap gap-4 items-center">
-        <button onClick={() => setRiskPenaltyEnabled(!riskPenaltyEnabled)} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${riskPenaltyEnabled ? 'bg-orange-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>
-          <Activity size={14} /> Risk Penalty: {riskPenaltyEnabled ? 'ON' : 'OFF'}
-        </button>
-      </div>
-
       {processedData.length > 0 && (
         <div className="space-y-8">
-          {/* Table 1: Primary Metrics */}
-          <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-lg" style={{ overflow: 'visible' }}>
+          <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-lg">
             <div className="p-4 border-b border-slate-700 bg-slate-900/30">
               <h3 className="font-bold text-white flex items-center gap-2"><TrendingUp size={18} className="text-green-400" /> Points & Consistency</h3>
             </div>
-            <div className="overflow-x-auto" style={{ overflow: 'visible' }}>
-              <div className="min-w-full inline-block align-middle overflow-x-auto">
-                <table className="w-full text-left border-collapse" style={{ overflow: 'visible' }}>
+            <div className="relative group/table">
+              <div
+                ref={tableWrapperRef}
+                onScroll={handleTableScroll}
+                className="overflow-x-auto no-scrollbar overscroll-x-contain"
+              >
+                <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider sticky top-0 z-20">
-                      <th className="p-4 w-12 text-center bg-slate-900/90 border-b border-slate-700 hidden sm:table-cell">#</th>
-                      <th className="p-4 cursor-pointer hover:text-white sticky left-0 z-30 bg-slate-900/95 border-b border-slate-700 shadow-[2px_0_5px_rgba(0,0,0,0.3)]" onClick={() => handleSort('web_name')}>PLAYER <SortIcon colKey="web_name" /></th>
-                      <th className="p-4 text-right cursor-pointer hover:text-white bg-slate-900/90 border-b border-slate-700" onClick={() => handleSort('ownership_num')}>OWN <SortIcon colKey="ownership" /></th>
-                      <th className="p-4 text-right text-slate-300 bg-slate-900/90 border-b border-slate-700 hidden sm:table-cell">
-                        POINTS HISTORY
+                    <tr className="bg-slate-900 text-slate-400 text-[10px] sm:text-xs uppercase tracking-wider sticky top-0 z-40">
+                      <th className="px-1 py-2 sm:px-3 sm:py-4 w-12 text-center bg-slate-900 border-b border-slate-700 hidden sm:table-cell">#</th>
+                      <th className="px-2 py-2 sm:px-4 sm:py-4 cursor-pointer hover:text-white sticky left-0 z-50 bg-slate-900 border-b border-slate-700 shadow-[2px_0_5px_rgba(0,0,0,0.3)] w-[110px] min-w-[110px] sm:w-auto" onClick={() => handleSort('web_name')}>PLAYER <SortIcon colKey="web_name" /></th>
+                      <th className="px-1 py-2 sm:px-3 sm:py-4 text-right cursor-pointer hover:text-white bg-slate-900 border-b border-slate-700 hidden sm:table-cell" onClick={() => handleSort('ownership_num')}>OWN <SortIcon colKey="ownership" /></th>
+                      <th className="px-1 py-2 sm:px-3 sm:py-4 text-left text-slate-300 bg-slate-900 border-b border-slate-700 sticky left-[110px] sm:static z-40 bg-slate-900 shadow-[2px_0_5px_rgba(0,0,0,0.3)] sm:shadow-none min-w-[120px] sm:min-w-0">
+                        <span className="sm:hidden">FORM</span>
+                        <span className="hidden sm:inline">POINTS HISTORY</span>
                         <InfoIcon>
                           <strong className="block mb-1 text-white">Points History</strong>
-                          Match-by-match points in the selected period.
-                          <br /><br />
-                          <span className="text-slate-400">How to read it:</span><br />
-                          Look for patterns, not single results.
+                          Match-by-match points from newest to oldest in the selected period.
                         </InfoIcon>
                       </th>
-                      <th className="p-4 text-right text-blue-400 font-bold cursor-pointer hover:text-white bg-slate-900/90 border-b border-slate-700" onClick={() => handleSort('median_points')}>
-                        MEDIAN <SortIcon colKey="median_points" />
-                        <InfoIcon>
-                          <strong className="block mb-1 text-white">Median Points</strong>
-                          Median shows a player’s typical points return when he plays.
-                          It is less affected by one big haul or one bad game.
-                          <br /><br />
-                          <span className="text-slate-400">How to read it:</span><br />
-                          Half of the matches are above this value and half below.
-                          This is the player’s baseline output.
-                        </InfoIcon>
-                      </th>
-                      <th className="p-4 text-right text-green-400 font-bold cursor-pointer hover:text-white bg-slate-900/90 border-b border-slate-700" onClick={() => handleSort('consistency')}>
-                        POINTS CONSISTENCY <SortIcon colKey="consistency" />
-                        <InfoIcon>
-                          <strong className="block mb-1 text-white">Points Consistency</strong>
-                          How often the player delivers usable points.
-                          <br /><br />
-                          Percent of played matches with 3+ points.
-                          Played = minutes &gt; 0.
-                          <br /><br />
-                          <span className="text-slate-400">How to read it:</span><br />
-                          Higher value means fewer frustrating blanks.
-                        </InfoIcon>
-                      </th>
-                      <th className="p-4 text-right text-orange-400 font-bold cursor-pointer hover:text-white bg-slate-900/90 border-b border-slate-700" onClick={() => handleSort('startRate')}>
-                        START RATE <SortIcon colKey="startRate" />
-                        <InfoIcon>
-                          <strong className="block mb-1 text-white">Start Rate</strong>
-                          How often the player gets minutes.
-                          <br /><br />
-                          Used as a rotation / availability check, not a performance metric.
-                        </InfoIcon>
-                      </th>
-                      {riskPenaltyEnabled && <th className="p-4 text-right text-red-400 font-bold cursor-pointer hover:text-white bg-slate-900/90 border-b border-slate-700" onClick={() => handleSort('adj_points')}>Adj. Pts <SortIcon colKey="adj_points" /></th>}
-                      <th className="p-4 text-right font-bold text-white cursor-pointer hover:text-white bg-slate-900/90 border-b border-slate-700" onClick={() => handleSort('total_points')}>TOTAL PTS <SortIcon colKey="total_points" /></th>
+                      <th className="px-1 py-2 sm:px-3 sm:py-4 text-right text-blue-400 font-bold cursor-pointer hover:text-white bg-slate-900 border-b border-slate-700" onClick={() => handleSort('median_points')}>MEDIAN <SortIcon colKey="median_points" /></th>
+                      <th className="px-1 py-2 sm:px-3 sm:py-4 text-right text-green-400 font-bold cursor-pointer hover:text-white bg-slate-900 border-b border-slate-700" onClick={() => handleSort('consistency')}>CONS. <span className="hidden sm:inline">CONSISTENCY</span> <SortIcon colKey="consistency" /></th>
+                      <th className="px-1 py-2 sm:px-3 sm:py-4 text-right text-orange-400 font-bold cursor-pointer hover:text-white bg-slate-900 border-b border-slate-700" onClick={() => handleSort('startRate')}>SRATE <SortIcon colKey="startRate" /></th>
+                      <th className="px-1 py-2 sm:px-3 sm:py-4 text-right font-bold text-white cursor-pointer hover:text-white bg-slate-900 border-b border-slate-700" onClick={() => handleSort('total_points')}><span className="text-[10px] sm:text-xs">PTS</span> <SortIcon colKey="total_points" /></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-700/50 text-sm">
+                  <tbody className="divide-y divide-slate-700/50 text-[11px] sm:text-sm">
                     {processedData.map((p, idx) => (
                       <React.Fragment key={p.id}>
-                        <tr className={`hover:bg-slate-700/30 transition-colors cursor-pointer ${expandedRow === p.id ? 'bg-slate-700/50' : ''}`} onClick={() => setExpandedRow(expandedRow === p.id ? null : p.id)}>
-                          <td className="p-4 text-center text-slate-500 font-mono hidden sm:table-cell">{idx + 1}</td>
-                          <td className="p-4 sticky left-0 z-10 bg-slate-800 border-r border-slate-700/50">
-                            <div className="font-bold text-white flex items-center justify-between">{p.web_name} {expandedRow === p.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</div>
-                            <div className="text-xs text-slate-500">{p.team}</div>
+                        <tr className={`group odd:bg-white/[0.02] even:bg-transparent hover:bg-white/[0.04] transition-colors cursor-pointer ${expandedRow === p.id ? 'bg-slate-700/50' : ''}`} onClick={() => setExpandedRow(expandedRow === p.id ? null : p.id)}>
+                          <td className="px-1 py-2 sm:px-3 sm:py-4 text-center text-slate-500 font-mono hidden sm:table-cell">{idx + 1}</td>
+                          <td className="px-2 py-2 sm:px-4 sm:py-4 sticky left-0 z-30 bg-slate-800 group-odd:bg-[#1f293d] group-hover:bg-[#252f44] border-r border-slate-700/50 w-[110px] min-w-[110px] sm:w-auto">
+                            <div className="font-bold text-white flex items-center justify-between gap-1 truncate leading-tight">
+                              <span className="truncate text-sm">{p.web_name}</span>
+                              {expandedRow === p.id ? <ChevronUp size={12} className="shrink-0 sm:size-[14px]" /> : <ChevronDown size={12} className="shrink-0 sm:size-[14px]" />}
+                            </div>
+                            <div className="text-[10px] text-slate-500 truncate leading-tight mt-0.5 sm:mt-1">{p.team}</div>
                           </td>
-                          <td className="p-4 text-right font-mono text-slate-400">{p.ownership}%</td>
-                          <td className="p-4 hidden sm:table-cell text-right">
-                            <div className="flex justify-end gap-1">
-                              {p.points_history.map((pt, i) => (
-                                <div key={i} className={`w-5 h-5 flex items-center justify-center text-[9px] font-bold rounded border ${pt >= 10 ? 'bg-purple-600 text-white' : pt >= 6 ? 'bg-green-600 text-white' : pt > 2 ? 'bg-slate-600 text-white' : 'bg-slate-800 text-slate-500'}`}>{pt}</div>
-                              ))}
+                          <td className="px-1 py-2 sm:px-3 sm:py-4 text-right font-mono text-slate-400 hidden sm:table-cell">{p.ownership}%</td>
+                          <td className="px-1 py-2 sm:px-3 sm:py-4 sticky left-[110px] sm:static z-20 bg-slate-800 group-odd:bg-[#1f293d] group-hover:bg-[#252f44] border-r border-slate-700/50 sm:border-r-0 min-w-[120px] sm:min-w-0">
+                            <div className="flex justify-start gap-0.5 sm:gap-1 mt-3 sm:mt-4">
+                              {p.points_history.map((h, i) => {
+                                const isFirst = i === 0;
+                                const isLast = i === p.points_history.length - 1;
+                                return (
+                                  <div key={i} className="relative group/badge flex flex-col items-center">
+                                    {(isFirst || isLast) && (
+                                      <div className="absolute top-[-1.15rem] left-0 w-full text-center">
+                                        <span className="text-[7px] sm:text-[9px] font-bold text-slate-500 uppercase tracking-tighter">GW{h.round}</span>
+                                      </div>
+                                    )}
+                                    <div className={`w-5 h-5 sm:w-6 sm:h-6 flex-none flex items-center justify-center text-[9px] sm:text-[10px] font-bold rounded-md border ${h.points >= 10 ? 'bg-purple-600 text-white' : h.points >= 6 ? 'bg-green-600 text-white' : h.points > 2 ? 'bg-slate-600 text-white' : 'bg-slate-800 text-slate-500'}`}>
+                                      {h.points}
+                                    </div>
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/badge:block w-max px-2 py-1 bg-slate-900 border border-slate-700 rounded text-[9px] text-white z-50 pointer-events-none">
+                                      GW {h.round}: {h.points} pts
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </td>
-                          <td className="p-4 text-right font-mono font-bold text-blue-300">{p.median_points}</td>
-                          <td className="p-4 text-right font-mono font-bold text-green-400">
-                            <div className="relative group inline-block">
-                              {p.consistency.toFixed(0)}%
-                              <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-48 p-2 bg-slate-900 border border-slate-700 rounded shadow-xl text-[10px] font-normal tracking-normal text-slate-200 z-50 pointer-events-none">
-                                Percent of played matches with 3+ points.
-                                <br />
-                                Played = appearances with minutes &gt; 0.
-                              </div>
-                            </div>
-                          </td>
-                          <td className={`p-4 text-right font-mono font-bold ${p.startRate < 80 ? 'text-amber-500/80' : 'text-orange-300'}`}>
-                            <div className="relative group inline-block">
-                              <div className="flex items-center justify-end gap-1">
-                                {p.startRate < 80 && <AlertCircle size={12} className="opacity-70" />}
-                                {p.startRate.toFixed(0)}%
-                              </div>
-                              <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-56 p-2 bg-slate-900 border border-slate-700 rounded shadow-xl text-[10px] font-normal tracking-normal text-slate-200 z-50 pointer-events-none text-left">
-                                <p className="mb-1">How often the player gets minutes.</p>
-                                <p className="text-slate-400 mb-2">Used as a rotation / availability check, not a performance metric.</p>
-                                <div className="pt-2 border-t border-slate-800 font-mono text-[9px] flex items-center justify-between">
-                                  <span className="text-slate-200">Started: {p.starts_count}/{p.games_available}</span>
-                                  <span className="text-slate-500 mx-1">&bull;</span>
-                                  <span className="text-slate-300">Played: {p.games_played}/{p.games_available}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          {riskPenaltyEnabled && <td className="p-4 text-right font-mono font-bold text-red-400">{p.adj_points.toFixed(1)}</td>}
-                          <td className="p-4 text-right font-bold text-white text-base">{p.total_points}</td>
+                          <td className="px-1 py-2 sm:px-3 sm:py-4 text-right font-mono font-bold text-blue-300">{p.median_points}</td>
+                          <td className="px-1 py-2 sm:px-3 sm:py-4 text-right font-mono font-bold text-green-400">{p.consistency.toFixed(0)}%</td>
+                          <td className={`px-1 py-2 sm:px-3 sm:py-4 text-right font-mono font-bold ${p.startRate < 80 ? 'text-amber-500/80' : 'text-orange-300'}`}>{p.startRate.toFixed(0)}%</td>
+                          <td className="px-1 py-2 sm:px-3 sm:py-4 text-right font-bold text-white text-[11px] sm:text-sm">{p.total_points}</td>
                         </tr>
                         {expandedRow === p.id && (
                           <tr className="bg-slate-900/40">
-                            <td colSpan={riskPenaltyEnabled ? 9 : 8} className="p-0 border-none overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
-                              <div className="p-6">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                  <div className="flex flex-col h-full space-y-3">
-                                    <div className="space-y-1">
-                                      <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
-                                        <Target size={14} className="text-red-400" /> ATTACKING
-                                      </h4>
-                                      <p className="text-[10px] text-slate-500 leading-tight">Underlying attacking involvement.</p>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2 text-xs flex-1">
-                                      <div className="bg-slate-800/50 p-2.5 rounded border border-slate-700/50 text-[10px] font-bold uppercase tracking-wider text-red-400 transition-colors hover:bg-slate-700/50 relative group cursor-help">
-                                        <div className="flex flex-col gap-2">
-                                          <div className="flex items-center justify-between">
-                                            <span>THREAT</span>
-                                            <span className="text-white text-xs font-mono">{p.threat.toFixed(1)}</span>
-                                          </div>
-                                          <div className="flex items-center justify-between pt-1 border-t border-slate-700/50">
-                                            {(() => {
-                                              const rating = getMetricRating(p.threat, p.element_type, 'threat');
-                                              return (
-                                                <>
-                                                  <span className="text-[9px] opacity-60 font-normal normal-case">{rating.label}</span>
-                                                  <MetricRatingBar segments={rating.segments} colorClass="text-red-400" />
-                                                </>
-                                              );
-                                            })()}
-                                          </div>
+                            <td colSpan={8} className="p-0 border-none">
+                              <div className="sticky left-0 w-[calc(100vw-48px)] sm:w-full p-4 sm:p-6 overflow-x-hidden">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+                                  <div className="space-y-3">
+                                    <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+                                      <Target size={14} className="text-red-400" /> ATTACKING
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="bg-slate-800/50 p-2 rounded border border-slate-700/50">
+                                        <div className="flex justify-between text-[10px] font-bold text-red-400 mb-1">
+                                          <span>THREAT</span>
+                                          <span>{p.threat.toFixed(1)}</span>
                                         </div>
-                                        <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-48 p-2 bg-slate-900 border border-slate-700 rounded shadow-xl text-[9px] normal-case tracking-normal font-normal text-slate-200 z-50">
-                                          <p className="font-bold mb-1">How to read:</p>
-                                          <p>Relative ranking among players in the same position for this period.</p>
-                                          <p className="mt-1 opacity-60 italic">Measures goal-scoring danger. Higher = more shots and chances close to goal.</p>
-                                        </div>
+                                        <MetricRatingBar segments={getMetricRating(p.threat, p.element_type, 'threat').segments} colorClass="text-red-400" />
                                       </div>
-                                      <div className="bg-slate-800/50 p-2.5 rounded border border-slate-700/50 text-[10px] font-bold uppercase tracking-wider text-sky-400 transition-colors hover:bg-slate-700/50 relative group cursor-help">
-                                        <div className="flex flex-col gap-2">
-                                          <div className="flex items-center justify-between">
-                                            <span>CREATIVITY</span>
-                                            <span className="text-white text-xs font-mono">{p.creativity.toFixed(1)}</span>
-                                          </div>
-                                          <div className="flex items-center justify-between pt-1 border-t border-slate-700/50">
-                                            {(() => {
-                                              const rating = getMetricRating(p.creativity, p.element_type, 'creativity');
-                                              return (
-                                                <>
-                                                  <span className="text-[9px] opacity-60 font-normal normal-case">{rating.label}</span>
-                                                  <MetricRatingBar segments={rating.segments} colorClass="text-sky-400" />
-                                                </>
-                                              );
-                                            })()}
-                                          </div>
+                                      <div className="bg-slate-800/50 p-2 rounded border border-slate-700/50">
+                                        <div className="flex justify-between text-[10px] font-bold text-sky-400 mb-1">
+                                          <span>CREATIVITY</span>
+                                          <span>{p.creativity.toFixed(1)}</span>
                                         </div>
-                                        <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-48 p-2 bg-slate-900 border border-slate-700 rounded shadow-xl text-[9px] normal-case tracking-normal font-normal text-slate-200 z-50">
-                                          <p className="font-bold mb-1">How to read:</p>
-                                          <p>Relative ranking among players in the same position for this period.</p>
-                                          <p className="mt-1 opacity-60 italic">Measures chance creation for teammates. Higher = more assist potential.</p>
-                                        </div>
+                                        <MetricRatingBar segments={getMetricRating(p.creativity, p.element_type, 'creativity').segments} colorClass="text-sky-400" />
                                       </div>
-                                      <div className="bg-slate-800/50 p-2 rounded border border-slate-700/50 text-[10px] font-bold uppercase tracking-wider text-emerald-400">GOALS: {p.goals}</div>
-                                      <div className="bg-slate-800/50 p-2 rounded border border-slate-700/50 text-[10px] font-bold uppercase tracking-wider text-emerald-400">ASSISTS: {p.assists}</div>
                                     </div>
                                   </div>
-                                  <div className="flex flex-col h-full space-y-3">
-                                    <div className="space-y-1">
-                                      <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
-                                        <Shield size={14} className="text-blue-400" /> Defensive
-                                      </h4>
-                                      <p className="text-[10px] text-slate-500 leading-tight">Shows defensive contribution and clean sheet value.</p>
-                                    </div>
-                                    <div className="grid grid-cols-1 gap-2 text-xs flex-1">
-                                      <div className="bg-slate-800/50 p-2.5 rounded border border-slate-700/50 text-[10px] font-bold uppercase tracking-wider text-blue-400 transition-colors hover:bg-slate-700/50 relative group cursor-help">
-                                        <div className="flex flex-col gap-2">
-                                          <div className="flex items-center justify-between">
-                                            <span>DEFENSIVE POINTS</span>
-                                            <span className="text-white text-xs font-mono">{p.def_pts_proxy.toFixed(1)}</span>
-                                          </div>
-                                          <div className="flex items-center justify-between pt-1 border-t border-slate-700/50">
-                                            {(() => {
-                                              const rating = getMetricRating(p.def_pts_proxy, p.element_type, 'def_pts_proxy');
-                                              return (
-                                                <>
-                                                  <span className="text-[9px] opacity-60 font-normal normal-case">{rating.label}</span>
-                                                  <MetricRatingBar segments={rating.segments} colorClass="text-blue-400" />
-                                                </>
-                                              );
-                                            })()}
-                                          </div>
+                                  <div className="space-y-3">
+                                    <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+                                      <Shield size={14} className="text-blue-400" /> DEFENSIVE
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="bg-slate-800/50 p-2 rounded border border-slate-700/50">
+                                        <div className="flex justify-between text-[10px] font-bold text-blue-400 mb-1">
+                                          <span>DEF POINTS</span>
+                                          <span>{p.def_pts_proxy.toFixed(1)}</span>
                                         </div>
-                                        <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-56 p-2 bg-slate-900 border border-slate-700 rounded shadow-xl text-[9px] normal-case tracking-normal font-normal text-slate-200 z-50">
-                                          <p className="font-bold mb-1">How to read:</p>
-                                          <p>Relative ranking among players in the same position for this period.</p>
-                                          <p className="mt-1 opacity-60 italic">Total points earned from defensive actions. Includes clean sheets, goals conceded impact and bonuses.</p>
-                                        </div>
+                                        <MetricRatingBar segments={getMetricRating(p.def_pts_proxy, p.element_type, 'def_pts_proxy').segments} colorClass="text-blue-400" />
                                       </div>
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <div className="bg-slate-800/50 p-2 rounded border border-slate-700/50 text-[10px] font-bold uppercase tracking-wider text-emerald-400">CLEAN SHEETS: {p.clean_sheets}
-                                          <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-48 p-2 bg-slate-900 border border-slate-700 rounded shadow-xl text-[9px] normal-case tracking-normal font-normal text-slate-200 z-50 pointer-events-none">
-                                            Matches with no goals conceded while playing.
-                                          </div></div>
-                                        <div className="bg-slate-800/50 p-2 rounded border border-slate-700/50 text-[10px] font-bold uppercase tracking-wider text-slate-300 relative group cursor-help">
-                                          GOALS CONCEDED: {p.goals_conceded}
-                                          <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-56 p-2 bg-slate-900 border border-slate-700 rounded shadow-xl text-[9px] normal-case tracking-normal font-normal text-slate-200 z-50 pointer-events-none">
-                                            Goals conceded while the player was on the pitch.
-                                          </div>
-
+                                      <div className="bg-slate-800/50 p-2 rounded border border-slate-700/50 flex flex-col justify-center gap-1.5">
+                                        <div className="text-[10px] font-bold text-emerald-400 flex justify-between">
+                                          <span>CS</span>
+                                          <span className="text-white font-mono">{p.clean_sheets}</span>
+                                        </div>
+                                        <div className="text-[10px] font-bold text-slate-400 flex justify-between border-t border-slate-700/50 pt-1">
+                                          <span>GC</span>
+                                          <span className="text-white font-mono">{p.goals_conceded}</span>
                                         </div>
                                       </div>
                                     </div>
                                   </div>
-                                  <div className="flex flex-col h-full space-y-3">
-                                    <div className="space-y-1">
-                                      <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2"><CalendarRange size={14} className="text-orange-400" /> Availability</h4>
-                                      <p className="text-[10px] text-slate-500 leading-tight">Shows minutes security and rotation risk.</p>
-                                    </div>
-                                    <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700/50 text-[10px] flex-1 flex flex-col justify-center">
-                                      <div className="space-y-4">
-                                        {/* Risk / Missed Metrics Only */}
-                                        <div className="relative group cursor-help text-red-400 font-bold uppercase tracking-wider flex justify-between items-center border-b border-slate-700/30 pb-2">
-                                          <span>MISSED MATCHES</span>
-                                          <span className="text-white font-mono">{p.zero_starts}</span>
-                                          <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-56 p-2 bg-slate-900 border border-slate-700 rounded shadow-xl text-[9px] normal-case tracking-normal font-normal text-slate-200 z-50">
-                                            Matches where the player did not play at all.
-                                          </div>
-                                        </div>
-                                        <div className="relative group cursor-help text-orange-400 font-bold uppercase tracking-wider flex justify-between items-center">
-                                          <span>0-POINT CAMEOS</span>
-                                          <span className="text-white font-mono">{p.zero_points}</span>
-                                          <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-56 p-2 bg-slate-900 border border-slate-700 rounded shadow-xl text-[9px] normal-case tracking-normal font-normal text-slate-200 z-50">
-                                            Matches played with zero points. Often late subs or low involvement.
-                                          </div>
-                                        </div>
+                                  <div className="space-y-3 hidden md:block">
+                                    <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+                                      <CalendarRange size={14} className="text-orange-400" /> AVAILABILITY
+                                    </h4>
+                                    <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50 space-y-2 text-[10px] font-bold">
+                                      <div className="flex justify-between text-red-400 border-b border-slate-700/30 pb-1">
+                                        <span>MISSED</span>
+                                        <span className="text-white font-mono">{p.zero_starts}</span>
+                                      </div>
+                                      <div className="flex justify-between text-orange-400">
+                                        <span>CAMEOS</span>
+                                        <span className="text-white font-mono">{p.zero_points}</span>
                                       </div>
                                     </div>
                                   </div>
@@ -703,6 +639,9 @@ const PeriodAnalysis: React.FC<PeriodAnalysisProps> = ({ players, teams, events 
                   </tbody>
                 </table>
               </div>
+              {showSwipeHint && (
+                <div className="md:hidden pointer-events-none absolute right-0 top-0 h-full w-12 bg-gradient-to-l from-slate-950/60 to-transparent z-[60]" />
+              )}
             </div>
             <div className="p-4 bg-slate-900/50 border-t border-slate-700 text-xs text-slate-400">
               Consistency measures returns when played. Start Rate shows how often a player gets minutes.
