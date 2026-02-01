@@ -16,23 +16,31 @@ async function fetchFromBackend(path: string) {
  */
 async function fetchViaProxy(url: string) {
   const encodedUrl = encodeURIComponent(url);
-  
+
+  const fetchWithTimeout = async (proxyUrl: string, timeoutMs: number = 15000) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(proxyUrl, { signal: controller.signal });
+      clearTimeout(id);
+      if (!response.ok) throw new Error(`Status ${response.status}`);
+      return await response.json();
+    } catch (err) {
+      clearTimeout(id);
+      throw err;
+    }
+  };
+
   // Strategy 1: corsproxy.io (Fastest, usually works)
   try {
-    const proxyUrl = `https://corsproxy.io/?${encodedUrl}`;
-    const response = await fetch(proxyUrl);
-    if (!response.ok) throw new Error(`Status ${response.status}`);
-    return await response.json();
+    return await fetchWithTimeout(`https://corsproxy.io/?${encodedUrl}`);
   } catch (err1) {
     console.warn('Proxy 1 (corsproxy.io) failed, trying fallback...', err1);
   }
 
   // Strategy 2: allorigins.win (Reliable JSONP-style)
   try {
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodedUrl}`;
-    const response = await fetch(proxyUrl);
-    if (!response.ok) throw new Error(`Status ${response.status}`);
-    const data = await response.json();
+    const data = await fetchWithTimeout(`https://api.allorigins.win/get?url=${encodedUrl}`);
     if (!data.contents) throw new Error("No content in response");
     return JSON.parse(data.contents);
   } catch (err2) {
@@ -41,10 +49,7 @@ async function fetchViaProxy(url: string) {
 
   // Strategy 3: codetabs (Last resort)
   try {
-    const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodedUrl}`;
-    const response = await fetch(proxyUrl);
-    if (!response.ok) throw new Error(`Status ${response.status}`);
-    return await response.json();
+    return await fetchWithTimeout(`https://api.codetabs.com/v1/proxy?quest=${encodedUrl}`);
   } catch (err3) {
     console.error('All proxy strategies failed:', err3);
     throw new Error('Failed to connect to FPL API via proxies. This may happen on free hosting if proxies rate-limit the domain. Please try refreshing later.');
@@ -91,5 +96,5 @@ export const getPlayerImageUrl = (photoCode: string) => {
 };
 
 export const getTeamLogoUrl = (teamCode: number) => {
-    return null; 
+  return null;
 };
