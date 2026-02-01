@@ -23,6 +23,7 @@ interface PlayerTransferStats extends FPLPlayer {
 
 const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures, events }) => {
     const [activePos, setActivePos] = useState<number>(1); // Default GKP
+    const [horizon, setHorizon] = useState<'next' | 'next5'>('next5');
     const [showInfo, setShowInfo] = useState(false);
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
         key: 'transferIndex',
@@ -51,9 +52,10 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
             fixtures,
             teams,
             events,
-            lookahead: 5
+            lookahead: horizon === 'next' ? 1 : 5,
+            horizon: horizon
         });
-    }, [players, fixtures, teams, events]);
+    }, [players, fixtures, teams, events, horizon]);
 
 
     // 3. Sorting & Filtering
@@ -100,9 +102,10 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
         }));
     };
 
-    // Get next 5 GW headers
+    // Get next GW headers
     const nextEvent = events.find(e => e.is_next) || events[0];
-    const gwHeaders = Array.from({ length: 5 }, (_, i) => nextEvent.id + i).filter(id => id <= 38);
+    const lookaheadLength = horizon === 'next' ? 1 : 5;
+    const gwHeaders = Array.from({ length: lookaheadLength }, (_, i) => nextEvent.id + i).filter(id => id <= 38);
 
     // Sorting Header Component
     const SortHeader: React.FC<{ label: string, sortKey: string, align?: "left" | "right" | "center", className?: string }> = ({ label, sortKey, align = "left", className = "" }) => {
@@ -136,10 +139,12 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                     <div className="flex justify-between items-start gap-4">
                         <div className="flex-1">
                             <h2 className="text-xl md:text-2xl font-bold text-white mb-2 flex items-center gap-2">
-                                <ArrowLeftRight className="text-blue-400 shrink-0" /> Transfer Algorithm Picks
+                                <ArrowLeftRight className="text-blue-400 shrink-0" /> {horizon === 'next' ? 'Next GW Rankings' : 'Transfer Algorithm Picks'}
                             </h2>
                             <p className="text-slate-400 text-sm leading-relaxed max-w-2xl">
-                                Transfer Index ranks players using 50% current form and 50% upcoming fixture ease.
+                                {horizon === 'next'
+                                    ? "Optimized for next Gameweek only (form + next fixture)."
+                                    : "Ranks players using current form + upcoming 5 fixtures."}
                             </p>
                         </div>
                         <div className="mt-2 shrink-0 bg-slate-700/50 p-1.5 rounded-lg group-hover:bg-slate-700 transition-colors">
@@ -158,17 +163,46 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                 <h4 className="font-bold text-white uppercase tracking-wider text-xs">
                                     The Algorithm
                                 </h4>
-                                <p className="text-slate-300 leading-relaxed text-xs">
-                                    Transfer Index (0–100) identifies players by weighting recent performance against schedule difficulty.
-                                </p>
-                                <div className="flex gap-2 text-[10px] text-slate-400">
-                                    <span className="bg-slate-900 px-2 py-1 rounded border border-slate-700">50% Form</span>
-                                    <span className="flex items-center">+</span>
-                                    <span className="bg-slate-900 px-2 py-1 rounded border border-slate-700">50% Fixtures</span>
-                                </div>
-                                <p className="text-[11px] text-slate-500 leading-relaxed">
-                                    Dynamic Fixture Difficulty is a custom model that adjusts based on team strength and performance trends, differing from the official FPL FDR.
-                                </p>
+                                {horizon === 'next' ? (
+                                    <>
+                                        <p className="text-slate-300 leading-relaxed text-[11px]">
+                                            Optimized for the immediate gameweek. Combines next opponent difficulty with individual player form.
+                                        </p>
+                                        <div className="flex gap-2 text-[10px] text-slate-400 font-mono">
+                                            <span className="bg-slate-900 px-2 py-1 rounded border border-slate-700 text-blue-400">65% Next Fixture</span>
+                                            <span className="flex items-center">+</span>
+                                            <span className="bg-slate-900 px-2 py-1 rounded border border-slate-700 text-green-400">35% Form</span>
+                                        </div>
+                                        <div className="space-y-1.5 pt-1">
+                                            <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                                Easy/Good: 0.85 • Mod: 0.65 • Hard: 0.40 • V.Hard/Blank: 0.25
+                                            </p>
+                                            <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                                Home Bonus: +0.05 (clamped to 1.0)
+                                            </p>
+                                            <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                                Form normalized by 8 (max 1.0)
+                                            </p>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-slate-300 leading-relaxed text-[11px]">
+                                            Transfer Index (0–100) planning for the mid-term (5 GWs). Equal weight on form and fixture run.
+                                        </p>
+                                        <div className="flex gap-2 text-[10px] text-slate-400">
+                                            <span className="bg-slate-900 px-2 py-1 rounded border border-slate-700">50% Form</span>
+                                            <span className="flex items-center">+</span>
+                                            <span className="bg-slate-900 px-2 py-1 rounded border border-slate-700">50% Fixtures</span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-500 leading-relaxed pt-1">
+                                            Dynamic FDR adjusts based on opponent key-player form and league position.
+                                        </p>
+                                    </>
+                                )}
                             </div>
 
                             {/* Table Metrics */}
@@ -207,25 +241,43 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
             </div>
 
 
-            {/* Tabs */}
-            <div className="grid grid-cols-4 md:flex gap-2 pb-2">
-                {[1, 2, 3, 4].map(pos => (
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
+                {/* Position Tabs */}
+                <div className="grid grid-cols-4 md:flex gap-2">
+                    {[1, 2, 3, 4].map(pos => (
+                        <button
+                            key={pos}
+                            onClick={() => {
+                                setActivePos(pos);
+                                setExpandedPlayerId(null);
+                                const posLabels: Record<number, string> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
+                                track("transfer_picks_interaction", { action: "select_position", position: posLabels[pos] });
+                            }}
+                            className={`px-2 md:px-6 py-3 rounded-lg font-bold text-xs md:text-sm flex items-center justify-center gap-2 transition-all ${activePos === pos ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
+                        >
+                            {pos === 1 && "GKP"}
+                            {pos === 2 && "DEF"}
+                            {pos === 3 && "MID"}
+                            {pos === 4 && "FWD"}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Horizon Toggle */}
+                <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex self-start md:self-auto">
                     <button
-                        key={pos}
-                        onClick={() => {
-                            setActivePos(pos);
-                            setExpandedPlayerId(null);
-                            const posLabels: Record<number, string> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
-                            track("transfer_picks_interaction", { action: "select_position", position: posLabels[pos] });
-                        }}
-                        className={`px-2 md:px-6 py-3 rounded-lg font-bold text-xs md:text-sm flex items-center justify-center gap-2 transition-all ${activePos === pos ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
+                        onClick={() => setHorizon('next')}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${horizon === 'next' ? 'bg-slate-700 text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
                     >
-                        {pos === 1 && "GKP"}
-                        {pos === 2 && "DEF"}
-                        {pos === 3 && "MID"}
-                        {pos === 4 && "FWD"}
+                        Next GW
                     </button>
-                ))}
+                    <button
+                        onClick={() => setHorizon('next5')}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${horizon === 'next5' ? 'bg-slate-700 text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                        Next 5 GWs
+                    </button>
+                </div>
             </div>
 
             {/* Mobile View (Standard Cards) */}
@@ -263,7 +315,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                         <div className="text-blue-400 font-black text-xl leading-none">
                                             {Math.round(p.transferIndex * 100)}
                                         </div>
-                                        <div className="text-[8px] text-slate-500 uppercase tracking-tighter">INDEX</div>
+                                        <div className="text-[8px] text-slate-500 uppercase tracking-tighter">{horizon === 'next' ? 'GW SCORE' : 'INDEX'}</div>
                                     </div>
                                 </div>
 
@@ -273,7 +325,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                         {/* Transfer Index Bar */}
                                         <div className="space-y-0.5">
                                             <div className="flex justify-between text-[8px] uppercase font-bold text-slate-500">
-                                                <span className="truncate mr-1">TRANSFER INDEX</span>
+                                                <span className="truncate mr-1">{horizon === 'next' ? 'GW SCORE' : 'TRANSFER INDEX'}</span>
                                                 <span className="text-blue-400 font-mono font-black">{Math.round(p.transferIndex * 100)}</span>
                                             </div>
                                             <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
@@ -327,10 +379,10 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                     {/* Fixtures Timeline */}
                                     <div className="space-y-0.5 pt-1">
                                         <div className="flex justify-between text-[8px] uppercase font-bold text-slate-500">
-                                            <span>Upcoming Fixtures</span>
+                                            <span>{horizon === 'next' ? 'Next Fixture' : 'Upcoming Fixtures'}</span>
                                         </div>
                                         <div className="flex gap-0.5 h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
-                                            {p.nextFixtures.slice(0, 5).map((f, i) => (
+                                            {p.nextFixtures.slice(0, horizon === 'next' ? 1 : 5).map((f, i) => (
                                                 <div
                                                     key={i}
                                                     className={`flex-1 ${getDifficultyColor(f.difficulty)}`}
@@ -403,7 +455,11 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                             <tr className="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700">
                                 <th className="p-4 w-12 text-center">#</th>
                                 <SortHeader label="Player" sortKey="web_name" className="w-64" />
-                                <SortHeader label="Transfer Index" sortKey="transferIndex" className="w-36" />
+                                <SortHeader
+                                    label={horizon === 'next' ? 'GW SCORE' : 'TRANSFER INDEX'}
+                                    sortKey="transferIndex"
+                                    className="w-36"
+                                />
                                 <SortHeader label="Price" sortKey="now_cost" align="right" />
                                 <SortHeader label="Ownership" sortKey="selected_by_percent" align="right" />
                                 <SortHeader label="Form" sortKey="form" align="right" />
@@ -412,7 +468,9 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                     <SortHeader key={gw} label={`GW${gw}`} sortKey={`GW${gw}`} align="center" className="w-16" />
                                 ))}
 
-                                <SortHeader label="Diff Score" sortKey="fixtureDifficultySum" align="center" />
+                                {horizon === 'next5' && (
+                                    <SortHeader label="Diff Score" sortKey="fixtureDifficultySum" align="center" />
+                                )}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-700/50 text-sm">
@@ -468,9 +526,11 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                             )
                                         })}
 
-                                        <td className="p-4 text-center">
-                                            <span className="font-mono text-slate-400">{p.fixtureDifficultySum}</span>
-                                        </td>
+                                        {horizon === 'next5' && (
+                                            <td className="p-4 text-center">
+                                                <span className="font-mono text-slate-400">{p.fixtureDifficultySum}</span>
+                                            </td>
+                                        )}
                                     </tr>
                                 )
                             })}
@@ -480,11 +540,13 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
             </div>
 
             {/* DIFF SCORE Legend */}
-            <div className="mt-4 px-2">
-                <p className="text-xs text-slate-400 italic">
-                    <span className="font-bold text-slate-300">Diff Score</span> = sum of Dynamic FDR (1–5) for the next 5 Gameweeks. Lower is better. Blank GWs count as 6 (worse than Very Hard).
-                </p>
-            </div>
+            {horizon === 'next5' && (
+                <div className="mt-4 px-2">
+                    <p className="text-xs text-slate-400 italic">
+                        <span className="font-bold text-slate-300">Diff Score</span> = sum of Dynamic FDR (1–5) for the next 5 Gameweeks. Lower is better. Blank GWs count as 6 (worse than Very Hard).
+                    </p>
+                </div>
+            )}
 
         </div>
     );

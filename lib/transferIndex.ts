@@ -15,8 +15,9 @@ export function computeTransferIndexForPlayers(args: {
     teams: FPLTeam[];
     events: FPLEvent[];
     lookahead: number;
+    horizon?: 'next' | 'next5';
 }): TransferIndexResult[] {
-    const { players, fixtures, teams, events, lookahead } = args;
+    const { players, fixtures, teams, events, lookahead, horizon = 'next5' } = args;
 
     // 1. Calculate League Positions
     const leaguePositions = calculateLeaguePositions(teams, fixtures);
@@ -54,18 +55,42 @@ export function computeTransferIndexForPlayers(args: {
                 }
             }
 
-            // --- THE ALGORITHM ---
-            // 1. Normalize Form (0-10 scale usually) -> 0.0 to 1.0
+            let index = 0;
             const formVal = parseFloat(p.form);
-            const normForm = Math.min(formVal / 10, 1.0);
 
-            // 2. Normalize Fixtures (5 games * 1 diff = 5 best, 5 * 5 = 25 worst)
-            // Invert so higher is better.
-            const normFixtures = Math.max(0, Math.min(1, ((lookahead * 5) - difficultySum) / (lookahead * 4)));
+            if (horizon === 'next') {
+                // --- NEXT GW SCORING LOGIC ---
+                const firstFix = nextFixtures[0];
+                let fixtureScore = 0.65; // Moderate default
 
-            // 3. Combine (Weighted)
-            // 50/50 Form and Fixtures
-            const index = (normForm * 0.5) + (normFixtures * 0.5);
+                if (firstFix) {
+                    const diff = firstFix.difficulty;
+                    if (diff >= 5) fixtureScore = 0.25;      // Very Hard
+                    else if (diff === 4) fixtureScore = 0.40; // Hard
+                    else if (diff === 3) fixtureScore = 0.65; // Moderate
+                    else fixtureScore = 0.85;                // Easy/Good (1, 2)
+
+                    // Home bonus +0.05
+                    if (firstFix.isHome) {
+                        fixtureScore = Math.min(1.0, fixtureScore + 0.05);
+                    }
+                }
+
+                const formNorm = Math.max(0, Math.min(1, formVal / 8));
+                index = (0.65 * fixtureScore + 0.35 * formNorm);
+            } else {
+                // --- THE ALGORITHM (Next 5 GWs) ---
+                // 1. Normalize Form (0-10 scale usually) -> 0.0 to 1.0
+                const normForm = Math.min(formVal / 10, 1.0);
+
+                // 2. Normalize Fixtures (5 games * 1 diff = 5 best, 5 * 5 = 25 worst)
+                // Invert so higher is better.
+                const normFixtures = Math.max(0, Math.min(1, ((lookahead * 5) - difficultySum) / (lookahead * 4)));
+
+                // 3. Combine (Weighted)
+                // 50/50 Form and Fixtures
+                index = (normForm * 0.5) + (normFixtures * 0.5);
+            }
 
             // Ratios
             const ownership = parseFloat(p.selected_by_percent);
@@ -82,3 +107,4 @@ export function computeTransferIndexForPlayers(args: {
             } as TransferIndexResult;
         });
 }
+
