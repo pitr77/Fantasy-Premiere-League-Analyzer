@@ -51,7 +51,7 @@ export async function createScoutChatSession(
   const topPlayersText = formatPlayersForPrompt(topPlayers, teams);
 
   // User Team
-  const myTeamText = userTeam.length > 0 
+  const myTeamText = userTeam.length > 0
     ? formatPlayersForPrompt(userTeam, teams)
     : "User has no team selected yet.";
 
@@ -87,7 +87,7 @@ export async function createScoutChatSession(
   `;
 
   return ai.chats.create({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-2.0-flash',
     config: {
       systemInstruction: systemInstruction,
     }
@@ -101,12 +101,12 @@ export async function getScoutAdvice(
   nextGameweek: FPLEvent | undefined,
   userTeam: FPLPlayer[]
 ): Promise<{ analysis: string; captain: string; differential: string }> {
-  
+
   if (!ai) {
     return {
-        analysis: "API Key missing. Cannot generate advice.",
-        captain: "N/A",
-        differential: "N/A"
+      analysis: "API Key missing. Cannot generate advice.",
+      captain: "N/A",
+      differential: "N/A"
     };
   }
 
@@ -116,7 +116,7 @@ export async function getScoutAdvice(
     .map(p => `${p.web_name} (Price: ${p.now_cost / 10}, Form: ${p.form}, Total: ${p.total_points})`)
     .join(", ");
 
-  const myTeamNames = userTeam.length > 0 
+  const myTeamNames = userTeam.length > 0
     ? userTeam.map(p => p.web_name).join(", ")
     : "No team selected yet.";
 
@@ -141,7 +141,7 @@ export async function getScoutAdvice(
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash',
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -158,7 +158,7 @@ export async function getScoutAdvice(
 
     const text = response.text;
     if (!text) throw new Error("No response from Gemini");
-    
+
     return JSON.parse(text);
 
   } catch (error) {

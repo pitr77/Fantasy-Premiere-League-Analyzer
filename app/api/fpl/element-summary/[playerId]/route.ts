@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
-export const revalidate = 300; // 5 minutes
+export const dynamic = 'force-dynamic';
 
 const FPL_BASE = 'https://fantasy.premierleague.com/api';
 
@@ -17,7 +17,7 @@ export async function GET(
 
   try {
     const upstream = await fetch(`${FPL_BASE}/element-summary/${id}/`, {
-      next: { revalidate },
+      cache: 'no-store',
     });
 
     if (!upstream.ok) {

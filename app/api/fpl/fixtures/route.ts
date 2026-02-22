@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
-export const revalidate = 60; // 1 minute (fixtures can update during match windows)
+export const dynamic = 'force-dynamic';
 
 const FPL_BASE = 'https://fantasy.premierleague.com/api';
 
 export async function GET() {
   try {
     const upstream = await fetch(`${FPL_BASE}/fixtures/`, {
-      next: { revalidate },
+      cache: 'no-store',
     });
 
     if (!upstream.ok) {
