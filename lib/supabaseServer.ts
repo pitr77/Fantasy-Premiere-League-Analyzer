@@ -2,10 +2,21 @@ import { createClient } from '@supabase/supabase-js';
 
 /**
  * Server-side Supabase client for use in API routes and server components.
- * Uses NEXT_PUBLIC_ keys (anon) but runs on the server to avoid CORS issues.
+ * Optionally accepts an access token to authenticate the user.
  */
-export function createServerSupabase() {
+export function createServerSupabase(accessToken?: string) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+    if (accessToken) {
+        return createClient(url, key, {
+            global: {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                },
+            },
+        });
+    }
+
     return createClient(url, key);
 }

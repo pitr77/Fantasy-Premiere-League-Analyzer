@@ -69,46 +69,60 @@ export async function generateMetadata({
  * Handles: ## headings, **bold**, *italic*, - lists, \n paragraphs
  */
 function renderMarkdown(md: string): string {
-    return md
-        .split('\n\n')
-        .map((block) => {
-            const trimmed = block.trim();
-            if (!trimmed) return '';
+    // First, handle headers that might not have double newlines
+    const lines = md.split('\n');
+    const result: string[] = [];
+    let currentParagraph: string[] = [];
 
-            // Headings
-            if (trimmed.startsWith('## ')) {
-                const text = trimmed.slice(3);
-                return `<h2 class="text-xl sm:text-2xl font-bold text-white mt-10 mb-4 tracking-tight">${text}</h2>`;
+    const flushParagraph = () => {
+        if (currentParagraph.length > 0) {
+            const text = currentParagraph.join(' ').trim();
+            if (text) {
+                result.push(`<p class="text-slate-400 text-base leading-relaxed mb-6">${inlineFormat(text)}</p>`);
             }
-            if (trimmed.startsWith('### ')) {
-                const text = trimmed.slice(4);
-                return `<h3 class="text-lg font-bold text-white mt-8 mb-3">${text}</h3>`;
-            }
+            currentParagraph = [];
+        }
+    };
 
-            // Bullet lists
-            if (trimmed.match(/^[-*] /m)) {
-                const items = trimmed
-                    .split('\n')
-                    .filter((l) => l.trim().match(/^[-*] /))
-                    .map((l) => {
-                        const content = l.trim().replace(/^[-*] /, '');
-                        return `<li class="text-slate-300 leading-relaxed">${inlineFormat(content)}</li>`;
-                    })
-                    .join('');
-                return `<ul class="list-disc list-inside space-y-2 my-4 ml-2">${items}</ul>`;
-            }
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) {
+            flushParagraph();
+            continue;
+        }
 
-            // Regular paragraph
-            return `<p class="text-slate-300 leading-relaxed my-4">${inlineFormat(trimmed)}</p>`;
-        })
-        .join('');
+        if (line.startsWith('## ')) {
+            flushParagraph();
+            const text = line.slice(3);
+            result.push(`<h2 class="text-lg sm:text-xl font-bold text-white mt-10 mb-4 tracking-tight border-b border-white/5 pb-2">${inlineFormat(text)}</h2>`);
+        } else if (line.startsWith('### ')) {
+            flushParagraph();
+            const text = line.slice(4);
+            result.push(`<h3 class="text-base font-bold text-white mt-8 mb-3">${inlineFormat(text)}</h3>`);
+        } else if (line.startsWith('- ') || line.startsWith('* ')) {
+            flushParagraph();
+            // Basic list handling
+            let listItems = '';
+            while (i < lines.length && (lines[i].trim().startsWith('- ') || lines[i].trim().startsWith('* '))) {
+                const itemText = lines[i].trim().replace(/^[-*] /, '');
+                listItems += `<li class="text-slate-400 text-sm leading-relaxed mb-2 ml-4 relative pl-5 before:content-[''] before:absolute before:left-0 before:top-2.5 before:w-1.5 before:h-1.5 before:bg-purple-500 before:rounded-full">${inlineFormat(itemText)}</li>`;
+                i++;
+            }
+            i--; // Step back for loop increment
+            result.push(`<ul class="my-6 space-y-1">${listItems}</ul>`);
+        } else {
+            currentParagraph.push(line);
+        }
+    }
+    flushParagraph();
+    return result.join('');
 }
 
 function inlineFormat(text: string): string {
     return text
-        .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
-        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-        .replace(/`([^`]+)`/g, '<code class="text-purple-300 bg-purple-500/10 px-1 rounded text-sm">$1</code>');
+        .replace(/\*\*([^*]+)\*\*/g, '<span class="text-white font-medium">$1</span>')
+        .replace(/\*([^*]+)\*/g, '<em class="text-slate-300">$1</em>')
+        .replace(/`([^`]+)`/g, '<code class="text-purple-300 bg-purple-500/10 px-1.5 py-0.5 rounded text-xs font-mono">$1</code>');
 }
 
 export default async function ScoutArticlePage({

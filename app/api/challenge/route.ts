@@ -15,7 +15,10 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'Missing gw parameter' }, { status: 400 });
     }
 
-    const supabase = createServerSupabase();
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.split(' ')[1];
+
+    const supabase = createServerSupabase(token);
     const { data: userData, error: userError } = await supabase.auth.getUser();
 
     if (userError || !userData?.user) {
@@ -43,7 +46,10 @@ export async function GET(req: Request) {
  * Body: { gameweek, gk_id, def_id, mid_id, fwd_id, captain_id }
  */
 export async function POST(req: Request) {
-    const supabase = createServerSupabase();
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.split(' ')[1];
+
+    const supabase = createServerSupabase(token);
     const { data: userData, error: userError } = await supabase.auth.getUser();
 
     if (userError || !userData?.user) {

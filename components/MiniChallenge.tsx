@@ -48,7 +48,12 @@ export default function MiniChallenge({ players, teams, events, fixtures }: Mini
                     return;
                 }
 
-                const res = await fetch(`/api/challenge?gw=${eventId}`);
+                const { data: sessionData } = await supabase.auth.getSession();
+                const token = sessionData?.session?.access_token;
+
+                const res = await fetch(`/api/challenge?gw=${eventId}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                });
                 if (!res.ok) throw new Error('Failed to load picks');
                 const { picks } = await res.json();
 
@@ -86,10 +91,16 @@ export default function MiniChallenge({ players, teams, events, fixtures }: Mini
         }
 
         try {
+            const { data: sessionData } = await supabase.auth.getSession();
+            const token = sessionData?.session?.access_token;
+
             const payload = { gameweek: eventId, gk_id: gkId, def_id: defId, mid_id: midId, fwd_id: fwdId, captain_id: captainId };
             const res = await fetch(`/api/challenge`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify(payload),
             });
 
