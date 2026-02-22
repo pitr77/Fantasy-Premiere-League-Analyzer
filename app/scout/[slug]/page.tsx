@@ -40,7 +40,7 @@ export async function generateMetadata({
     const article = await getArticle(slug);
     if (!article) return { title: 'Article Not Found | FPL Studio' };
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://fplstudio.co';
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.fplstudio.com';
 
     return {
         title: `${article.title} | FPL Studio`,
@@ -156,7 +156,7 @@ export default async function ScoutArticlePage({
         author: {
             '@type': 'Organization',
             name: 'FPL Studio',
-            url: process.env.NEXT_PUBLIC_SITE_URL || 'https://fplstudio.co'
+            url: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.fplstudio.com'
         }
     };
 

@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
 import Script from 'next/script';
-import GoogleAnalytics from "@/components/GoogleAnalytics";
+import Analytics from "@/components/Analytics";
 import ModuleViewTracker from "@/components/ModuleViewTracker";
+import { Suspense } from 'react';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://fplstudio.co';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.fplstudio.com';
+const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
 export const metadata: Metadata = {
   title: {
@@ -45,7 +47,24 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <GoogleAnalytics />
+        {gaId && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${gaId}', {
+                  send_page_view: false
+                });
+              `}
+            </Script>
+          </>
+        )}
         {/* Tailwind via CDN (kept to avoid a full styling migration today). */}
         <Script src="https://cdn.tailwindcss.com" strategy="beforeInteractive" />
 
@@ -87,6 +106,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="bg-slate-900 text-gray-100" suppressHydrationWarning>
+        <Suspense fallback={null}>
+          <Analytics />
+        </Suspense>
         <ModuleViewTracker />
         {children}
       </body>

@@ -8,12 +8,16 @@ export const metadata: Metadata = {
     title: 'FPL Scout — AI-Powered Gameweek Previews | FPL Studio',
     description:
         'Get AI-generated Fantasy Premier League gameweek previews with captain picks, differentials, and transfer targets. Updated weekly with live FPL data.',
+    alternates: {
+        canonical: 'https://www.fplstudio.com/scout',
+    },
     openGraph: {
         title: 'FPL Scout — AI-Powered Gameweek Previews',
         description:
             'AI-generated FPL analysis with captain picks, differentials, and transfer targets.',
         type: 'website',
         siteName: 'FPL Studio',
+        url: 'https://www.fplstudio.com/scout',
     },
     twitter: {
         card: 'summary_large_image',
