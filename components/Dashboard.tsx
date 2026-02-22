@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { BootstrapStatic, FPLPlayer, FPLFixture } from '../types';
-import { TrendingUp, TrendingDown, Lightbulb, Zap, CalendarRange, ChevronRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, Lightbulb, Zap, CalendarRange, ChevronRight, Trophy, BrainCircuit, Sparkles } from 'lucide-react';
 import { View } from '../App';
 import { getDynamicDifficulty, calculateLeaguePositions } from '../lib/fdrModel';
 import { TeamIcon } from './TeamIcon';
@@ -121,6 +121,55 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
                 </div>
                 <div className="absolute -right-10 -top-10 w-64 h-64 bg-purple-600/20 rounded-full blur-3xl"></div>
                 <div className="absolute bottom-0 right-20 w-32 h-32 bg-green-500/10 rounded-full blur-2xl"></div>
+            </div>
+
+            {/* New Features Quick Promotion */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a
+                    href="/scout"
+                    className="group relative overflow-hidden bg-slate-900 border border-purple-500/30 rounded-2xl p-6 hover:bg-slate-800 transition-all shadow-xl hover:shadow-purple-500/10"
+                >
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <BrainCircuit size={80} className="text-purple-400" />
+                    </div>
+                    <div className="relative z-10 flex items-start gap-4">
+                        <div className="p-3 bg-purple-500/20 rounded-xl text-purple-400">
+                            <Sparkles size={24} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-white font-black text-xl tracking-tight">AI GW Preview</span>
+                                <span className="px-2 py-0.5 bg-purple-600 text-white text-[10px] font-black rounded-full animate-pulse">NEW</span>
+                            </div>
+                            <p className="text-slate-400 text-sm leading-relaxed">
+                                Get AI-generated gameweek reports, differential picks, and captaincy advice.
+                            </p>
+                        </div>
+                    </div>
+                </a>
+
+                <button
+                    onClick={() => onNavigate(View.CHALLENGE, 'Mini Challenge')}
+                    className="group relative overflow-hidden bg-slate-900 border border-emerald-500/30 rounded-2xl p-6 hover:bg-slate-800 transition-all shadow-xl hover:shadow-emerald-500/10 text-left"
+                >
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Trophy size={80} className="text-emerald-400" />
+                    </div>
+                    <div className="relative z-10 flex items-start gap-4">
+                        <div className="p-3 bg-emerald-500/20 rounded-xl text-emerald-400">
+                            <Zap size={24} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-white font-black text-xl tracking-tight">5-a-side Challenge</span>
+                                <span className="px-2 py-0.5 bg-emerald-600 text-white text-[10px] font-black rounded-full">LIVE</span>
+                            </div>
+                            <p className="text-slate-400 text-sm leading-relaxed">
+                                Pick your best 4 players + Captain for the upcoming Gameweek.
+                            </p>
+                        </div>
+                    </div>
+                </button>
             </div>
 
             <div className="grid grid-cols-12 gap-6">
@@ -376,6 +425,26 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
                         <div>
                             <div className="text-white font-bold text-sm">Form Leaders</div>
                             <div className="text-[11px] text-slate-500">Advanced player performance stats</div>
+                        </div>
+                    </button>
+                    <a
+                        href="/scout"
+                        className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700 hover:bg-purple-600/10 hover:border-purple-500/50 transition-all text-left group"
+                    >
+                        <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400 group-hover:scale-110 transition-transform"><BrainCircuit size={24} /></div>
+                        <div>
+                            <div className="text-white font-bold text-sm">AI Scout Reports</div>
+                            <div className="text-[11px] text-slate-500">Deep AI analysis and previews</div>
+                        </div>
+                    </a>
+                    <button
+                        onClick={() => onNavigate(View.CHALLENGE, 'Mini Challenge')}
+                        className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700 hover:bg-emerald-600/10 hover:border-emerald-500/50 transition-all text-left group"
+                    >
+                        <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400 group-hover:scale-110 transition-transform"><Trophy size={24} /></div>
+                        <div>
+                            <div className="text-white font-bold text-sm">Mini Weekly League</div>
+                            <div className="text-[11px] text-slate-500">Your 5-a-side weekly picks</div>
                         </div>
                     </button>
                 </div>

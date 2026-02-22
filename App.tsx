@@ -16,6 +16,7 @@ import OptimalSquad from './components/OptimalSquad';
 import TeamAnalysis from './components/TeamAnalysis';
 import PeriodAnalysis from './components/PeriodAnalysis';
 import CompareMode from './components/CompareMode';
+import MiniChallenge from './components/MiniChallenge';
 import AnalyticsTracker from './components/AnalyticsTracker';
 import { initGA } from './lib/analytics';
 import {
@@ -52,7 +53,8 @@ export enum View {
   PERIOD_ANALYSIS,
   COMPARE_MODE,
   LOCKED,
-  SCOUT
+  SCOUT,
+  CHALLENGE
 }
 
 function App() {
@@ -248,6 +250,22 @@ function App() {
     </button>
   );
 
+  const ScoutLink = ({ mobile = false }: { mobile?: boolean }) => (
+    <a
+      href="/scout"
+      className={mobile
+        ? "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all"
+        : "px-3 py-1.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/40 transition-all flex items-center gap-2"
+      }
+    >
+      <BrainCircuit size={mobile ? 20 : 16} className="text-purple-400" />
+      <span>FPL Scout</span>
+      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500 text-white font-black leading-none animate-pulse">
+        NEW
+      </span>
+    </a>
+  );
+
   const AccountBar = () => (
     <div className="flex items-center">
       {userEmail ? (
@@ -295,6 +313,7 @@ function App() {
           </button>
 
           <nav className="flex items-center gap-1">
+            <ScoutLink />
             <HeaderNavItem v={View.DASHBOARD} label="Dashboard" />
             <HeaderNavItem v={View.LEAGUE_TABLE} label="League Table" />
             <HeaderNavItem v={View.TEAM_ANALYSIS} label="Team Analysis" />
@@ -303,6 +322,19 @@ function App() {
             <HeaderNavItem v={View.TRANSFER_PICKS} label="Transfer Picks" />
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.OPTIMAL_SQUAD} label="Optimal 11" />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.TEAM} label="My Team" />}
+            <button
+              onClick={() => handleNavigate(View.CHALLENGE, 'Mini Challenge', true)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 relative ${view === View.CHALLENGE
+                ? 'text-white bg-purple-600/20 shadow-[0_0_0_1px_rgba(168,85,247,0.4)]'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+                }`}
+            >
+              <Zap size={16} className={view === View.CHALLENGE ? "text-purple-400" : "text-slate-500"} />
+              <span>Mini Challenge</span>
+              <span className="text-[8px] px-1 rounded-full bg-emerald-500 text-white font-bold">
+                NEW
+              </span>
+            </button>
             <HeaderNavItem v={View.STATS} label="Player Stats" />
           </nav>
         </div>
@@ -337,12 +369,14 @@ function App() {
           </div>
 
           <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto custom-scrollbar">
+            <ScoutLink mobile={true} />
             <NavItem v={View.DASHBOARD} label="Dashboard" icon={LayoutDashboard} />
             <NavItem v={View.LEAGUE_TABLE} label="League Table" icon={Trophy} />
             <NavItem v={View.TEAM_ANALYSIS} label="Team Analysis" icon={Search} />
             <NavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" icon={CalendarRange} />
             <NavItem v={View.FIXTURES} label="Fixtures" icon={Calendar} />
             <NavItem v={View.TRANSFER_PICKS} label="Transfer Picks" icon={ArrowLeftRight} />
+            <NavItem v={View.CHALLENGE} label="Mini Challenge" icon={Zap} requiresAuth={true} />
             <NavItem v={View.STATS} label="Player Stats" icon={BarChart2} />
             <NavItem v={View.DETAILED_STATS} label="Detailed Analyses" icon={Activity} />
             {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.OPTIMAL_SQUAD} label="Optimal 11" icon={Zap} />}
@@ -400,6 +434,7 @@ function App() {
             {view === View.DETAILED_STATS && <DetailedStats players={data.elements} teams={data.teams} />}
             {view === View.TOP_MANAGERS && <TopManagers players={data.elements} teams={data.teams} />}
             {view === View.COMPARE_MODE && <CompareMode data={data} fixtures={fixtures} />}
+            {view === View.CHALLENGE && <MiniChallenge players={data.elements} teams={data.teams} fixtures={fixtures} events={data.events} />}
           </div>
         </main>
       </div>

@@ -3,7 +3,10 @@ import { BootstrapStatic, FPLFixture, FPLElementSummary } from '../types';
 const BASE_URL = 'https://fantasy.premierleague.com/api';
 
 async function fetchFromBackend(path: string) {
-  const response = await fetch(path);
+  // Cache-buster: append timestamp to bypass browser/SW cache
+  const separator = path.includes('?') ? '&' : '?';
+  const url = `${path}${separator}_t=${Date.now()}`;
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Backend API error: ${response.status}`);
   }

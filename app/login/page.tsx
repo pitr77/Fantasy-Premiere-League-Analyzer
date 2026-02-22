@@ -10,9 +10,10 @@ function LoginInner() {
 
   const signInWithEmail = async () => {
     setStatus(null);
+    const baseUrl = window.location.origin;
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: `${baseUrl}/auth/callback` },
     });
     if (error) setStatus(error.message);
     else {
@@ -23,9 +24,10 @@ function LoginInner() {
 
   const signInWithGoogle = async () => {
     setStatus(null);
+    const baseUrl = window.location.origin;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${baseUrl}/auth/callback` },
     });
     if (error) setStatus(error.message);
     else {
