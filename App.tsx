@@ -87,7 +87,7 @@ function App() {
       setFixtures(fixturesData);
     } catch (err) {
       console.error(err);
-      setError("Failed to load FPL Data. This could be due to API rate limits. Please try again.");
+      setError("FPL Data Sync failed (FPL API might be down or rate-limited). This is NOT an AI token issue. Please try again later.");
     } finally {
       setLoading(false);
     }

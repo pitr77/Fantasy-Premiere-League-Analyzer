@@ -8,8 +8,8 @@ const FPL_BASE = 'https://fantasy.premierleague.com/api';
  */
 
 function getServerApiKey(): string {
-    const key = process.env.GEMINI_API_KEY;
-    if (!key) throw new Error('GEMINI_API_KEY not set in environment');
+    const key = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+    if (!key) throw new Error('NEXT_PUBLIC_GEMINI_API_KEY not set in environment');
     return key;
 }
 
@@ -128,14 +128,28 @@ export interface ScoutArticleResult {
     slug: string;
 }
 
-export async function generateScoutArticle(): Promise<ScoutArticleResult> {
-    const ai = new GoogleGenAI({ apiKey: getServerApiKey() });
+export async function generateScoutArticle(isMock: boolean = false): Promise<ScoutArticleResult> {
     const { bootstrap, fixtures } = await fetchFPLData();
 
     const nextEvent = bootstrap.events.find((e: any) => e.is_next);
     if (!nextEvent) throw new Error('No upcoming gameweek');
     const gwNum = nextEvent.id;
+    const slug = `gw${gwNum}-preview-${new Date().getFullYear()}`;
 
+    if (isMock) {
+        console.log('🧪 Mock Mode: Generating fake scout article data.');
+        return {
+            title: `[MOCK] FPL Gameweek ${gwNum} Preview: Strategy & Picks`,
+            summary: "This is a mock scout article for development and testing purposes. No AI tokens were consumed.",
+            content: `## GW${gwNum} Overview\nThis is a mock article content for testing the UI and Supabase integration.\n\n## Captain Picks\n- **Haaland** (MCI)\n- **Salah** (LIV)\n\n## Differential Picks\n- **Mitoma** (BHA)\n\n## Summary\nGood luck with your GW${gwNum} team!`,
+            captain_pick: "Haaland (MOCK)",
+            differential_pick: "Mitoma (MOCK)",
+            gameweek: gwNum,
+            slug,
+        };
+    }
+
+    const ai = new GoogleGenAI({ apiKey: getServerApiKey() });
     const prompt = buildArticlePrompt(bootstrap, fixtures);
 
     const response = await ai.models.generateContent({
@@ -161,7 +175,6 @@ export async function generateScoutArticle(): Promise<ScoutArticleResult> {
     if (!text) throw new Error('Empty response from Gemini');
 
     const parsed = JSON.parse(text);
-    const slug = `gw${gwNum}-preview-${new Date().getFullYear()}`;
 
     return {
         title: parsed.title,

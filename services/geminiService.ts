@@ -3,15 +3,15 @@ import { FPLPlayer, FPLTeam, FPLEvent, FPLFixture } from '../types';
 
 // Helper to securely get the API Key from various environment configurations
 const getApiKey = () => {
-  // Check standard process.env (Node/Webpack/CRA)
-  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-    return process.env.API_KEY;
+  // Check standard process.env (Node/Next.js)
+  if (typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+    return process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   }
-  // Check Vite specific env
+  // Check Vite specific env or Next.js public env
   // @ts-ignore
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.NEXT_PUBLIC_GEMINI_API_KEY) {
     // @ts-ignore
-    return import.meta.env.VITE_API_KEY;
+    return import.meta.env.NEXT_PUBLIC_GEMINI_API_KEY;
   }
   return undefined;
 };
