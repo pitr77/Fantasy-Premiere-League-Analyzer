@@ -76,6 +76,14 @@ export const getFixtures = async (): Promise<FPLFixture[]> => {
   }
 };
 
+export const getEventLive = async (gw: number): Promise<any> => {
+  try {
+    return await fetchFromBackend(`/api/fpl/event/${gw}/live`);
+  } catch {
+    return fetchViaProxy(`${BASE_URL}/event/${gw}/live/`);
+  }
+};
+
 export const getUserPicks = async (teamId: number, eventId: number): Promise<{ picks: { element: number, position: number }[] }> => {
   try {
     return await fetchFromBackend(`/api/fpl/entry/${teamId}/event/${eventId}/picks`);

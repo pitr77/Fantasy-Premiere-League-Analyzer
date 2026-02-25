@@ -1,11 +1,25 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 
 export default function ScoutAdminPanel() {
     const [loading, setLoading] = useState(false);
     const [topic, setTopic] = useState('general');
     const [secret, setSecret] = useState('');
     const [message, setMessage] = useState('');
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [authChecked, setAuthChecked] = useState(false);
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            const { data } = await supabase.auth.getUser();
+            if (data?.user?.email === 'p.kalavsky@gmail.com') {
+                setIsAdmin(true);
+            }
+            setAuthChecked(true);
+        };
+        checkAuth();
+    }, []);
 
     const generate = async () => {
         setLoading(true);
@@ -28,6 +42,8 @@ export default function ScoutAdminPanel() {
             setLoading(false);
         }
     };
+
+    if (!authChecked || !isAdmin) return null;
 
     return (
         <div className="bg-slate-900 border border-purple-500/30 p-5 rounded-2xl mb-8 flex flex-col gap-4 shadow-[0_0_15px_rgba(168,85,247,0.1)]">

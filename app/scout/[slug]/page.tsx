@@ -110,6 +110,32 @@ function renderMarkdown(md: string): string {
             }
             i--; // Step back for loop increment
             result.push(`<ul class="my-6 space-y-1">${listItems}</ul>`);
+        } else if (line.startsWith('|')) {
+            flushParagraph();
+            const tableLines: string[] = [];
+            while (i < lines.length && lines[i].trim().startsWith('|')) {
+                tableLines.push(lines[i].trim());
+                i++;
+            }
+            i--; // Step back
+
+            let tableHtml = '<div class="overflow-x-auto my-6 bg-slate-900 border border-slate-800 rounded-xl shadow-lg"><table class="w-full text-left border-collapse text-sm whitespace-nowrap">';
+            tableLines.forEach((tLine, idx) => {
+                const cells = tLine.replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+                if (idx === 1 && tLine.includes('---')) return; // skip divider
+
+                if (idx === 0) {
+                    tableHtml += '<thead><tr class="bg-slate-800 text-slate-400 text-xs uppercase tracking-wider font-bold">';
+                    cells.forEach(c => tableHtml += `<th class="p-4 border-b border-slate-700">${inlineFormat(c)}</th>`);
+                    tableHtml += '</tr></thead><tbody class="divide-y divide-slate-800/50">';
+                } else {
+                    tableHtml += '<tr class="hover:bg-slate-800/30 transition-colors">';
+                    cells.forEach((c, cIdx) => tableHtml += `<td class="p-4 text-slate-200 ${cIdx === 0 ? 'font-medium text-white' : ''}">${inlineFormat(c)}</td>`);
+                    tableHtml += '</tr>';
+                }
+            });
+            tableHtml += '</tbody></table></div>';
+            result.push(tableHtml);
         } else {
             currentParagraph.push(line);
         }

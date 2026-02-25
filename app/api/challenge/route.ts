@@ -11,10 +11,6 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const gw = searchParams.get('gw');
 
-    if (!gw) {
-        return NextResponse.json({ error: 'Missing gw parameter' }, { status: 400 });
-    }
-
     const authHeader = req.headers.get('Authorization');
     const token = authHeader?.split(' ')[1];
 
@@ -25,19 +21,34 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data, error } = await supabase
-        .from('challenge_picks')
-        .select('*')
-        .eq('user_id', userData.user.id)
-        .eq('gameweek', Number(gw))
-        .single();
+    if (gw) {
+        const { data, error } = await supabase
+            .from('challenge_picks')
+            .select('*')
+            .eq('user_id', userData.user.id)
+            .eq('gameweek', Number(gw))
+            .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-        console.error('Error fetching challenge picks:', error);
-        return NextResponse.json({ error: 'Failed to fetch picks' }, { status: 500 });
+        if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+            console.error('Error fetching challenge picks:', error);
+            return NextResponse.json({ error: 'Failed to fetch picks' }, { status: 500 });
+        }
+
+        return NextResponse.json({ picks: data || null });
+    } else {
+        const { data, error } = await supabase
+            .from('challenge_picks')
+            .select('*')
+            .eq('user_id', userData.user.id)
+            .order('gameweek', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching all challenge picks:', error);
+            return NextResponse.json({ error: 'Failed to fetch picks history' }, { status: 500 });
+        }
+
+        return NextResponse.json({ history: data || [] });
     }
-
-    return NextResponse.json({ picks: data || null });
 }
 
 /**

@@ -3,7 +3,8 @@ import { FPLPlayer, FPLTeam, FPLEvent, FPLFixture } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { TeamIcon } from './TeamIcon';
 import { getDynamicDifficulty, calculateLeaguePositions } from '../lib/fdrModel';
-import { CircleUserRound, Shield, Zap, Search, X, Loader2, Trophy, ArrowRight } from 'lucide-react';
+import { CircleUserRound, Shield, Zap, Search, X, Loader2, Trophy, ArrowRight, History } from 'lucide-react';
+import { getEventLive } from '../services/fplService';
 
 interface MiniChallengeProps {
     players: FPLPlayer[];
@@ -23,6 +24,10 @@ export default function MiniChallenge({ players, teams, events, fixtures }: Mini
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+    const [historyPicks, setHistoryPicks] = useState<any[]>([]);
+    const [historyPoints, setHistoryPoints] = useState<Record<number, any>>({});
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
     const [selectorPos, setSelectorPos] = useState<'G' | 'D' | 'M' | 'F' | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -54,20 +59,48 @@ export default function MiniChallenge({ players, teams, events, fixtures }: Mini
                 const res = await fetch(`/api/challenge?gw=${eventId}`, {
                     headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 });
-                if (!res.ok) throw new Error('Failed to load picks');
-                const { picks } = await res.json();
-
-                if (picks) {
-                    setGkId(picks.gk_id);
-                    setDefId(picks.def_id);
-                    setMidId(picks.mid_id);
-                    setFwdId(picks.fwd_id);
-                    setCaptainId(picks.captain_id);
+                if (res.ok) {
+                    const { picks } = await res.json();
+                    if (picks) {
+                        setGkId(picks.gk_id);
+                        setDefId(picks.def_id);
+                        setMidId(picks.mid_id);
+                        setFwdId(picks.fwd_id);
+                        setCaptainId(picks.captain_id);
+                    }
                 }
+
+                setIsLoadingHistory(true);
+                const histRes = await fetch(`/api/challenge`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                });
+                if (histRes.ok) {
+                    const { history } = await histRes.json();
+                    if (history && history.length > 0) {
+                        const pastHistory = history.filter((h: any) => h.gameweek < eventId);
+                        setHistoryPicks(pastHistory);
+
+                        // Fetch live points for each past GW
+                        const pointsMap: Record<number, any> = {};
+                        for (const h of pastHistory) {
+                            try {
+                                const liveData = await getEventLive(h.gameweek);
+                                if (liveData && liveData.elements) {
+                                    pointsMap[h.gameweek] = liveData.elements;
+                                }
+                            } catch (e) {
+                                console.error(`Failed to fetch live points for GW ${h.gameweek}`, e);
+                            }
+                        }
+                        setHistoryPoints(pointsMap);
+                    }
+                }
+
             } catch (err: any) {
                 console.error(err);
             } finally {
                 setIsLoading(false);
+                setIsLoadingHistory(false);
             }
         }
         loadPicks();
@@ -343,6 +376,97 @@ export default function MiniChallenge({ players, teams, events, fixtures }: Mini
                     {renderSlot('Forward', 4, fwdId)}
                 </div>
             </div>
+
+            {/* History Section */}
+            {historyPicks.length > 0 && (
+                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 lg:p-10 relative overflow-hidden mt-8">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="bg-blue-500/20 p-2 rounded-xl border border-blue-500/30 text-blue-400">
+                            <History size={20} />
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">Challenge History</h2>
+                    </div>
+
+                    <div className="overflow-x-auto border border-slate-800 rounded-2xl">
+                        <table className="w-full text-left border-collapse text-sm whitespace-nowrap min-w-[700px]">
+                            <thead>
+                                <tr className="bg-slate-800/80 text-slate-400 text-xs uppercase tracking-wider font-bold">
+                                    <th className="p-4 border-b border-slate-700">GW</th>
+                                    <th className="p-4 border-b border-slate-700 text-center border-x border-slate-700">Total Pts</th>
+                                    <th className="p-4 border-b border-slate-700">Goalkeeper</th>
+                                    <th className="p-4 border-b border-slate-700">Defender</th>
+                                    <th className="p-4 border-b border-slate-700">Midfielder</th>
+                                    <th className="p-4 border-b border-slate-700">Forward</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800/50">
+                                {historyPicks.map((pick) => {
+                                    const gk = players.find(p => p.id === pick.gk_id);
+                                    const def = players.find(p => p.id === pick.def_id);
+                                    const mid = players.find(p => p.id === pick.mid_id);
+                                    const fwd = players.find(p => p.id === pick.fwd_id);
+
+                                    const liveElements = historyPoints[pick.gameweek];
+
+                                    const getPts = (playerId: number, isCaptain: boolean) => {
+                                        if (!liveElements) return '-';
+                                        const el = liveElements.find((e: any) => e.id === playerId);
+                                        if (!el) return 0;
+                                        return (el.stats?.total_points || 0) * (isCaptain ? 2 : 1);
+                                    };
+
+                                    const gkPts = getPts(pick.gk_id, pick.captain_id === pick.gk_id);
+                                    const defPts = getPts(pick.def_id, pick.captain_id === pick.def_id);
+                                    const midPts = getPts(pick.mid_id, pick.captain_id === pick.mid_id);
+                                    const fwdPts = getPts(pick.fwd_id, pick.captain_id === pick.fwd_id);
+
+                                    const totalPts = liveElements ? (gkPts as number) + (defPts as number) + (midPts as number) + (fwdPts as number) : '-';
+
+                                    const renderPlayerCell = (p: typeof gk, pts: any, isCaptain: boolean) => (
+                                        <div className="flex flex-col">
+                                            <div className="font-bold text-white flex items-center gap-1.5">
+                                                {p?.web_name || '?'}
+                                                {isCaptain && <span className="bg-amber-500 text-slate-900 text-[9px] font-black px-1 rounded-sm w-4 h-4 flex items-center justify-center">C</span>}
+                                            </div>
+                                            <div className="text-xs text-slate-400 mt-0.5">
+                                                {pts} pts
+                                            </div>
+                                        </div>
+                                    );
+
+                                    return (
+                                        <tr key={pick.gameweek} className="hover:bg-slate-800/30 transition-colors">
+                                            <td className="p-4 text-slate-200 font-bold bg-slate-800/30">
+                                                GW {pick.gameweek}
+                                            </td>
+                                            <td className="p-4 text-white font-black text-center text-lg border-x border-slate-700 bg-emerald-500/5">
+                                                {totalPts}
+                                            </td>
+                                            <td className="p-4">
+                                                {renderPlayerCell(gk, gkPts, pick.captain_id === pick.gk_id)}
+                                            </td>
+                                            <td className="p-4">
+                                                {renderPlayerCell(def, defPts, pick.captain_id === pick.def_id)}
+                                            </td>
+                                            <td className="p-4">
+                                                {renderPlayerCell(mid, midPts, pick.captain_id === pick.mid_id)}
+                                            </td>
+                                            <td className="p-4">
+                                                {renderPlayerCell(fwd, fwdPts, pick.captain_id === pick.fwd_id)}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                        {isLoadingHistory && (
+                            <div className="w-full text-center p-4 text-slate-500 text-sm flex items-center justify-center gap-2">
+                                <Loader2 className="w-4 h-4 animate-spin" /> Loading points...
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Selector Modal */}
             {selectorPos && (
