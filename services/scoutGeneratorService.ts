@@ -35,7 +35,7 @@ async function fetchFPLData(): Promise<{ bootstrap: FPLBootstrap; fixtures: any[
     };
 }
 
-function buildArticlePrompt(bootstrap: FPLBootstrap, fixtures: any[]): string {
+function buildArticlePrompt(bootstrap: FPLBootstrap, fixtures: any[], topic: string): string {
     const { elements: players, teams, events } = bootstrap;
     const nextEvent = events.find((e: any) => e.is_next);
     if (!nextEvent) throw new Error('No upcoming gameweek found');
@@ -43,79 +43,43 @@ function buildArticlePrompt(bootstrap: FPLBootstrap, fixtures: any[]): string {
     const gwNum = nextEvent.id;
     const deadline = nextEvent.deadline_time;
 
-    // Top form players
-    const topForm = players
-        .filter((p: any) => parseFloat(p.form) > 3.0)
-        .sort((a: any, b: any) => parseFloat(b.form) - parseFloat(a.form))
-        .slice(0, 10)
-        .map((p: any) => {
-            const team = teams.find((t: any) => t.id === p.team)?.short_name || '???';
-            return `${p.web_name} (${team}, £${(p.now_cost / 10).toFixed(1)}, Form: ${p.form}, Pts: ${p.total_points}, Ownership: ${p.selected_by_percent}%)`;
-        });
+    // Default overview logic
+    if (topic === 'general') {
+        const topForm = players.filter((p: any) => parseFloat(p.form) > 3.0).sort((a: any, b: any) => parseFloat(b.form) - parseFloat(a.form)).slice(0, 10).map((p: any) => `${p.web_name} (${teams.find((t: any) => t.id === p.team)?.short_name}, Form: ${p.form}, Own: ${p.selected_by_percent}%)`);
+        const gems = players.filter((p: any) => parseFloat(p.form) > 4.0 && parseFloat(p.selected_by_percent) < 10).sort((a: any, b: any) => parseFloat(b.form) - parseFloat(a.form)).slice(0, 5).map((p: any) => `${p.web_name} (${teams.find((t: any) => t.id === p.team)?.short_name}, Form: ${p.form}, Own: ${p.selected_by_percent}%)`);
+        const gwFixtures = fixtures.filter((f: any) => f.event === gwNum).map((f: any) => `${teams.find((t: any) => t.id === f.team_h)?.short_name} vs ${teams.find((t: any) => t.id === f.team_a)?.short_name} (H: ${f.team_h_difficulty}, A: ${f.team_a_difficulty})`);
 
-    // Hidden gems: high form, low ownership
-    const gems = players
-        .filter((p: any) => parseFloat(p.form) > 4.0 && parseFloat(p.selected_by_percent) < 10)
-        .sort((a: any, b: any) => parseFloat(b.form) - parseFloat(a.form))
-        .slice(0, 5)
-        .map((p: any) => {
-            const team = teams.find((t: any) => t.id === p.team)?.short_name || '???';
-            return `${p.web_name} (${team}, £${(p.now_cost / 10).toFixed(1)}, Form: ${p.form}, Own: ${p.selected_by_percent}%)`;
-        });
+        return `You are the FPL Studio Scout. Write a GW${gwNum} preview... (General Overview).
+DATA:
+Fixtures: ${gwFixtures.join(', ')}
+Top Form: ${topForm.join(', ')}
+Hidden Gems: ${gems.join(', ')}
 
-    // Upcoming fixtures for the GW
-    const gwFixtures = fixtures
-        .filter((f: any) => f.event === gwNum)
-        .map((f: any) => {
-            const home = teams.find((t: any) => t.id === f.team_h)?.short_name || '???';
-            const away = teams.find((t: any) => t.id === f.team_a)?.short_name || '???';
-            return `${home} vs ${away} (H difficulty: ${f.team_h_difficulty}, A difficulty: ${f.team_a_difficulty})`;
-        });
+Structure: Overview, Key Fixtures, Captains, Differentials, Summar. 400-600 words. Keep it actionable. Also return structured JSON data with: title, summary, content, captain_pick, differential_pick.`;
+    }
 
-    // Injury flagged players
-    const injured = players
-        .filter((p: any) => p.chance_of_playing_next_round !== null && p.chance_of_playing_next_round < 75 && parseFloat(p.selected_by_percent) > 5)
-        .sort((a: any, b: any) => parseFloat(b.selected_by_percent) - parseFloat(a.selected_by_percent))
-        .slice(0, 5)
-        .map((p: any) => {
-            const team = teams.find((t: any) => t.id === p.team)?.short_name || '???';
-            return `${p.web_name} (${team}, ${p.chance_of_playing_next_round}% chance, Own: ${p.selected_by_percent}%, Status: ${p.news || 'Unknown'})`;
-        });
+    if (topic === 'fdr_matrix') {
+        return `You are the FPL Studio Scout. Write an analysis based on the FDR Matrix for the next 5 GWs starting from GW${gwNum}. Focus on teams with the best and worst upcoming fixture runs. Tell managers who to target and who to avoid. Provide actionable transfer advice. Also return structured JSON data with: title, summary, content, captain_pick, differential_pick.`;
+    }
 
-    return `
-You are the FPL Studio Scout — an expert Fantasy Premier League analyst.
-Write a comprehensive, engaging Gameweek ${gwNum} preview article.
+    if (topic === 'team_analysis') {
+        return `You are the FPL Studio Scout. Write a detailed Team Analysis article for GW${gwNum}. Focus on attacking and defensive form over the last 5 matches. Highlight teams overperforming or underperforming their stats. Advise on defensive double-ups or attacking targets. Also return structured JSON data with: title, summary, content, captain_pick, differential_pick.`;
+    }
 
-RULES:
-- Write in English, professional but accessible tone
-- Use Markdown formatting with ## headers, **bold** for player names, bullet lists
-- Include specific stats and numbers from the data
-- Structure: Overview → Key Fixtures → Captain Picks → Differential Picks → Who to Avoid → Transfer Targets → Summary
-- Each section should be 2-4 paragraphs
-- Total length: 400-600 words
-- Make it opinionated and actionable — managers should feel confident making decisions after reading
+    if (topic === 'period_analysis') {
+        return `You are the FPL Studio Scout. Write a Period Analysis article for GW${gwNum} focusing on recent player form (last 5 GWs). Compare top performers across all positions (GKP, DEF, MID, FWD). Who is genuinely essential right now based on recent output? Return structured JSON data with: title, summary, content, captain_pick, differential_pick.`;
+    }
 
-DATA FOR GAMEWEEK ${gwNum}:
-Deadline: ${deadline}
+    if (topic === 'fixtures_next') {
+        return `You are the FPL Studio Scout. Write an article focused EXCLUSIVELY on the next gameweek (GW${gwNum}) fixtures. Highlight key matchups, potential high-scoring games, and clean sheet probabilities. Who are the best one-week punts? Return structured JSON data with: title, summary, content, captain_pick, differential_pick.`;
+    }
 
-FIXTURES:
-${gwFixtures.join('\n')}
+    if (topic === 'transfer_picks' || topic === 'transfer_picks_next') {
+        return `You are the FPL Studio Scout. Write a Transfer Picks article for GW${gwNum} (Focus: ${topic === 'transfer_picks_next' ? 'Next GW Only' : 'Next 5 GWs'}). Analyze top targets by position using our Transfer Algorithm (which balances Form and Fixtures). Discuss whether current highly-rated picks are sustainable or potential traps. Return structured JSON data: title, summary, content, captain_pick, differential_pick.`;
+    }
 
-TOP FORM PLAYERS:
-${topForm.join('\n')}
-
-HIDDEN GEMS (Low Ownership, High Form):
-${gems.join('\n')}
-
-INJURY/DOUBT FLAGS:
-${injured.join('\n')}
-
-Also return structured data:
-- captain_pick: Your #1 captain recommendation (just the player name)
-- differential_pick: Your top differential pick (just the player name)
-- title: A catchy article title (include GW number)
-- summary: A 1-2 sentence summary for social sharing
-`;
+    // Fallback
+    return `You are the FPL Studio Scout. Write a preview for Gameweek ${gwNum}. Topic: ${topic}. Return JSON: title, summary, content, captain_pick, differential_pick.`;
 }
 
 export interface ScoutArticleResult {
@@ -128,20 +92,22 @@ export interface ScoutArticleResult {
     slug: string;
 }
 
-export async function generateScoutArticle(isMock: boolean = false): Promise<ScoutArticleResult> {
+export async function generateScoutArticle({ isMock = false, topic = 'general' }: { isMock?: boolean, topic?: string } = {}): Promise<ScoutArticleResult> {
     const { bootstrap, fixtures } = await fetchFPLData();
 
     const nextEvent = bootstrap.events.find((e: any) => e.is_next);
     if (!nextEvent) throw new Error('No upcoming gameweek');
     const gwNum = nextEvent.id;
-    const slug = `gw${gwNum}-preview-${new Date().getFullYear()}`;
+    const slugBase = `gw${gwNum}-preview`;
+    const topicSlug = topic !== 'general' ? `-${topic}` : '';
+    const slug = `${slugBase}${topicSlug}-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000)}`;
 
     if (isMock) {
         console.log('🧪 Mock Mode: Generating fake scout article data.');
         return {
-            title: `[MOCK] FPL Gameweek ${gwNum} Preview: Strategy & Picks`,
+            title: `[MOCK] FPL Gameweek ${gwNum} Preview: ${topic}`,
             summary: "This is a mock scout article for development and testing purposes. No AI tokens were consumed.",
-            content: `## GW${gwNum} Overview\nThis is a mock article content for testing the UI and Supabase integration.\n\n## Captain Picks\n- **Haaland** (MCI)\n- **Salah** (LIV)\n\n## Differential Picks\n- **Mitoma** (BHA)\n\n## Summary\nGood luck with your GW${gwNum} team!`,
+            content: `## GW${gwNum} Overview\nThis is a mock article content for testing the UI and Supabase integration. Topic: ${topic}\n\n## Captain Picks\n- **Haaland** (MCI)\n- **Salah** (LIV)\n\n## Differential Picks\n- **Mitoma** (BHA)\n\n## Summary\nGood luck with your GW${gwNum} team!`,
             captain_pick: "Haaland (MOCK)",
             differential_pick: "Mitoma (MOCK)",
             gameweek: gwNum,
@@ -150,10 +116,10 @@ export async function generateScoutArticle(isMock: boolean = false): Promise<Sco
     }
 
     const ai = new GoogleGenAI({ apiKey: getServerApiKey() });
-    const prompt = buildArticlePrompt(bootstrap, fixtures);
+    const prompt = buildArticlePrompt(bootstrap, fixtures, topic);
 
     const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash',
         contents: prompt,
         config: {
             responseMimeType: 'application/json',

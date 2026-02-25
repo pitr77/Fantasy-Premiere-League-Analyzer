@@ -26,6 +26,7 @@ export async function POST(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const isMock = searchParams.get('mock') === 'true';
+    const topic = searchParams.get('topic') || 'general';
 
     if (isGenerating && !isMock) {
         return NextResponse.json(
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
     try {
         if (!isMock) isGenerating = true;
 
-        const article = await generateScoutArticle(isMock);
+        const article = await generateScoutArticle({ isMock, topic });
         const supabase = createServerSupabase();
 
         // Upsert: if slug exists, update; otherwise insert

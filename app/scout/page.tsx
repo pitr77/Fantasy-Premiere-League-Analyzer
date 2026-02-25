@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { createServerSupabase } from '@/lib/supabaseServer';
+import ScoutAdminPanel from './ScoutAdminPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +46,7 @@ export default async function ScoutPage() {
         .from('scout_articles')
         .select('id, slug, gameweek, title, summary, captain_pick, differential_pick, generated_at')
         .eq('published', true)
-        .order('gameweek', { ascending: false })
+        .order('generated_at', { ascending: false })
         .limit(20);
 
     const articleList: ScoutArticle[] = articles ?? [];
@@ -99,6 +100,9 @@ export default async function ScoutPage() {
 
             {/* Articles Grid */}
             <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
+                {/* Admin Generation Panel */}
+                <ScoutAdminPanel />
+
                 {error && (
                     <div className="bg-red-900/20 border border-red-500/20 rounded-xl p-6 mb-8">
                         <p className="text-red-400 text-sm">Failed to load articles. Please try again later.</p>
