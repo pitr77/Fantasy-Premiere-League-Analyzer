@@ -43,59 +43,58 @@ function buildArticlePrompt(bootstrap: FPLBootstrap, fixtures: any[], topic: str
     const gwNum = nextEvent.id;
     const deadline = nextEvent.deadline_time;
 
+    // Create Universal Data Context to prevent AI Hallucination
+    const topForm = players.filter((p: any) => parseFloat(p.form) > 3.0).sort((a: any, b: any) => parseFloat(b.form) - parseFloat(a.form)).slice(0, 15).map((p: any) => `${p.web_name} (${teams.find((t: any) => t.id === p.team)?.short_name}, Form: ${p.form}, Own: ${p.selected_by_percent}%)`);
+    const gems = players.filter((p: any) => parseFloat(p.form) > 4.0 && parseFloat(p.selected_by_percent) < 10).sort((a: any, b: any) => parseFloat(b.form) - parseFloat(a.form)).slice(0, 10).map((p: any) => `${p.web_name} (${teams.find((t: any) => t.id === p.team)?.short_name}, Form: ${p.form}, Own: ${p.selected_by_percent}%)`);
+    const gwFixtures = fixtures.filter((f: any) => f.event === gwNum).map((f: any) => `${teams.find((t: any) => t.id === f.team_h)?.short_name} vs ${teams.find((t: any) => t.id === f.team_a)?.short_name} (H: ${f.team_h_difficulty}, A: ${f.team_a_difficulty})`);
+
+    const dataContext = `
+---
+FPL RAW DATA (Use this ONLY. DO NOT hallucinate stats or ownership percentages!):
+Matches: ${gwFixtures.join(' | ')}
+Top Form Players: ${topForm.join(', ')}
+Diffs/Gems (<10% owned): ${gems.join(', ')}
+---
+`;
+
+    let promptBody = '';
+
     // Default overview logic
     if (topic === 'general') {
-        const topForm = players.filter((p: any) => parseFloat(p.form) > 3.0).sort((a: any, b: any) => parseFloat(b.form) - parseFloat(a.form)).slice(0, 10).map((p: any) => `${p.web_name} (${teams.find((t: any) => t.id === p.team)?.short_name}, Form: ${p.form}, Own: ${p.selected_by_percent}%)`);
-        const gems = players.filter((p: any) => parseFloat(p.form) > 4.0 && parseFloat(p.selected_by_percent) < 10).sort((a: any, b: any) => parseFloat(b.form) - parseFloat(a.form)).slice(0, 5).map((p: any) => `${p.web_name} (${teams.find((t: any) => t.id === p.team)?.short_name}, Form: ${p.form}, Own: ${p.selected_by_percent}%)`);
-        const gwFixtures = fixtures.filter((f: any) => f.event === gwNum).map((f: any) => `${teams.find((t: any) => t.id === f.team_h)?.short_name} vs ${teams.find((t: any) => t.id === f.team_a)?.short_name} (H: ${f.team_h_difficulty}, A: ${f.team_a_difficulty})`);
-
-        return `You are the FPL Studio Scout. Write a GW${gwNum} preview... (General Overview).
-DATA:
-Fixtures: ${gwFixtures.join(', ')}
-Top Form: ${topForm.join(', ')}
-Hidden Gems: ${gems.join(', ')}
-
+        promptBody = `You are the FPL Studio Scout. Write a GW${gwNum} preview... (General Overview).
 RULES:
 - Overview, Key Fixtures, Captains, Differentials, Summary. 400-600 words. Keep it actionable. 
 - CRITICAL: Break the text into SMALL paragraphs (2-3 sentences max). Use double newlines (\\n\\n) between paragraphs and sections so it's not a giant wall of text.
 - Include simple Markdown tables when comparing players (e.g. Name | Team | Form | Cost). 
 Also return structured JSON data with: title, summary, content, captain_pick, differential_pick.`;
-    }
-
-    if (topic === 'fdr_matrix') {
-        return `You are the FPL Studio Scout. Write an analysis based on the FDR Matrix for the next 5 GWs starting from GW${gwNum}. Focus on teams with the best and worst upcoming fixture runs. Tell managers who to target and who to avoid. Provide actionable transfer advice. 
+    } else if (topic === 'fdr_matrix') {
+        promptBody = `You are the FPL Studio Scout. Write an analysis based on the FDR Matrix for the next 5 GWs starting from GW${gwNum}. Focus on teams with the best and worst upcoming fixture runs. Tell managers who to target and who to avoid. Provide actionable transfer advice. 
 CRITICAL: Break the text into SMALL paragraphs (2-3 sentences max). Use double newlines (\\n\\n) between paragraphs.
 Include a simple Markdown table summarizing top team's fixtures or player targets. Also return structured JSON data with: title, summary, content, captain_pick, differential_pick.`;
-    }
-
-    if (topic === 'team_analysis') {
-        return `You are the FPL Studio Scout. Write a detailed Team Analysis article for GW${gwNum}. Focus on attacking and defensive form over the last 5 matches. Highlight teams overperforming or underperforming their stats. Advise on defensive double-ups or attacking targets.
+    } else if (topic === 'team_analysis') {
+        promptBody = `You are the FPL Studio Scout. Write a detailed Team Analysis article for GW${gwNum}. Focus on attacking and defensive form over the last 5 matches. Highlight teams overperforming or underperforming their stats. Advise on defensive double-ups or attacking targets.
 CRITICAL: Break the text into SMALL paragraphs (2-3 sentences max). Use double newlines (\\n\\n) between paragraphs. 
 Include a simple Markdown table comparing the best attacking/defensive teams right now. Also return structured JSON data with: title, summary, content, captain_pick, differential_pick.`;
-    }
-
-    if (topic === 'period_analysis') {
-        return `You are the FPL Studio Scout. Write a Period Analysis article for GW${gwNum} focusing on recent player form (last 5 GWs). Compare top performers across all positions (GKP, DEF, MID, FWD). Who is genuinely essential right now based on recent output? 
+    } else if (topic === 'period_analysis') {
+        promptBody = `You are the FPL Studio Scout. Write a Period Analysis article for GW${gwNum} focusing on recent player form (last 5 GWs). Compare top performers across all positions (GKP, DEF, MID, FWD). Who is genuinely essential right now based on recent output? 
 CRITICAL: Break the text into SMALL paragraphs (2-3 sentences max). Use double newlines (\\n\\n) between paragraphs.
 Use simple Markdown tables to compare the top players in each position. Return structured JSON data with: title, summary, content, captain_pick, differential_pick.`;
-    }
-
-    if (topic === 'fixtures_next') {
-        return `You are the FPL Studio Scout. Write an article focused EXCLUSIVELY on the next gameweek (GW${gwNum}) fixtures. Highlight key matchups, potential high-scoring games, and clean sheet probabilities. Who are the best one-week punts? 
+    } else if (topic === 'fixtures_next') {
+        promptBody = `You are the FPL Studio Scout. Write an article focused EXCLUSIVELY on the next gameweek (GW${gwNum}) fixtures. Highlight key matchups, potential high-scoring games, and clean sheet probabilities. Who are the best one-week punts? 
 CRITICAL: Break the text into SMALL paragraphs (2-3 sentences max). Use double newlines (\\n\\n) between paragraphs.
 Include a simple Markdown table for the best one-week punts. Return structured JSON data with: title, summary, content, captain_pick, differential_pick.`;
-    }
-
-    if (topic === 'transfer_picks' || topic === 'transfer_picks_next') {
-        return `You are the FPL Studio Scout. Write a Transfer Picks article for GW${gwNum} (Focus: ${topic === 'transfer_picks_next' ? 'Next GW Only' : 'Next 5 GWs'}). Analyze top targets by position using our Transfer Algorithm (which balances Form and Fixtures). Discuss whether current highly-rated picks are sustainable or potential traps. 
+    } else if (topic === 'transfer_picks' || topic === 'transfer_picks_next') {
+        promptBody = `You are the FPL Studio Scout. Write a Transfer Picks article for GW${gwNum} (Focus: ${topic === 'transfer_picks_next' ? 'Next GW Only' : 'Next 5 GWs'}). Analyze top targets by position using our Transfer Algorithm (which balances Form and Fixtures). Discuss whether current highly-rated picks are sustainable or potential traps. 
 CRITICAL: Break the text into SMALL paragraphs (2-3 sentences max). Use double newlines (\\n\\n) between paragraphs.
 Include simple Markdown tables comparing player picks. Return structured JSON data: title, summary, content, captain_pick, differential_pick.`;
-    }
-
-    // Fallback
-    return `You are the FPL Studio Scout. Write a preview for Gameweek ${gwNum}. Topic: ${topic}. 
+    } else {
+        // Fallback
+        promptBody = `You are the FPL Studio Scout. Write a preview for Gameweek ${gwNum}. Topic: ${topic}. 
 CRITICAL: Break the text into SMALL paragraphs (2-3 sentences max). Use double newlines (\\n\\n) between paragraphs.
 Return JSON: title, summary, content, captain_pick, differential_pick.`;
+    }
+
+    return promptBody + '\n\n' + dataContext;
 }
 
 export interface ScoutArticleResult {
