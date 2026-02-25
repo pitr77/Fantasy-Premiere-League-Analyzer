@@ -164,7 +164,15 @@ function getHeroImage(slug: string): string {
     }
 
     // Generic default for general preview
-    return 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&q=80&w=1600'; // classic sunset stadium
+    const generalImages = [
+        'https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&q=80&w=1600', // classic sunset stadium
+        'https://images.unsplash.com/photo-1489944440615-453fc2b6a9a9?auto=format&fit=crop&q=80&w=1600', // football on field
+        'https://images.unsplash.com/photo-1518605368461-1eb24d1685e9?auto=format&fit=crop&q=80&w=1600', // empty night stadium
+        'https://images.unsplash.com/photo-1551280857-2fc9af23eeff?auto=format&fit=crop&q=80&w=1600'  // floodlights
+    ];
+    // Deterministically pick one based on the slug string so it's consistent for each article
+    const hash = slug.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return generalImages[hash % generalImages.length];
 }
 
 export default async function ScoutArticlePage({
