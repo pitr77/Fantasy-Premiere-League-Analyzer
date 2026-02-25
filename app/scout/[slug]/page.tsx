@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabaseServer';
 import ShareButtons from './ShareButtons';
+import DeleteArticleButton from './DeleteArticleButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,7 +79,7 @@ function renderMarkdown(md: string): string {
         if (currentParagraph.length > 0) {
             const text = currentParagraph.join(' ').trim();
             if (text) {
-                result.push(`<p class="text-slate-400 text-base leading-relaxed mb-6">${inlineFormat(text)}</p>`);
+                result.push(`<p class="text-slate-400 text-sm sm:text-base leading-relaxed mb-6">${inlineFormat(text)}</p>`);
             }
             currentParagraph = [];
         }
@@ -219,7 +220,7 @@ export default async function ScoutArticlePage({
             {/* Article */}
             <article className="max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
                 {/* Meta */}
-                <div className="flex items-center gap-3 mb-6">
+                <div className="flex flex-wrap items-center gap-3 mb-6">
                     <span className="inline-flex items-center text-xs font-black uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg">
                         GW {article.gameweek}
                     </span>
@@ -228,6 +229,8 @@ export default async function ScoutArticlePage({
                         <svg width="12" height="12" className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>
                         AI Generated
                     </span>
+
+                    <DeleteArticleButton articleId={article.id} />
                 </div>
 
                 {/* Title */}

@@ -17,9 +17,14 @@ let isGenerating = false;
 export async function POST(req: Request) {
     // Auth check
     const secret = process.env.SCOUT_GENERATE_SECRET;
-    if (secret) {
+    const cronSecret = process.env.CRON_SECRET;
+
+    if (secret || cronSecret) {
         const authHeader = req.headers.get('authorization');
-        if (authHeader !== `Bearer ${secret}`) {
+        const tokenVal = authHeader?.split('Bearer ')?.[1];
+
+        // Accept either user-defined scout secret or Vercel's automated CRON secret
+        if (tokenVal !== secret && tokenVal !== cronSecret) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
     }

@@ -1,0 +1,20 @@
+{
+    "crons": [
+        {
+            "path": "/api/scout/generate?topic=period_analysis",
+            "schedule": "0 16 * * 2"
+        },
+        {
+            "path": "/api/scout/generate?topic=fdr_matrix",
+            "schedule": "0 16 * * 3"
+        },
+        {
+            "path": "/api/scout/generate?topic=general",
+            "schedule": "0 16 * * 4"
+        },
+        {
+            "path": "/api/scout/generate?topic=transfer_picks",
+            "schedule": "0 16 * * 5"
+        }
+    ]
+}
