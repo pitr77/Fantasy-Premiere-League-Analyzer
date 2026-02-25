@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface ShareButtonsProps {
     title: string;
@@ -10,10 +10,12 @@ interface ShareButtonsProps {
 
 export default function ShareButtons({ title, summary, slug }: ShareButtonsProps) {
     const [copied, setCopied] = useState(false);
+    const [siteUrl, setSiteUrl] = useState('https://www.fplstudio.com');
 
-    const siteUrl = typeof window !== 'undefined'
-        ? window.location.origin
-        : 'https://fplstudio.co';
+    useEffect(() => {
+        setSiteUrl(window.location.origin);
+    }, []);
+
     const articleUrl = `${siteUrl}/scout/${slug}`;
     const shareText = `${title}\n\n${summary}`;
 
@@ -84,8 +86,8 @@ export default function ShareButtons({ title, summary, slug }: ShareButtonsProps
             <button
                 onClick={handleCopy}
                 className={`inline-flex items-center gap-2 border font-semibold text-sm px-4 py-2.5 rounded-xl transition-all hover:scale-105 ${copied
-                        ? 'bg-green-600/20 border-green-500/30 text-green-400'
-                        : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-white'
+                    ? 'bg-green-600/20 border-green-500/30 text-green-400'
+                    : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-white'
                     }`}
             >
                 {copied ? (
