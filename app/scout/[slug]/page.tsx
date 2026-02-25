@@ -154,21 +154,20 @@ function inlineFormat(text: string): string {
 
 function getHeroImage(slug: string): string {
     if (slug.includes('period_analysis')) {
-        return 'https://images.unsplash.com/photo-1543351611-58f69d7c1781?auto=format&fit=crop&q=80&w=1600'; // tactics board
+        return '/icons/period_kalendar.png';
     }
     if (slug.includes('transfer')) {
-        return 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&q=80&w=1600'; // football gear / grass
+        return '/icons/fpl_studio5.png';
     }
     if (slug.includes('team_analysis') || slug.includes('fdr_matrix')) {
-        return 'https://images.unsplash.com/photo-1508344928928-7137b29de216?auto=format&fit=crop&q=80&w=1600'; // stunning stadium overview
+        return '/icons/fpl_studio3_transp.png';
     }
 
     // Generic default for general preview
     const generalImages = [
-        'https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&q=80&w=1600', // classic sunset stadium
-        'https://images.unsplash.com/photo-1489944440615-453fc2b6a9a9?auto=format&fit=crop&q=80&w=1600', // football on field
-        'https://images.unsplash.com/photo-1518605368461-1eb24d1685e9?auto=format&fit=crop&q=80&w=1600', // empty night stadium
-        'https://images.unsplash.com/photo-1551280857-2fc9af23eeff?auto=format&fit=crop&q=80&w=1600'  // floodlights
+        '/icons/fpl_studio3.png',
+        '/icons/fpl_studio5.png',
+        '/icons/fpl_studio3_transp.png'
     ];
     // Deterministically pick one based on the slug string so it's consistent for each article
     const hash = slug.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
