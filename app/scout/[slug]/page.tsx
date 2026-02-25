@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabaseServer';
 import ShareButtons from './ShareButtons';
 import DeleteArticleButton from './DeleteArticleButton';
+import HeroImage from './HeroImage';
 
 export const dynamic = 'force-dynamic';
 
@@ -154,20 +155,20 @@ function inlineFormat(text: string): string {
 
 function getHeroImage(slug: string): string {
     if (slug.includes('period_analysis')) {
-        return '/icons/period_kalendar.png';
+        return '/scout-heroes/period.jpg';
     }
     if (slug.includes('transfer')) {
-        return '/icons/fpl_studio5.png';
+        return '/scout-heroes/transfer.jpg';
     }
     if (slug.includes('team_analysis') || slug.includes('fdr_matrix')) {
-        return '/icons/fpl_studio3_transp.png';
+        return '/scout-heroes/tactics.jpg';
     }
 
     // Generic default for general preview
     const generalImages = [
-        '/icons/fpl_studio3.png',
-        '/icons/fpl_studio5.png',
-        '/icons/fpl_studio3_transp.png'
+        '/scout-heroes/general1.jpg',
+        '/scout-heroes/general2.jpg',
+        '/scout-heroes/general3.jpg'
     ];
     // Deterministically pick one based on the slug string so it's consistent for each article
     const hash = slug.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -260,15 +261,10 @@ export default async function ScoutArticlePage({
                     {article.title}
                 </h1>
 
-                {/* Hero Image Cover */}
-                <div className="w-full aspect-video sm:aspect-[21/9] rounded-2xl overflow-hidden mb-10 relative shadow-2xl shadow-purple-900/10 border border-slate-800">
-                    <img
-                        src={getHeroImage(article.slug)}
-                        alt={article.title}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent"></div>
+                {/* Hero Image Cover with local failsafe gradient */}
+                <div className="w-full aspect-video sm:aspect-[21/9] rounded-2xl overflow-hidden mb-10 relative shadow-2xl shadow-purple-900/10 border border-slate-800 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 flex items-center justify-center">
+                    <HeroImage src={getHeroImage(article.slug)} alt={article.title} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent z-10"></div>
                 </div>
 
                 {/* Summary */}
