@@ -152,6 +152,21 @@ function inlineFormat(text: string): string {
         .replace(/`([^`]+)`/g, '<code class="text-purple-300 bg-purple-500/10 px-1.5 py-0.5 rounded text-xs font-mono">$1</code>');
 }
 
+function getHeroImage(slug: string): string {
+    if (slug.includes('period_analysis')) {
+        return 'https://images.unsplash.com/photo-1543351611-58f69d7c1781?auto=format&fit=crop&q=80&w=1600'; // tactics board
+    }
+    if (slug.includes('transfer')) {
+        return 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&q=80&w=1600'; // football gear / grass
+    }
+    if (slug.includes('team_analysis') || slug.includes('fdr_matrix')) {
+        return 'https://images.unsplash.com/photo-1508344928928-7137b29de216?auto=format&fit=crop&q=80&w=1600'; // stunning stadium overview
+    }
+
+    // Generic default for general preview
+    return 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&q=80&w=1600'; // classic sunset stadium
+}
+
 export default async function ScoutArticlePage({
     params,
 }: {
@@ -234,9 +249,20 @@ export default async function ScoutArticlePage({
                 </div>
 
                 {/* Title */}
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight mb-6 leading-tight">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight mb-8 leading-tight">
                     {article.title}
                 </h1>
+
+                {/* Hero Image Cover */}
+                <div className="w-full aspect-video sm:aspect-[21/9] rounded-2xl overflow-hidden mb-10 relative shadow-2xl shadow-purple-900/10 border border-slate-800">
+                    <img
+                        src={getHeroImage(article.slug)}
+                        alt={article.title}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent"></div>
+                </div>
 
                 {/* Summary */}
                 <p className="text-lg text-slate-400 leading-relaxed mb-8 border-l-4 border-purple-500 pl-4">
