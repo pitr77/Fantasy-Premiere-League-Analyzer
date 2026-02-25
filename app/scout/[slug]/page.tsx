@@ -297,11 +297,8 @@ export default async function ScoutArticlePage({
                     {article.title}
                 </h1>
 
-                {/* Hero Image Cover with local failsafe gradient */}
-                <div className="w-full aspect-video sm:aspect-[21/9] rounded-2xl overflow-hidden mb-10 relative shadow-2xl shadow-purple-900/10 border border-slate-800 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 flex items-center justify-center">
-                    <HeroImage src={getHeroImage(article.slug)} alt={article.title} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent z-10"></div>
-                </div>
+                {/* Hero Image Component - disappears if the image file doesn't exist */}
+                <HeroImage src={getHeroImage(article.slug)} alt={article.title} />
 
                 {/* Summary */}
                 <p className="text-lg text-slate-400 leading-relaxed mb-8 border-l-4 border-purple-500 pl-4">
