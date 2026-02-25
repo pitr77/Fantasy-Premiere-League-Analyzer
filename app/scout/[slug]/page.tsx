@@ -175,6 +175,42 @@ function getHeroImage(slug: string): string {
     return generalImages[hash % generalImages.length];
 }
 
+function formatPickText(text: string | null) {
+    if (!text) return null;
+    if (text.length < 60 && !text.includes('.')) {
+        return <div className="text-xl font-bold text-white">{text}</div>;
+    }
+
+    // Bold capitalized words followed by Team abbreviation e.g., Ollie Watkins (AVL)
+    let formatted = text.replace(/((?:[A-Z\u00C0-\u024F][^\s]*\s){1,3}\([A-Z]{3}\))/g, '<strong class="text-white font-bold text-[15px]">$1</strong>');
+
+    // Also bold anything explicitly surrounded by markdown **
+    formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-white font-bold text-[15px]">$1</strong>');
+
+    // Split sentences using a lookbehind for punctuation followed by space
+    const sentences = formatted.split(/(?<=\.)\s+/);
+    let htmlContent = '';
+
+    // Create paragraphs
+    if (sentences.length > 2) {
+        const mid = Math.ceil(sentences.length / 2);
+        const p1 = sentences.slice(0, mid).join(' ');
+        const p2 = sentences.slice(mid).join(' ');
+        htmlContent = `<p>${p1}</p><p>${p2}</p>`;
+    } else if (sentences.length === 2) {
+        htmlContent = `<p>${sentences[0]}</p><p>${sentences[1]}</p>`;
+    } else {
+        htmlContent = `<p>${formatted}</p>`;
+    }
+
+    return (
+        <div
+            className="text-sm text-slate-300 leading-relaxed space-y-3"
+            dangerouslySetInnerHTML={{ __html: htmlContent }}
+        />
+    );
+}
+
 export default async function ScoutArticlePage({
     params,
 }: {
@@ -276,18 +312,18 @@ export default async function ScoutArticlePage({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12">
                     {article.captain_pick && (
                         <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-5">
-                            <div className="text-xs font-bold uppercase tracking-wider text-amber-500 mb-2">
+                            <div className="text-xs font-bold uppercase tracking-wider text-amber-500 mb-4">
                                 👑 Captain Pick
                             </div>
-                            <div className="text-xl font-bold text-white">{article.captain_pick}</div>
+                            {formatPickText(article.captain_pick)}
                         </div>
                     )}
                     {article.differential_pick && (
                         <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl p-5">
-                            <div className="text-xs font-bold uppercase tracking-wider text-cyan-500 mb-2">
+                            <div className="text-xs font-bold uppercase tracking-wider text-cyan-500 mb-4">
                                 💎 Differential Pick
                             </div>
-                            <div className="text-xl font-bold text-white">{article.differential_pick}</div>
+                            {formatPickText(article.differential_pick)}
                         </div>
                     )}
                 </div>
