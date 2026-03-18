@@ -168,3 +168,4 @@ export async function generateScoutArticle({ isMock = false, topic = 'general' }
         slug,
     };
 }
+// Re-triggering build
