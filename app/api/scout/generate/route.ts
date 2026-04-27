@@ -17,8 +17,16 @@ async function handleGeneration(req: Request) {
     const tokenVal = authHeader?.split('Bearer ')?.[1];
 
     const supabase = createServerSupabase(tokenVal);
-    const { data: { user } } = await supabase.auth.getUser();
-    const isAdminUser = user?.email === 'p.kalavsky@gmail.com';
+    let isAdminUser = false;
+    
+    try {
+        if (tokenVal) {
+            const { data: { user } } = await supabase.auth.getUser();
+            isAdminUser = user?.email === 'p.kalavsky@gmail.com';
+        }
+    } catch (e) {
+        console.error('Auth check error:', e);
+    }
 
     // Auth check logic
     const { searchParams } = new URL(req.url);
@@ -30,6 +38,16 @@ async function handleGeneration(req: Request) {
         (tokenVal && (tokenVal === secret || tokenVal === cronSecret)) ||
         (urlKey && urlKey === secret);
 
+    // If it's a GET request and NOT authorized, return info
+    if (req.method === 'GET' && !isAuthorized) {
+        return NextResponse.json({
+            info: 'Use POST for manual generation. GET is reserved for automated Crons.',
+            requiresAuth: Boolean(secret),
+            hint: 'If you are trying to test the Cron, ensure your ?key= is correct.'
+        });
+    }
+
+    // If it's a POST request (or authorized GET) but auth failed, return 401
     if (!isAuthorized && (secret || cronSecret)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -106,35 +124,10 @@ async function handleGeneration(req: Request) {
     }
 }
 
-/**
- * POST /api/scout/generate
- */
 export async function POST(req: Request) {
     return handleGeneration(req);
 }
 
-/**
- * GET /api/scout/generate
- */
 export async function GET(req: Request) {
-    const { searchParams } = new URL(req.url);
-    const urlKey = searchParams.get('key');
-    const secret = process.env.SCOUT_GENERATE_SECRET;
-    const cronSecret = process.env.CRON_SECRET;
-    const authHeader = req.headers.get('authorization');
-
-    // If it's an authorized request (via key in URL or Bearer token), run it
-    if (
-        (urlKey && urlKey === secret) || 
-        (authHeader?.includes(`Bearer ${cronSecret}`)) ||
-        (authHeader?.includes(`Bearer ${secret}`))
-    ) {
-        return handleGeneration(req);
-    }
-
-    // Otherwise, just return info (health check)
-    return NextResponse.json({
-        info: 'Use POST for manual generation. GET is reserved for automated Crons.',
-        requiresAuth: Boolean(secret),
-    });
+    return handleGeneration(req);
 }
