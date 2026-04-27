@@ -8,13 +8,7 @@ export const maxDuration = 60; // Allow up to 60s for AI generation
 // Global lock to prevent concurrent AI generations
 let isGenerating = false;
 
-/**
- * POST /api/scout/generate
- * 
- * Generates a new Scout article for the current gameweek using Gemini AI.
- * Protected by SCOUT_GENERATE_SECRET — only callable by cron or admin.
- */
-export async function POST(req: Request) {
+async function handleGeneration(req: Request) {
     // Auth check - only enforce if secrets are explicitly defined
     const secret = process.env.SCOUT_GENERATE_SECRET;
     const cronSecret = process.env.CRON_SECRET;
@@ -29,7 +23,6 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
     }
-    // If no secrets are configured, allow all requests (for Vercel crons to work)
 
     const { searchParams } = new URL(req.url);
     const isMock = searchParams.get('mock') === 'true';
@@ -64,6 +57,7 @@ export async function POST(req: Request) {
                     published: true,
                     metadata: {
                         is_mock: isMock,
+                        topic,
                         captain_pick: article.captain_pick,
                         differential_pick: article.differential_pick,
                     },
@@ -82,6 +76,7 @@ export async function POST(req: Request) {
         return NextResponse.json({
             success: true,
             isMock,
+            topic,
             article: {
                 slug: article.slug,
                 title: article.title,
@@ -104,12 +99,30 @@ export async function POST(req: Request) {
 }
 
 /**
- * GET /api/scout/generate
- * Health check / manual trigger info
+ * POST /api/scout/generate
+ * Manual trigger from UI
  */
-export async function GET() {
+export async function POST(req: Request) {
+    return handleGeneration(req);
+}
+
+/**
+ * GET /api/scout/generate
+ * Triggered by Vercel Cron
+ */
+export async function GET(req: Request) {
+    // If it's a cron request (has CRON_SECRET or is being called by Vercel)
+    // or if no security is set at all, we allow GET to trigger generation.
+    const cronSecret = process.env.CRON_SECRET;
+    const authHeader = req.headers.get('authorization');
+    
+    if (cronSecret && authHeader?.includes(`Bearer ${cronSecret}`)) {
+        return handleGeneration(req);
+    }
+
+    // Otherwise, just return info (health check)
     return NextResponse.json({
-        info: 'POST to this endpoint with Bearer token to generate a scout article.',
+        info: 'Use POST for manual generation. GET is reserved for automated Crons.',
         requiresAuth: Boolean(process.env.SCOUT_GENERATE_SECRET),
     });
 }
