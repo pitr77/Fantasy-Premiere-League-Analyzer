@@ -27,9 +27,14 @@ export default function ScoutAdminPanel() {
         const modeText = useMockMode ? '(Mock Mode)' : '(Gemini API - up to 60s)';
         setMessage(`Generating ${modeText}...`);
         try {
-            const headers: Record<string, string> = {};
-            if (secret) {
-                headers['Authorization'] = `Bearer ${secret}`;
+            // Get current session token for auth
+            const { data: { session } } = await supabase.auth.getSession();
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json'
+            };
+            
+            if (session?.access_token) {
+                headers['Authorization'] = `Bearer ${session.access_token}`;
             }
 
             const mockParam = useMockMode ? '&mock=true' : '';

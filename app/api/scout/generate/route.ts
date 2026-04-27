@@ -11,7 +11,12 @@ let isGenerating = false;
 async function handleGeneration(req: Request) {
     const secret = process.env.SCOUT_GENERATE_SECRET;
     const cronSecret = process.env.CRON_SECRET;
-    const supabase = createServerSupabase();
+    
+    // Extract token from header for Supabase auth
+    const authHeader = req.headers.get('authorization');
+    const tokenVal = authHeader?.split('Bearer ')?.[1];
+
+    const supabase = createServerSupabase(tokenVal);
     const { data: { user } } = await supabase.auth.getUser();
     const isAdminUser = user?.email === 'p.kalavsky@gmail.com';
 
@@ -19,10 +24,8 @@ async function handleGeneration(req: Request) {
     if (!isAdminUser && (secret || cronSecret)) {
         const { searchParams } = new URL(req.url);
         const urlKey = searchParams.get('key');
-        const authHeader = req.headers.get('authorization');
-        const tokenVal = authHeader?.split('Bearer ')?.[1];
 
-        // Accept: 1. Bearer token, 2. 'key' param in URL, 3. Vercel Cron Secret
+        // Accept: 1. Bearer token (secret/cronSecret), or 2. 'key' param in URL
         const isAuthorized = 
             (tokenVal && (tokenVal === secret || tokenVal === cronSecret)) ||
             (urlKey && urlKey === secret);
