@@ -106,18 +106,6 @@ export default async function Image({ params }: { params: { slug: string } }) {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
                     <div style={{ display: 'flex', gap: '30px' }}>
-                        {article.captain_pick && (
-                            <div style={{ display: 'flex', flexDirection: 'column', background: 'rgba(245, 158, 11, 0.05)', padding: '24px', borderRadius: '24px', border: '2px solid rgba(245, 158, 11, 0.2)' }}>
-                                <div style={{ color: '#f59e0b', fontSize: '20px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>Captain</div>
-                                <div style={{ color: '#fff', fontSize: '36px', fontWeight: 900 }}>{article.captain_pick}</div>
-                            </div>
-                        )}
-                        {article.differential_pick && (
-                            <div style={{ display: 'flex', flexDirection: 'column', background: 'rgba(6, 182, 212, 0.05)', padding: '24px', borderRadius: '24px', border: '2px solid rgba(6, 182, 212, 0.2)' }}>
-                                <div style={{ color: '#06b6d4', fontSize: '20px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>Differential</div>
-                                <div style={{ color: '#fff', fontSize: '36px', fontWeight: 900 }}>{article.differential_pick}</div>
-                            </div>
-                        )}
                     </div>
 
                     <div style={{ display: 'flex', fontSize: '32px', fontWeight: 900, color: 'transparent', backgroundClip: 'text', backgroundImage: 'linear-gradient(to right, #c084fc, #34d399)' }}>

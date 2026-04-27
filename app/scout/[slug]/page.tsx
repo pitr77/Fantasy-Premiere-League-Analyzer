@@ -243,25 +243,6 @@ export default async function ScoutArticlePage({
                     {article.summary}
                 </p>
 
-                {/* Quick picks cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12">
-                    {article.captain_pick && (
-                        <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-5">
-                            <div className="text-xs font-bold uppercase tracking-wider text-amber-500 mb-2">
-                                👑 Captain Pick
-                            </div>
-                            <div className="text-xl font-bold text-white">{article.captain_pick}</div>
-                        </div>
-                    )}
-                    {article.differential_pick && (
-                        <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl p-5">
-                            <div className="text-xs font-bold uppercase tracking-wider text-cyan-500 mb-2">
-                                💎 Differential Pick
-                            </div>
-                            <div className="text-xl font-bold text-white">{article.differential_pick}</div>
-                        </div>
-                    )}
-                </div>
 
                 {/* Article body */}
                 <div

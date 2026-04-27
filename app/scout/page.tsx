@@ -151,19 +151,6 @@ export default async function ScoutPage() {
                                         {article.summary}
                                     </p>
 
-                                    {/* Quick picks */}
-                                    <div className="flex flex-wrap gap-3">
-                                        {article.captain_pick && (
-                                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg">
-                                                👑 Captain: {article.captain_pick}
-                                            </span>
-                                        )}
-                                        {article.differential_pick && (
-                                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 rounded-lg">
-                                                💎 Differential: {article.differential_pick}
-                                            </span>
-                                        )}
-                                    </div>
 
                                     {/* Arrow */}
                                     <div className="absolute top-1/2 right-6 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
