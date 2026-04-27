@@ -15,19 +15,21 @@ let isGenerating = false;
  * Protected by SCOUT_GENERATE_SECRET — only callable by cron or admin.
  */
 export async function POST(req: Request) {
-    // Auth check
+    // Auth check - only enforce if secrets are explicitly defined
     const secret = process.env.SCOUT_GENERATE_SECRET;
     const cronSecret = process.env.CRON_SECRET;
 
+    // If secrets are configured, require auth
     if (secret || cronSecret) {
         const authHeader = req.headers.get('authorization');
         const tokenVal = authHeader?.split('Bearer ')?.[1];
 
         // Accept either user-defined scout secret or Vercel's automated CRON secret
-        if (tokenVal !== secret && tokenVal !== cronSecret) {
+        if (!tokenVal || (tokenVal !== secret && tokenVal !== cronSecret)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
     }
+    // If no secrets are configured, allow all requests (for Vercel crons to work)
 
     const { searchParams } = new URL(req.url);
     const isMock = searchParams.get('mock') === 'true';

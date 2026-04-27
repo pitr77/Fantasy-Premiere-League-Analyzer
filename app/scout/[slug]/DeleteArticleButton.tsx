@@ -24,8 +24,12 @@ export default function DeleteArticleButton({ articleId }: { articleId: string }
 
         setIsDeleting(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const res = await fetch(`/api/scout/article?id=${articleId}`, {
                 method: 'DELETE',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
             });
 
             if (res.ok) {

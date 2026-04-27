@@ -108,6 +108,12 @@ export interface ScoutArticleResult {
     slug: string;
 }
 
+const DEFAULT_MODEL = 'gemini-3.1-pro-preview';
+
+async function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export async function generateScoutArticle({ isMock = false, topic = 'general' }: { isMock?: boolean, topic?: string } = {}): Promise<ScoutArticleResult> {
     const { bootstrap, fixtures } = await fetchFPLData();
 
@@ -134,38 +140,56 @@ export async function generateScoutArticle({ isMock = false, topic = 'general' }
     const ai = new GoogleGenAI({ apiKey: getServerApiKey() });
     const prompt = buildArticlePrompt(bootstrap, fixtures, topic);
 
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    title: { type: Type.STRING },
-                    summary: { type: Type.STRING },
-                    content: { type: Type.STRING },
-                    captain_pick: { type: Type.STRING },
-                    differential_pick: { type: Type.STRING },
+    let lastError: any;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            console.log(`🤖 AI Generation Attempt ${attempt} (Model: ${DEFAULT_MODEL})...`);
+            const response = await ai.models.generateContent({
+                model: DEFAULT_MODEL,
+                contents: prompt,
+                config: {
+                    responseMimeType: 'application/json',
+                    responseSchema: {
+                        type: Type.OBJECT,
+                        properties: {
+                            title: { type: Type.STRING },
+                            summary: { type: Type.STRING },
+                            content: { type: Type.STRING },
+                            captain_pick: { type: Type.STRING },
+                            differential_pick: { type: Type.STRING },
+                        },
+                        required: ['title', 'summary', 'content', 'captain_pick', 'differential_pick'],
+                    },
                 },
-                required: ['title', 'summary', 'content', 'captain_pick', 'differential_pick'],
-            },
-        },
-    });
+            });
 
-    const text = response.text;
-    if (!text) throw new Error('Empty response from Gemini');
+            const text = response.text;
+            if (!text) throw new Error('Empty response from Gemini');
 
-    const parsed = JSON.parse(text);
+            const parsed = JSON.parse(text);
 
-    return {
-        title: parsed.title,
-        summary: parsed.summary,
-        content: parsed.content,
-        captain_pick: parsed.captain_pick,
-        differential_pick: parsed.differential_pick,
-        gameweek: gwNum,
-        slug,
-    };
+            return {
+                title: parsed.title,
+                summary: parsed.summary,
+                content: parsed.content,
+                captain_pick: parsed.captain_pick,
+                differential_pick: parsed.differential_pick,
+                gameweek: gwNum,
+                slug,
+            };
+        } catch (err: any) {
+            lastError = err;
+            const isRetryable = err?.status === 503 || err?.status === 429 || String(err).includes('503') || String(err).includes('demand');
+            
+            if (isRetryable && attempt < 3) {
+                const delay = attempt * 5000;
+                console.warn(`⚠️ Gemini busy (503/429). Retrying in ${delay}ms...`);
+                await sleep(delay);
+                continue;
+            }
+            throw err;
+        }
+    }
+
+    throw lastError || new Error('Failed to generate article after retries');
 }
-// Re-triggering build

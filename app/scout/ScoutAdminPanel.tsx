@@ -9,6 +9,7 @@ export default function ScoutAdminPanel() {
     const [message, setMessage] = useState('');
     const [isAdmin, setIsAdmin] = useState(false);
     const [authChecked, setAuthChecked] = useState(false);
+    const [useMockMode, setUseMockMode] = useState(false);
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -23,11 +24,18 @@ export default function ScoutAdminPanel() {
 
     const generate = async () => {
         setLoading(true);
-        setMessage('Generating via Gemini API (this may take up to 60s)...');
+        const modeText = useMockMode ? '(Mock Mode)' : '(Gemini API - up to 60s)';
+        setMessage(`Generating ${modeText}...`);
         try {
-            const res = await fetch(`/api/scout/generate?topic=${topic}`, {
+            const headers: Record<string, string> = {};
+            if (secret) {
+                headers['Authorization'] = `Bearer ${secret}`;
+            }
+
+            const mockParam = useMockMode ? '&mock=true' : '';
+            const res = await fetch(`/api/scout/generate?topic=${topic}${mockParam}`, {
                 method: 'POST',
-                headers: secret ? { 'Authorization': `Bearer ${secret}` } : {}
+                headers
             });
             const data = await res.json();
             if (res.ok) {
@@ -57,7 +65,7 @@ export default function ScoutAdminPanel() {
                     </p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto flex-wrap">
                     <input
                         type="password"
                         placeholder="Admin Secret (if req)"
@@ -78,6 +86,15 @@ export default function ScoutAdminPanel() {
                         <option value="transfer_picks_next">Transfer Picks (Next GW Only)</option>
                         <option value="team_analysis">Team Analysis (Att/Def)</option>
                     </select>
+                    <label className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={useMockMode}
+                            onChange={e => setUseMockMode(e.target.checked)}
+                            className="w-4 h-4"
+                        />
+                        <span className="text-slate-300">Mock Mode</span>
+                    </label>
                     <button
                         onClick={generate}
                         disabled={loading}

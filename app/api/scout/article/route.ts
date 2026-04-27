@@ -12,6 +12,10 @@ export async function DELETE(req: Request) {
     const authHeader = req.headers.get('Authorization');
     const token = authHeader?.split(' ')[1];
 
+    if (!token) {
+        return NextResponse.json({ error: 'Missing authorization token' }, { status: 401 });
+    }
+
     const supabase = createServerSupabase(token);
     const { data: userData, error: userError } = await supabase.auth.getUser();
 
