@@ -66,13 +66,6 @@ export default function ScoutAdminPanel() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto flex-wrap">
-                    <input
-                        type="password"
-                        placeholder="Admin Secret (if req)"
-                        value={secret}
-                        onChange={e => setSecret(e.target.value)}
-                        className="bg-slate-950 text-white rounded-xl px-3 py-2 text-sm border border-slate-700 focus:border-purple-500 focus:outline-none w-full sm:w-36"
-                    />
                     <select
                         value={topic}
                         onChange={e => setTopic(e.target.value)}

@@ -9,17 +9,25 @@ export const maxDuration = 60; // Allow up to 60s for AI generation
 let isGenerating = false;
 
 async function handleGeneration(req: Request) {
-    // Auth check - only enforce if secrets are explicitly defined
     const secret = process.env.SCOUT_GENERATE_SECRET;
     const cronSecret = process.env.CRON_SECRET;
+    const supabase = createServerSupabase();
+    const { data: { user } } = await supabase.auth.getUser();
+    const isAdminUser = user?.email === 'p.kalavsky@gmail.com';
 
-    // If secrets are configured, require auth
-    if (secret || cronSecret) {
+    // If it's not the admin user, then enforce secrets
+    if (!isAdminUser && (secret || cronSecret)) {
+        const { searchParams } = new URL(req.url);
+        const urlKey = searchParams.get('key');
         const authHeader = req.headers.get('authorization');
         const tokenVal = authHeader?.split('Bearer ')?.[1];
 
-        // Accept either user-defined scout secret or Vercel's automated CRON secret
-        if (!tokenVal || (tokenVal !== secret && tokenVal !== cronSecret)) {
+        // Accept: 1. Bearer token, 2. 'key' param in URL, 3. Vercel Cron Secret
+        const isAuthorized = 
+            (tokenVal && (tokenVal === secret || tokenVal === cronSecret)) ||
+            (urlKey && urlKey === secret);
+
+        if (!isAuthorized) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
     }
