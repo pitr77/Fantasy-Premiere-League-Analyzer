@@ -12,7 +12,7 @@ async function handleGeneration(req: Request) {
     const secret = process.env.SCOUT_GENERATE_SECRET;
     const cronSecret = process.env.CRON_SECRET;
     
-    // Extract token from header for Supabase auth
+    // Extract token from header for Supabase auth OR direct secret auth
     const authHeader = req.headers.get('authorization');
     const tokenVal = authHeader?.split('Bearer ')?.[1];
 
@@ -20,22 +20,20 @@ async function handleGeneration(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     const isAdminUser = user?.email === 'p.kalavsky@gmail.com';
 
-    // If it's not the admin user, then enforce secrets
-    if (!isAdminUser && (secret || cronSecret)) {
-        const { searchParams } = new URL(req.url);
-        const urlKey = searchParams.get('key');
+    // Auth check logic
+    const { searchParams } = new URL(req.url);
+    const urlKey = searchParams.get('key');
 
-        // Accept: 1. Bearer token (secret/cronSecret), or 2. 'key' param in URL
-        const isAuthorized = 
-            (tokenVal && (tokenVal === secret || tokenVal === cronSecret)) ||
-            (urlKey && urlKey === secret);
+    // Accept: 1. Admin email session, 2. Bearer token (secret/cronSecret), or 3. 'key' param in URL
+    const isAuthorized = 
+        isAdminUser ||
+        (tokenVal && (tokenVal === secret || tokenVal === cronSecret)) ||
+        (urlKey && urlKey === secret);
 
-        if (!isAuthorized) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+    if (!isAuthorized && (secret || cronSecret)) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
     const isMock = searchParams.get('mock') === 'true';
     const topic = searchParams.get('topic') || 'general';
 
@@ -50,10 +48,9 @@ async function handleGeneration(req: Request) {
         if (!isMock) isGenerating = true;
 
         const article = await generateScoutArticle({ isMock, topic });
-        const supabase = createServerSupabase();
+        const supabaseAdmin = createServerSupabase(); // Use base client for upsert
 
-        // Upsert: if slug exists, update; otherwise insert
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
             .from('scout_articles')
             .upsert(
                 {
@@ -111,7 +108,6 @@ async function handleGeneration(req: Request) {
 
 /**
  * POST /api/scout/generate
- * Manual trigger from UI
  */
 export async function POST(req: Request) {
     return handleGeneration(req);
@@ -119,21 +115,26 @@ export async function POST(req: Request) {
 
 /**
  * GET /api/scout/generate
- * Triggered by Vercel Cron
  */
 export async function GET(req: Request) {
-    // If it's a cron request (has CRON_SECRET or is being called by Vercel)
-    // or if no security is set at all, we allow GET to trigger generation.
+    const { searchParams } = new URL(req.url);
+    const urlKey = searchParams.get('key');
+    const secret = process.env.SCOUT_GENERATE_SECRET;
     const cronSecret = process.env.CRON_SECRET;
     const authHeader = req.headers.get('authorization');
-    
-    if (cronSecret && authHeader?.includes(`Bearer ${cronSecret}`)) {
+
+    // If it's an authorized request (via key in URL or Bearer token), run it
+    if (
+        (urlKey && urlKey === secret) || 
+        (authHeader?.includes(`Bearer ${cronSecret}`)) ||
+        (authHeader?.includes(`Bearer ${secret}`))
+    ) {
         return handleGeneration(req);
     }
 
     // Otherwise, just return info (health check)
     return NextResponse.json({
         info: 'Use POST for manual generation. GET is reserved for automated Crons.',
-        requiresAuth: Boolean(process.env.SCOUT_GENERATE_SECRET),
+        requiresAuth: Boolean(secret),
     });
 }
