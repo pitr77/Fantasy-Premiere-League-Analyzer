@@ -1,7 +1,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1HcQsj3aVbvlak135JK_akFxQ68hG6ioV2HRtOpr-6JM/export?format=csv&gid=1265496615';
+const TRANSFERS_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1HcQsj3aVbvlak135JK_akFxQ68hG6ioV2HRtOpr-6JM/export?format=csv&gid=1265496615';
+const TEMPLATE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1HcQsj3aVbvlak135JK_akFxQ68hG6ioV2HRtOpr-6JM/export?format=csv&gid=1772307187';
 
 export interface Top100PlayerSignal {
   rank: number;
@@ -27,6 +28,37 @@ export interface PositionShare {
   shareOut: string;
 }
 
+export interface Top100PositionLeader {
+  rank: number;
+  player: string;
+  own: string;
+  team: string;
+}
+
+export interface Top100TemplateTierPlayer {
+  rank: number;
+  player: string;
+  pos: string; // 'GK' | 'DEF' | 'MID' | 'FWD'
+  team: string;
+  price: string;
+  top100Own: number; // e.g. 88.0
+  appearances: number; // e.g. 88
+  overallOwn: number; // e.g. 73.8
+  delta: number; // e.g. +14.2 (top100Own - overallOwn)
+  tier: string; // 'Template Core' | 'Strong Template' | 'Differential' | 'Elite Differential'
+  status: string; // 'Core' | 'Strong' | 'Differential' | 'Elite Diff'
+}
+
+export interface Top100TemplateAnalysis {
+  templateByPos: {
+    GK: Top100PositionLeader[];
+    DEF: Top100PositionLeader[];
+    MID: Top100PositionLeader[];
+    FWD: Top100PositionLeader[];
+  };
+  templateTiers: Top100TemplateTierPlayer[];
+}
+
 export interface Top100Snapshot {
   gw: number; // e.g. 5
   closedDeadlineGw: number; // 5 (closed deadline)
@@ -42,6 +74,7 @@ export interface Top100Snapshot {
   dividedOpinion: Top100PlayerSignal[];
   positionActivity: PositionShare[];
   playerLookup: Record<string, Top100PlayerSignal>; // normalized player name -> signal
+  templateAnalysis?: Top100TemplateAnalysis;
 }
 
 function normalizeName(name: string): string {
@@ -223,7 +256,7 @@ export function parseTop100Csv(csvText: string): Top100Snapshot {
     closedDeadlineGw: gw,
     planningForGw: gw + 1,
     refreshedAt,
-    sourceUrl: GOOGLE_SHEET_CSV_URL,
+    sourceUrl: TRANSFERS_SHEET_CSV_URL,
     mostBought,
     mostSold,
     strongestNetBuy,
@@ -236,19 +269,97 @@ export function parseTop100Csv(csvText: string): Top100Snapshot {
   };
 }
 
-export async function fetchAndSaveTop100Snapshot(): Promise<Top100Snapshot> {
-  const res = await fetch(GOOGLE_SHEET_CSV_URL, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    },
-  });
+export function parseTop100TemplateCsv(csvText: string): Top100TemplateAnalysis {
+  const lines = csvText.split(/\r?\n/).map(l => l.trim());
+  const templateByPos = {
+    GK: [] as Top100PositionLeader[],
+    DEF: [] as Top100PositionLeader[],
+    MID: [] as Top100PositionLeader[],
+    FWD: [] as Top100PositionLeader[],
+  };
+  const templateTiers: Top100TemplateTierPlayer[] = [];
 
-  if (!res.ok) {
-    throw new Error(`Failed to fetch Google Sheet CSV: HTTP ${res.status}`);
+  // Parse lines 6-10 (positions leaderboards)
+  for (let i = 6; i <= 10; i++) {
+    if (!lines[i]) continue;
+    const parts = lines[i].split(',').map(s => s.trim());
+    if (parts[1]) templateByPos.GK.push({ rank: Number(parts[0]) || 0, player: parts[1], own: parts[2] || '', team: parts[3] || '' });
+    if (parts[5]) templateByPos.DEF.push({ rank: Number(parts[4]) || 0, player: parts[5], own: parts[6] || '', team: parts[7] || '' });
+    if (parts[9]) templateByPos.MID.push({ rank: Number(parts[8]) || 0, player: parts[9], own: parts[10] || '', team: parts[11] || '' });
+    if (parts[13]) templateByPos.FWD.push({ rank: Number(parts[12]) || 0, player: parts[13], own: parts[14] || '', team: parts[15] || '' });
   }
 
-  const csvText = await res.text();
-  const snapshot = parseTop100Csv(csvText);
+  // Parse template tiers starting from line 16
+  for (let i = 16; i < lines.length; i++) {
+    const l = lines[i];
+    if (!l || !l.replace(/,/g, '').trim()) continue;
+    const parts = l.split(',').map(s => s.trim());
+    // Col format: ,Player,Pos,Team,Price,Top 100 Own %,Appearances,Overall Own %,Template Tier,Rank,Status
+    const player = parts[1];
+    if (!player || player.toLowerCase() === 'player') continue;
+
+    const pos = parts[2] || '';
+    const team = parts[3] || '';
+    const price = parts[4] || '';
+    const top100OwnStr = parts[5] || '0%';
+    const top100Own = parseFloat(top100OwnStr.replace('%', '')) || 0;
+    const appearances = parseInt(parts[6] || '0', 10);
+    const overallOwnStr = parts[7] || '0%';
+    const overallOwn = parseFloat(overallOwnStr.replace('%', '')) || 0;
+    const tier = parts[8] || '';
+    const rank = parseInt(parts[9] || '0', 10);
+    const status = parts[10] || '';
+    const delta = parseFloat((top100Own - overallOwn).toFixed(1));
+
+    templateTiers.push({
+      rank,
+      player,
+      pos,
+      team,
+      price,
+      top100Own,
+      appearances,
+      overallOwn,
+      tier,
+      status,
+      delta,
+    });
+  }
+
+  return {
+    templateByPos,
+    templateTiers,
+  };
+}
+
+export async function fetchAndSaveTop100Snapshot(): Promise<Top100Snapshot> {
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  };
+
+  const [transfersRes, templateRes] = await Promise.allSettled([
+    fetch(TRANSFERS_SHEET_CSV_URL, { headers }),
+    fetch(TEMPLATE_SHEET_CSV_URL, { headers }),
+  ]);
+
+  let snapshot: Top100Snapshot;
+  if (transfersRes.status === 'fulfilled' && transfersRes.value.ok) {
+    const csvText = await transfersRes.value.text();
+    snapshot = parseTop100Csv(csvText);
+  } else {
+    // If transfers fetch failed, try reading cached or construct fallback
+    const cached = await readTop100Snapshot();
+    if (cached) {
+      snapshot = cached;
+    } else {
+      throw new Error('Failed to fetch transfers Google Sheet CSV');
+    }
+  }
+
+  if (templateRes.status === 'fulfilled' && templateRes.value.ok) {
+    const templateCsv = await templateRes.value.text();
+    snapshot.templateAnalysis = parseTop100TemplateCsv(templateCsv);
+  }
 
   const dir = join(process.cwd(), 'data', 'top100');
   await mkdir(dir, { recursive: true });

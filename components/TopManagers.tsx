@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { FPLPlayer, FPLTeam } from '../types';
-import { ArrowUpDown, ChevronUp, ChevronDown, Search, Crown, Info, Flame, TrendingUp, TrendingDown, RefreshCw, AlertTriangle, Users } from 'lucide-react';
-import { Top100Snapshot } from '../services/top100Service';
+import { ArrowUpDown, ChevronUp, ChevronDown, Search, Crown, Info, Flame, TrendingUp, TrendingDown, RefreshCw, AlertTriangle, Users, Sparkles, Filter } from 'lucide-react';
+import { Top100Snapshot, Top100TemplateTierPlayer, Top100PositionLeader } from '../services/top100Service';
 
 interface TopManagersProps {
   players: FPLPlayer[];
@@ -28,6 +28,19 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
   const [top100Data, setTop100Data] = useState<Top100Snapshot | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'top100' | 'template'>('top100');
+
+  // Template tab states (Google Sheet gid 1772307187)
+  const [templateSearchTerm, setTemplateSearchTerm] = useState("");
+  const [templatePosFilter, setTemplatePosFilter] = useState<'all' | 'GK' | 'DEF' | 'MID' | 'FWD'>('all');
+  const [templateTierFilter, setTemplateTierFilter] = useState<string>('all');
+  const [templateDivergenceFilter, setTemplateDivergenceFilter] = useState<'all' | 'bias' | 'faded'>('all');
+  const [templateSortConfig, setTemplateSortConfig] = useState<{
+    key: 'rank' | 'top100Own' | 'overallOwn' | 'delta' | 'price' | 'appearances';
+    direction: 'asc' | 'desc';
+  }>({
+    key: 'rank',
+    direction: 'asc'
+  });
 
   useEffect(() => {
     fetch('/api/top100')
@@ -125,6 +138,94 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
     return "bg-slate-700 text-white";
   };
 
+  const getTemplatePosBadge = (pos: string) => {
+    const p = (pos || '').toUpperCase();
+    if (p === 'GK' || p === 'GKP') return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
+    if (p === 'DEF') return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+    if (p === 'MID') return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+    if (p === 'FWD') return "bg-rose-500/20 text-rose-400 border-rose-500/30";
+    return "bg-slate-700 text-white border-slate-600";
+  };
+
+  const getTierBadge = (tier: string) => {
+    switch (tier) {
+      case 'Template Core':
+        return 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+      case 'Strong Template':
+        return 'bg-blue-500/20 text-blue-300 border-blue-500/40';
+      case 'Differential':
+        return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+      case 'Elite Differential':
+        return 'bg-slate-700/60 text-slate-300 border-slate-600';
+      default:
+        return 'bg-slate-800 text-slate-400 border-slate-700';
+    }
+  };
+
+  const handleTemplateSort = (key: 'rank' | 'top100Own' | 'overallOwn' | 'delta' | 'price' | 'appearances') => {
+    setTemplateSortConfig(current => ({
+      key,
+      direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc'
+    }));
+  };
+
+  const TemplateSortIcon = ({ colKey }: { colKey: 'rank' | 'top100Own' | 'overallOwn' | 'delta' | 'price' | 'appearances' }) => {
+    if (templateSortConfig.key !== colKey) return <ArrowUpDown size={14} className="text-slate-600 inline ml-1" />;
+    return templateSortConfig.direction === 'asc' 
+      ? <ChevronUp size={14} className="text-purple-400 inline ml-1" /> 
+      : <ChevronDown size={14} className="text-purple-400 inline ml-1" />;
+  };
+
+  const filteredTemplateTiers = useMemo(() => {
+    const list = top100Data?.templateAnalysis?.templateTiers || [];
+    let result = [...list];
+
+    if (templateSearchTerm) {
+      const lower = templateSearchTerm.toLowerCase();
+      result = result.filter(p =>
+        p.player.toLowerCase().includes(lower) ||
+        p.team.toLowerCase().includes(lower)
+      );
+    }
+
+    if (templatePosFilter !== 'all') {
+      result = result.filter(p => p.pos.toUpperCase() === templatePosFilter.toUpperCase());
+    }
+
+    if (templateTierFilter !== 'all') {
+      result = result.filter(p => p.tier === templateTierFilter);
+    }
+
+    if (templateDivergenceFilter === 'bias') {
+      result = result.filter(p => p.delta >= 5);
+    } else if (templateDivergenceFilter === 'faded') {
+      result = result.filter(p => p.delta <= -5);
+    }
+
+    result.sort((a, b) => {
+      let valA: number = (a as any)[templateSortConfig.key];
+      let valB: number = (b as any)[templateSortConfig.key];
+
+      if (templateSortConfig.key === 'price') {
+        valA = parseFloat(a.price.replace(/[^0-9.]/g, '')) || 0;
+        valB = parseFloat(b.price.replace(/[^0-9.]/g, '')) || 0;
+      }
+
+      if (valA < valB) return templateSortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return templateSortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [
+    top100Data?.templateAnalysis?.templateTiers,
+    templateSearchTerm,
+    templatePosFilter,
+    templateTierFilter,
+    templateDivergenceFilter,
+    templateSortConfig,
+  ]);
+
   return (
     <div className="space-y-6">
       
@@ -157,21 +258,19 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
                     activeTab === 'template' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  Všeobecný Template
+                  Top 100 Template
                 </button>
               </div>
 
-              {activeTab === 'top100' && (
-                <button
-                  onClick={handleRefreshTop100}
-                  disabled={isRefreshing}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-700 hover:border-slate-600 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition-all disabled:opacity-50"
-                  title="Obnoviť dáta z Google Sheetu"
-                >
-                  <RefreshCw size={13} className={isRefreshing ? 'animate-spin text-amber-400' : 'text-slate-400'} />
-                  <span className="hidden sm:inline">Aktualizovať</span>
-                </button>
-              )}
+              <button
+                onClick={handleRefreshTop100}
+                disabled={isRefreshing}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-700 hover:border-slate-600 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition-all disabled:opacity-50"
+                title="Obnoviť dáta z Google Sheetu"
+              >
+                <RefreshCw size={13} className={isRefreshing ? 'animate-spin text-amber-400' : 'text-slate-400'} />
+                <span className="hidden sm:inline">Aktualizovať</span>
+              </button>
            </div>
         </div>
 
@@ -427,103 +526,369 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
         </div>
       )}
 
-      {/* Template Tab (Full Player Table) */}
+      {/* Template Tab (Full Google Sheets gid 1772307187 Template Analysis) */}
       {activeTab === 'template' && (
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
-          {/* Filters Row */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-               <div className="relative flex-1">
-                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                   <input 
-                     type="text" 
-                     placeholder="Search player name..." 
-                     value={searchTerm}
-                     onChange={(e) => setSearchTerm(e.target.value)}
-                     className="w-full bg-slate-900 border border-slate-600 rounded-lg pl-9 pr-3 py-2 text-white focus:ring-2 focus:ring-purple-500 outline-none"
-                   />
-                </div>
+        <div className="space-y-6">
+          {/* Section 1: Top 100 Template By Position */}
+          <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-5 border-b border-slate-700/80 gap-2">
+              <div>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <span className="p-1.5 bg-yellow-500/20 text-yellow-400 rounded-lg">
+                    <Crown size={18} />
+                  </span>
+                  TOP 100 TEMPLATE PODĽA POZÍCIÍ
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Najpopulárnejší hráči v 100 elitných tímoch (Top 5 na každej pozícii z Google Sheets analýzy)
+                </p>
+              </div>
+              <div className="text-xs text-slate-400 bg-slate-900/80 border border-slate-700/60 px-3 py-1.5 rounded-lg font-mono self-start sm:self-auto">
+                Vzorka: <strong className="text-white">100 Top 100 zostáv</strong>
+              </div>
+            </div>
 
-                <div className="flex gap-2">
-                  <select 
-                      value={teamFilter}
-                      onChange={(e) => setTeamFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                      className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                      <option value="all">All Teams</option>
-                      {teams.map(t => <option key={t.id} value={t.id}>{t.short_name}</option>)}
-                  </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* GK Card */}
+              <div className="bg-slate-900/70 rounded-xl border border-slate-700/60 p-4 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-700/50">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🧤</span>
+                      <h4 className="font-bold text-white text-sm">Brankári (GK)</h4>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">
+                      GKP
+                    </span>
+                  </div>
 
-                  <select 
-                      value={posFilter}
-                      onChange={(e) => setPosFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                      className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                      <option value="all">All Pos</option>
-                      <option value={1}>GKP</option>
-                      <option value={2}>DEF</option>
-                      <option value={3}>MID</option>
-                      <option value={4}>FWD</option>
-                  </select>
-                </div>
-          </div>
-        
-          {/* Modern Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-700 text-slate-400 text-xs uppercase tracking-wider">
-                  <th className="p-4 font-semibold cursor-pointer" onClick={() => handleSort('sel_num')}>Rank <SortIcon colKey="sel_num"/></th>
-                  <th className="p-4 font-semibold">Player</th>
-                  <th className="p-4 font-semibold text-center">Pos</th>
-                  <th className="p-4 font-semibold text-right cursor-pointer" onClick={() => handleSort('cost_num')}>Cost <SortIcon colKey="cost_num"/></th>
-                  <th className="p-4 font-semibold text-right cursor-pointer" onClick={() => handleSort('points_num')}>Points <SortIcon colKey="points_num"/></th>
-                  <th className="p-4 font-semibold w-1/4 cursor-pointer" onClick={() => handleSort('sel_num')}>Ownership <SortIcon colKey="sel_num"/></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700/50">
-                {filteredData.map((player, index) => (
-                  <tr key={player.id} className="hover:bg-slate-700/40 transition-colors group">
-                    <td className="p-4 font-mono text-slate-500">
-                      #{index + 1}
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                         <div className="font-bold text-white text-base">
-                           {player.web_name}
-                         </div>
-                         <span className="text-xs text-slate-500 px-2 py-0.5 rounded bg-slate-800 border border-slate-600">
-                           {player.short_team}
-                         </span>
-                      </div>
-                    </td>
-                    <td className="p-4 text-center">
-                      <span className={`px-2 py-1 rounded text-xs font-bold border ${getPosColor(player.element_type)}`}>
-                        {player.position_name}
-                      </span>
-                    </td>
-                    <td className="p-4 text-right font-mono text-blue-300">
-                      £{player.cost_num.toFixed(1)}
-                    </td>
-                    <td className="p-4 text-right font-bold text-white">
-                      {player.points_num}
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden">
-                          <div 
-                            className="bg-purple-500 h-2 rounded-full" 
-                            style={{ width: `${Math.min(player.sel_num, 100)}%` }}
-                          />
+                  <div className="space-y-2.5">
+                    {(top100Data?.templateAnalysis?.templateByPos?.GK || []).map(p => (
+                      <div key={p.player} className="flex items-center justify-between p-2 rounded-lg bg-slate-800/70 border border-slate-700/40">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="text-xs font-mono font-bold text-slate-500 w-4">#{p.rank}</span>
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-white truncate">{p.player}</div>
+                            <div className="text-[10px] text-slate-400">{p.team}</div>
+                          </div>
                         </div>
-                        <span className="text-sm font-mono text-purple-300 w-12 text-right">
-                          {player.sel_num}%
-                        </span>
+                        <div className="text-right shrink-0">
+                          <div className="text-xs font-bold font-mono text-yellow-300">{p.own}</div>
+                          <div className="w-14 bg-slate-900 rounded-full h-1.5 mt-1 overflow-hidden">
+                            <div className="bg-yellow-400 h-full rounded-full" style={{ width: p.own }} />
+                          </div>
+                        </div>
                       </div>
-                    </td>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* DEF Card */}
+              <div className="bg-slate-900/70 rounded-xl border border-slate-700/60 p-4 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-700/50">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🛡️</span>
+                      <h4 className="font-bold text-white text-sm">Obrancovia (DEF)</h4>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                      DEF
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {(top100Data?.templateAnalysis?.templateByPos?.DEF || []).map(p => (
+                      <div key={p.player} className="flex items-center justify-between p-2 rounded-lg bg-slate-800/70 border border-slate-700/40">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="text-xs font-mono font-bold text-slate-500 w-4">#{p.rank}</span>
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-white truncate">{p.player}</div>
+                            <div className="text-[10px] text-slate-400">{p.team}</div>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-xs font-bold font-mono text-blue-300">{p.own}</div>
+                          <div className="w-14 bg-slate-900 rounded-full h-1.5 mt-1 overflow-hidden">
+                            <div className="bg-blue-400 h-full rounded-full" style={{ width: p.own }} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* MID Card */}
+              <div className="bg-slate-900/70 rounded-xl border border-slate-700/60 p-4 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-700/50">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">⚡</span>
+                      <h4 className="font-bold text-white text-sm">Záložníci (MID)</h4>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                      MID
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {(top100Data?.templateAnalysis?.templateByPos?.MID || []).map(p => (
+                      <div key={p.player} className="flex items-center justify-between p-2 rounded-lg bg-slate-800/70 border border-slate-700/40">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="text-xs font-mono font-bold text-slate-500 w-4">#{p.rank}</span>
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-white truncate">{p.player}</div>
+                            <div className="text-[10px] text-slate-400">{p.team}</div>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-xs font-bold font-mono text-emerald-300">{p.own}</div>
+                          <div className="w-14 bg-slate-900 rounded-full h-1.5 mt-1 overflow-hidden">
+                            <div className="bg-emerald-400 h-full rounded-full" style={{ width: p.own }} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* FWD Card */}
+              <div className="bg-slate-900/70 rounded-xl border border-slate-700/60 p-4 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-700/50">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🎯</span>
+                      <h4 className="font-bold text-white text-sm">Útočníci (FWD)</h4>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
+                      FWD
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {(top100Data?.templateAnalysis?.templateByPos?.FWD || []).map(p => (
+                      <div key={p.player} className="flex items-center justify-between p-2 rounded-lg bg-slate-800/70 border border-slate-700/40">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="text-xs font-mono font-bold text-slate-500 w-4">#{p.rank}</span>
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-white truncate">{p.player}</div>
+                            <div className="text-[10px] text-slate-400">{p.team}</div>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-xs font-bold font-mono text-rose-300">{p.own}</div>
+                          <div className="w-14 bg-slate-900 rounded-full h-1.5 mt-1 overflow-hidden">
+                            <div className="bg-rose-400 h-full rounded-full" style={{ width: p.own }} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Full Top 100 Template Tiers Table */}
+          <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-700/80 mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <span className="p-1.5 bg-purple-500/20 text-purple-400 rounded-lg">
+                    <Sparkles size={18} />
+                  </span>
+                  TOP 100 TEMPLATE TIERS & KONSENZUS
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  152 hráčov zoradených podľa vlastníctva u elity vs. celkové FPL vlastníctvo a elitná divergencia
+                </p>
+              </div>
+
+              {/* Quick Summary Badges */}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold">
+                  Core: 5 hráčov (≥50%)
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-300 font-bold">
+                  Strong: 16 hráčov (25–49%)
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-300 font-bold">
+                  Diff: 17 hráčov (10–24%)
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-slate-700/60 border border-slate-600 text-slate-300 font-bold">
+                  Elite Diff: 114 hráčov (&lt;10%)
+                </span>
+              </div>
+            </div>
+
+            {/* Filter Controls Row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+              <div className="relative md:col-span-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <input 
+                  type="text" 
+                  placeholder="Hľadať hráča alebo tím..." 
+                  value={templateSearchTerm}
+                  onChange={(e) => setTemplateSearchTerm(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-600 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <select 
+                  value={templatePosFilter}
+                  onChange={(e) => setTemplatePosFilter(e.target.value as any)}
+                  className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-xs text-white outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="all">Všetky pozície (All Pos)</option>
+                  <option value="GK">Brankári (GK)</option>
+                  <option value="DEF">Obrancovia (DEF)</option>
+                  <option value="MID">Záložníci (MID)</option>
+                  <option value="FWD">Útočníci (FWD)</option>
+                </select>
+              </div>
+
+              <div>
+                <select 
+                  value={templateTierFilter}
+                  onChange={(e) => setTemplateTierFilter(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-xs text-white outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="all">Všetky Template Tiery</option>
+                  <option value="Template Core">Template Core (≥50%)</option>
+                  <option value="Strong Template">Strong Template (25–49%)</option>
+                  <option value="Differential">Differential (10–24%)</option>
+                  <option value="Elite Differential">Elite Differential (&lt;10%)</option>
+                </select>
+              </div>
+
+              <div>
+                <select 
+                  value={templateDivergenceFilter}
+                  onChange={(e) => setTemplateDivergenceFilter(e.target.value as any)}
+                  className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-xs text-white outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="all">Všetka divergencia (Top 100 vs Trh)</option>
+                  <option value="bias">🔥 Elitný Favorit (Delta ≥ +5%)</option>
+                  <option value="faded">⚠️ Faded by Elite (Delta ≤ -5%)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Template Tiers Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-700 text-slate-400 text-xs uppercase tracking-wider">
+                    <th className="p-3 font-semibold cursor-pointer" onClick={() => handleTemplateSort('rank')}>
+                      Rank <TemplateSortIcon colKey="rank" />
+                    </th>
+                    <th className="p-3 font-semibold">Hráč & Klub</th>
+                    <th className="p-3 font-semibold text-center">Poz</th>
+                    <th className="p-3 font-semibold text-right cursor-pointer" onClick={() => handleTemplateSort('price')}>
+                      Cena <TemplateSortIcon colKey="price" />
+                    </th>
+                    <th className="p-3 font-semibold w-1/4 cursor-pointer" onClick={() => handleTemplateSort('top100Own')}>
+                      Top 100 Vlastníctvo <TemplateSortIcon colKey="top100Own" />
+                    </th>
+                    <th className="p-3 font-semibold text-right cursor-pointer" onClick={() => handleTemplateSort('overallOwn')}>
+                      Celkový Trh <TemplateSortIcon colKey="overallOwn" />
+                    </th>
+                    <th className="p-3 font-semibold text-center cursor-pointer" onClick={() => handleTemplateSort('delta')}>
+                      Divergencia (Delta) <TemplateSortIcon colKey="delta" />
+                    </th>
+                    <th className="p-3 font-semibold text-center">Tier</th>
+                    <th className="p-3 font-semibold text-center">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-700/50">
+                  {filteredTemplateTiers.map((p) => {
+                    const isPositiveDelta = p.delta >= 5;
+                    const isNegativeDelta = p.delta <= -5;
+
+                    return (
+                      <tr key={`${p.rank}-${p.player}`} className="hover:bg-slate-700/40 transition-colors group">
+                        <td className="p-3 font-mono text-slate-500 text-xs">
+                          #{p.rank}
+                        </td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-white text-sm">{p.player}</span>
+                            <span className="text-[10px] text-slate-400 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 font-medium">
+                              {p.team}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-3 text-center">
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${getTemplatePosBadge(p.pos)}`}>
+                            {p.pos}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right font-mono text-blue-300 font-bold text-xs">
+                          {p.price}
+                        </td>
+                        <td className="p-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-xs font-mono">
+                              <span className="text-purple-300 font-bold">{p.top100Own}%</span>
+                              <span className="text-[10px] text-slate-500">{p.appearances}/100 zostáv</span>
+                            </div>
+                            <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden">
+                              <div
+                                className="bg-gradient-to-r from-purple-500 to-indigo-500 h-2 rounded-full"
+                                style={{ width: `${Math.min(p.top100Own, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-3 text-right font-mono text-slate-300 text-xs">
+                          {p.overallOwn}%
+                        </td>
+                        <td className="p-3 text-center">
+                          {isPositiveDelta ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                              <Flame size={12} className="text-emerald-400" />
+                              +{p.delta}%
+                            </span>
+                          ) : isNegativeDelta ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                              <TrendingDown size={12} className="text-rose-400" />
+                              {p.delta}%
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-xs font-mono text-slate-400 bg-slate-900 border border-slate-700">
+                              {p.delta > 0 ? `+${p.delta}` : p.delta}%
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${getTierBadge(p.tier)}`}>
+                            {p.tier}
+                          </span>
+                        </td>
+                        <td className="p-3 text-center font-mono text-xs text-slate-400">
+                          {p.status}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filteredTemplateTiers.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="p-8 text-center text-slate-400 text-sm">
+                        Žiadni hráči nezodpovedajú zvoleným filtrom.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs text-slate-400">
+              <span>Zobrazených: <strong className="text-white">{filteredTemplateTiers.length}</strong> z 152 hráčov</span>
+              <span>Zdroj: Google Sheets (gid 1772307187)</span>
+            </div>
           </div>
         </div>
       )}
