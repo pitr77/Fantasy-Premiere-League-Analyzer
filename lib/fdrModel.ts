@@ -108,7 +108,8 @@ type DifficultyResult = {
         position: number;
         tableAdj: number;
         haAdj: number;
-        final: number;
+                final: number;
+        signal: 'form' | 'strength' | 'blended';
     };
 };
 
@@ -123,17 +124,26 @@ export function getDynamicDifficulty(
     opponentId: number,
     players: FPLPlayer[],
     positionMap: Record<number, number>,
-    isAway: boolean = false
+    isAway: boolean = false,
+    teamStrength?: number
 ): DifficultyResult {
     const { avg, count } = getTeamFormStats(opponentId, players, 12);
 
+    // Early-season form and table data are sparse. Use official team strength
+    // as a prior, then gradually hand control to live form.
+    const strength = Number.isFinite(teamStrength) ? Math.max(1, Math.min(5, teamStrength!)) : 3;
+    const strengthSignal = 1.8 + (strength - 1) * 0.8;
+    const formWeight = Math.min(0.75, count / 12);
+    const signal = count >= 8 ? 'form' : count > 0 ? 'blended' : 'strength';
+    const opponentSignal = avg * formWeight + strengthSignal * (1 - formWeight);
+
     const position = positionMap[opponentId] || 10;
-    const tableAdj = tableAdjustment(position, 0.15);
+    const tableAdj = tableAdjustment(position, 0.10);
 
     // Away slightly harder
     const haAdj = isAway ? 0.15 : -0.10;
 
-    const final = avg + tableAdj + haAdj;
+    const final = opponentSignal + tableAdj + haAdj;
 
     let score: 1 | 2 | 3 | 4 | 5 = 1;
     let label = 'Easy';
@@ -157,7 +167,7 @@ export function getDynamicDifficulty(
         bg,
         border,
         text: 'text-white',
-        threat: Number(avg.toFixed(2)),
+                threat: Number(opponentSignal.toFixed(2)),
         details: {
             formAvgTop12: Number(avg.toFixed(2)),
             formCount: count,
@@ -165,6 +175,7 @@ export function getDynamicDifficulty(
             tableAdj: Number(tableAdj.toFixed(2)),
             haAdj: Number(haAdj.toFixed(2)),
             final: Number(final.toFixed(2)),
+            signal,
         }
     };
 }

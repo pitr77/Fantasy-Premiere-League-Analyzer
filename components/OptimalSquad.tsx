@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { FPLPlayer, FPLTeam } from '../types';
 import { getPlayerImageUrl } from '../services/fplService';
+import { projectPlayer } from '../lib/playerProjection';
 import { Zap, DollarSign, Trophy, TrendingUp, RefreshCw, AlertTriangle, Shield, Calculator } from 'lucide-react';
 
 interface OptimalSquadProps {
@@ -8,7 +9,7 @@ interface OptimalSquadProps {
   teams: FPLTeam[];
 }
 
-type OptimizationMetric = 'total_points' | 'form' | 'value';
+type OptimizationMetric = 'total_points' | 'form' | 'expected_points' | 'value';
 
 const POSITION_MAP: Record<number, string> = {
   1: "GKP",
@@ -31,7 +32,8 @@ const OptimalSquad: React.FC<OptimalSquadProps> = ({ players, teams }) => {
   const getPlayerScore = (p: FPLPlayer, currentMetric: OptimizationMetric): number => {
     switch (currentMetric) {
       case 'total_points': return p.total_points;
-      case 'form': return parseFloat(p.form);
+            case 'form': return parseFloat(p.form) || 0;
+      case 'expected_points': return projectPlayer(p, teams.find(team => team.id === p.team)).expectedPoints;
       case 'value': return p.total_points / (p.now_cost / 10);
       default: return 0;
     }
@@ -189,7 +191,7 @@ const OptimalSquad: React.FC<OptimalSquadProps> = ({ players, teams }) => {
 
     const teamObj = teams.find(t => t.id === player.team);
     const score = getPlayerScore(player, metric);
-    const scoreLabel = metric === 'form' ? 'Form' : metric === 'total_points' ? 'Pts' : 'Val';
+    const scoreLabel = metric === 'form' ? 'Form' : metric === 'total_points' ? 'Pts' : metric === 'expected_points' ? 'xPts' : 'Val';
 
     return (
       <div className="relative w-14 h-24 sm:w-20 sm:h-28 md:w-24 md:h-36 flex flex-col items-center group animate-in zoom-in duration-300">
@@ -249,6 +251,13 @@ const OptimalSquad: React.FC<OptimalSquadProps> = ({ players, teams }) => {
                          {metric === 'total_points' && <div className="w-2 h-2 bg-white rounded-full"></div>}
                      </button>
                      <button 
+                        onClick={() => setMetric('expected_points')}
+                        className={`p-3 rounded-lg border flex items-center justify-between transition-all ${metric === 'expected_points' ? 'bg-purple-600 border-purple-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-slate-500'}`}
+                     >
+                         <span className="flex items-center gap-2"><Calculator size={16}/> Projected GW Points</span>
+                         {metric === 'expected_points' && <div className="w-2 h-2 bg-white rounded-full"></div>}
+                     </button>
+                     <button  
                         onClick={() => setMetric('value')}
                         className={`p-3 rounded-lg border flex items-center justify-between transition-all ${metric === 'value' ? 'bg-purple-600 border-purple-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-slate-500'}`}
                      >
@@ -305,7 +314,7 @@ const OptimalSquad: React.FC<OptimalSquadProps> = ({ players, teams }) => {
                          </div>
                      </div>
                      <div className="bg-slate-900 p-3 rounded-lg border border-slate-700">
-                         <div className="text-xs text-slate-500 mb-1">Total {metric === 'form' ? 'Form' : 'Points'}</div>
+                         <div className="text-xs text-slate-500 mb-1">Total {metric === 'form' ? 'Form' : metric === 'expected_points' ? 'xPts' : 'Points'}</div>
                          <div className="text-xl font-bold font-mono text-purple-400">
                              {stats.score.toFixed(1)}
                          </div>

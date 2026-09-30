@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Local odds & top100 snapshots should not be committed.
+data/odds/*.json
+data/top100/*.json
+*.tsbuildinfo
+
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

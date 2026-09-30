@@ -1,10 +1,15 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { FPLPlayer, FPLTeam, FPLEvent, FPLFixture } from '../types';
-import { ArrowLeftRight, TrendingUp, Calendar, DollarSign, Filter, Info, ChevronDown, ChevronUp, Calculator, Activity, HelpCircle, ArrowUpDown, Clock, Users, ChevronRight, AlertTriangle } from 'lucide-react';
+import { ArrowLeftRight, TrendingUp, Calendar, DollarSign, Filter, Info, ChevronDown, ChevronUp, Calculator, Activity, HelpCircle, ArrowUpDown, Clock, Users, ChevronRight, AlertTriangle, Coins, RefreshCw, Target, Flame } from 'lucide-react';
 import ResultChip from './ResultChip';
 import { calculateLeaguePositions, getDynamicDifficulty } from '../lib/fdrModel';
 import { computeTransferIndexForPlayers, TransferIndexResult } from '../lib/transferIndex';
+import { projectPlayer } from '../lib/playerProjection';
 import { track } from '@/lib/ga';
+import { FortunaMatch } from '../services/oddsSnapshotService';
+import { getGoalscorerOdds, GoalscorerOddsResult } from '../lib/goalscorerModel';
+import { Top100Snapshot, Top100PlayerSignal } from '../services/top100Service';
+import { findTop100Signal } from '../lib/top100Matcher';
 
 interface TransferPicksProps {
     players: FPLPlayer[];
@@ -17,8 +22,13 @@ interface PlayerTransferStats extends FPLPlayer {
     transferIndex: number; // 0.00 - 1.00
     fixtureDifficultySum: number; // Lower is better
     nextFixtures: { event: number; opponent: number; difficulty: number; isHome: boolean }[];
-    eoFormRatio: number;
+        eoFormRatio: number;
     eoPtsRatio: number;
+    expectedPoints: number;
+    startProbability: number;
+    confidence: number;
+    goalscorer?: GoalscorerOddsResult | null;
+    top100Signal?: Top100PlayerSignal | null;
 }
 
 const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures, events }) => {
@@ -30,6 +40,67 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
         direction: 'desc'
     });
     const [expandedPlayerId, setExpandedPlayerId] = useState<number | null>(null);
+
+    // Fortuna odds states
+    const [oddsData, setOddsData] = useState<FortunaMatch[] | null>(null);
+    const [oddsLastUpdated, setOddsLastUpdated] = useState<string | null>(null);
+    const [isRefreshingOdds, setIsRefreshingOdds] = useState(false);
+    const [showOdds, setShowOdds] = useState(true);
+
+    // Top 100 Manager signals state
+    const [top100Data, setTop100Data] = useState<Top100Snapshot | null>(null);
+
+    useEffect(() => {
+        fetch('/api/odds')
+            .then(res => res.json())
+            .then(data => {
+                if (data.available && Array.isArray(data.matches)) {
+                    setOddsData(data.matches);
+                    if (data.fetchedAt) setOddsLastUpdated(data.fetchedAt);
+                }
+            })
+            .catch(() => {});
+
+        fetch('/api/top100')
+            .then(res => res.json())
+            .then(data => {
+                if (data.available) {
+                    setTop100Data(data);
+                }
+            })
+            .catch(() => {});
+    }, []);
+
+    const formatLastUpdated = (dateStr: string | null) => {
+        if (!dateStr) return null;
+        try {
+            const date = new Date(dateStr);
+            const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const day = date.toLocaleDateString([], { day: 'numeric', month: 'numeric' });
+            return `${time}, ${day}`;
+        } catch {
+            return null;
+        }
+    };
+
+    const handleRefreshOdds = async () => {
+        if (isRefreshingOdds) return;
+        setIsRefreshingOdds(true);
+        try {
+            const res = await fetch('/api/odds', { method: 'POST' });
+            const data = await res.json();
+            if (data.success && Array.isArray(data.matches)) {
+                setOddsData(data.matches);
+                if (data.fetchedAt) setOddsLastUpdated(data.fetchedAt);
+            }
+        } catch {
+        } finally {
+            setIsRefreshingOdds(false);
+        }
+    };
+
+    const nextEvent = events.find(e => e.is_next) || events.find(e => e.is_current) || events[0];
+    const nextEventId = nextEvent ? nextEvent.id : 1;
 
     const getTeamShort = (id: number) => teams.find(t => t.id === id)?.short_name || "-";
 
@@ -45,7 +116,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
         }
     };
 
-    // 2. Process Players & Calculate Index
+    // 2. Process Players & Calculate Index + Goalscorer Odds + Top 100 Signals
     const processedPlayers = useMemo(() => {
         return computeTransferIndexForPlayers({
             players,
@@ -54,8 +125,20 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
             events,
             lookahead: horizon === 'next' ? 1 : 5,
             horizon: horizon
+        }).map(player => {
+            const projected = projectPlayer(player, teams.find(team => team.id === player.team));
+            const goalscorer = (player.element_type === 3 || player.element_type === 4)
+                ? getGoalscorerOdds(player, teams, fixtures, nextEventId, oddsData)
+                : null;
+            const top100Signal = findTop100Signal(player, top100Data);
+            return {
+                ...player,
+                ...projected,
+                goalscorer,
+                top100Signal,
+            };
         });
-    }, [players, fixtures, teams, events, horizon]);
+    }, [players, fixtures, teams, events, horizon, nextEventId, oddsData, top100Data]);
 
 
     // 3. Sorting & Filtering
@@ -74,6 +157,14 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
             if (sortConfig.key === 'now_cost') {
                 valA = a.now_cost;
                 valB = b.now_cost;
+            }
+            if (sortConfig.key === 'goalProb') {
+                valA = a.goalscorer?.prob ?? -1;
+                valB = b.goalscorer?.prob ?? -1;
+            }
+            if (sortConfig.key === 'goalOdds') {
+                valA = a.goalscorer?.odds ?? 999;
+                valB = b.goalscorer?.odds ?? 999;
             }
             // Sort by specific Gameweek Difficulty
             if (sortConfig.key.startsWith('GW')) {
@@ -103,9 +194,8 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
     };
 
     // Get next GW headers
-    const nextEvent = events.find(e => e.is_next) || events[0];
     const lookaheadLength = horizon === 'next' ? 1 : 5;
-    const gwHeaders = Array.from({ length: lookaheadLength }, (_, i) => nextEvent.id + i).filter(id => id <= 38);
+    const gwHeaders = Array.from({ length: lookaheadLength }, (_, i) => (nextEvent?.id || 1) + i).filter(id => id <= 38);
 
     // Sorting Header Component
     const SortHeader: React.FC<{ label: string, sortKey: string, align?: "left" | "right" | "center", className?: string }> = ({ label, sortKey, align = "left", className = "" }) => {
@@ -229,6 +319,16 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                 : 'Upcoming fixture difficulty sum. Blanks are penalised as 6 points.'}
                                         </p>
                                     </div>
+                                    {(activePos === 3 || activePos === 4) && (
+                                        <div className="space-y-1">
+                                            <p className="text-amber-400 font-medium flex items-center gap-1">
+                                                <Coins size={12} /> Goal Odds (Kurzy na strelcov)
+                                            </p>
+                                            <p className="text-slate-500">
+                                                Kurz a pravdepodobnosť gólu v najbližšom kole odvodená z live kurzov Fortuny alebo z očakávaného počtu gólov tímu v kombinácii s individuálnym FPL Threat a formou.
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -273,20 +373,50 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                     ))}
                 </div>
 
-                {/* Horizon Toggle */}
-                <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex self-start md:self-auto">
-                    <button
-                        onClick={() => setHorizon('next')}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${horizon === 'next' ? 'bg-slate-700 text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
-                    >
-                        Next GW
-                    </button>
-                    <button
-                        onClick={() => setHorizon('next5')}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${horizon === 'next5' ? 'bg-slate-700 text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
-                    >
-                        Next 5 GWs
-                    </button>
+                <div className="flex items-center gap-2 flex-wrap self-start md:self-auto">
+                    {/* Horizon Toggle */}
+                    <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex">
+                        <button
+                            onClick={() => setHorizon('next')}
+                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${horizon === 'next' ? 'bg-slate-700 text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            Next GW
+                        </button>
+                        <button
+                            onClick={() => setHorizon('next5')}
+                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${horizon === 'next5' ? 'bg-slate-700 text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            Next 5 GWs
+                        </button>
+                    </div>
+
+                    {/* Goalscorer Odds Toggle for MID and FWD */}
+                    {(activePos === 3 || activePos === 4) && (
+                        <div className="flex items-center gap-1.5">
+                            <button
+                                onClick={() => setShowOdds(!showOdds)}
+                                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                                    showOdds
+                                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.2)]'
+                                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                                }`}
+                                title="Zobraziť stávkové kurzy na strelcov gólu z Fortuny"
+                            >
+                                <Coins size={14} className={showOdds ? "text-amber-400" : "text-slate-400"} />
+                                <span>Kurzy strelcov</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-0.5"></span>
+                            </button>
+
+                            <button
+                                onClick={handleRefreshOdds}
+                                disabled={isRefreshingOdds}
+                                className="p-2 bg-slate-800/90 border border-slate-700 hover:border-slate-600 rounded-xl text-slate-300 hover:text-white transition-all disabled:opacity-50"
+                                title={oddsLastUpdated ? `Aktualizovať kurzy (naposledy: ${formatLastUpdated(oddsLastUpdated)})` : 'Aktualizovať kurzy z Fortuny'}
+                            >
+                                <RefreshCw size={13} className={isRefreshingOdds ? 'animate-spin text-amber-400' : 'text-slate-400'} />
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -310,10 +440,21 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                             >
                                 <div className="flex justify-between items-start mb-2">
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-1.5 mb-1.5">
+                                        <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                                             <span className="text-[11px] text-slate-500 font-mono font-bold">#{idx + 1}</span>
                                             <span className="font-bold text-white text-base truncate">{p.web_name}</span>
                                             <span className="text-[11px] px-2 py-0.5 bg-green-500/10 text-green-400 rounded-md font-bold border border-green-500/20 leading-none">{p.form}</span>
+                                            {p.top100Signal && (
+                                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold leading-none ${
+                                                    p.top100Signal.net > 0
+                                                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                                        : p.top100Signal.net < 0
+                                                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                                }`}>
+                                                    {p.top100Signal.net > 0 ? `🔥 Top 100: +${p.top100Signal.net}` : p.top100Signal.net < 0 ? `⚠️ Top 100: ${p.top100Signal.net}` : `⚡ Churn`} (GW{top100Data?.closedDeadlineGw || 5})
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="text-xs text-slate-400 flex items-center gap-1.5 leading-none">
                                             <span className="truncate">{getTeamShort(p.team)}</span>
@@ -378,7 +519,15 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                 />
                                             </div>
                                         </div>
-                                        {/* Ownership Bar */}
+                                                                                {/* Projection */}
+                                        <div className="space-y-0.5">
+                                            <div className="flex justify-between text-[8px] uppercase font-bold text-slate-500">
+                                                <span>xPTS</span>
+                                                <span className="text-purple-300 font-mono font-black">{p.expectedPoints.toFixed(1)}</span>
+                                            </div>
+                                            <div className="text-[9px] text-slate-500">Start {Math.round(p.startProbability * 100)}% · Conf {Math.round(p.confidence * 100)}%</div>
+                                        </div>
+                                                                                {/* Ownership Bar */}
                                         <div className="space-y-0.5">
                                             <div className="flex justify-between text-[8px] uppercase font-bold text-slate-500">
                                                 <span>OWNERSHIP</span>
@@ -392,6 +541,30 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Goalscorer Odds Pill for MID and FWD */}
+                                    {p.goalscorer && (activePos === 3 || activePos === 4) && showOdds && (
+                                        <div className="flex items-center justify-between bg-slate-900/80 border border-amber-500/30 rounded-lg px-2.5 py-1.5 shadow-sm">
+                                            <span className="text-[10px] font-bold text-amber-400 flex items-center gap-1">
+                                                <Target size={12} className="text-amber-400" /> Strelec:
+                                            </span>
+                                            <div className="flex items-center gap-1.5 font-mono">
+                                                <span className="text-white font-bold text-xs">{p.goalscorer.odds.toFixed(2)}</span>
+                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                                                    p.goalscorer.prob >= 0.45
+                                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                                                        : p.goalscorer.prob >= 0.30
+                                                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                                }`}>
+                                                    {Math.round(p.goalscorer.prob * 100)}% šanca
+                                                </span>
+                                                <span className="text-[10px] text-slate-400">
+                                                    vs {p.goalscorer.opponentShort} ({p.goalscorer.isHome ? 'H' : 'A'})
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Fixtures Timeline */}
                                     <div className="space-y-1.5 pt-2">
@@ -421,6 +594,40 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                 <span className="text-white font-bold">{p.minutes}</span>
                                             </div>
 
+                                            {p.goalscorer && (activePos === 3 || activePos === 4) && (
+                                                <div className="flex flex-col gap-1 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20 col-span-2">
+                                                    <span className="text-[9px] text-amber-400 uppercase tracking-widest flex items-center gap-1 font-bold">
+                                                        <Coins size={10} /> Fortuna Goalscorer Odds (GW{nextEventId})
+                                                    </span>
+                                                    <div className="flex items-center justify-between text-xs font-mono">
+                                                        <span className="text-white font-bold">
+                                                            Kurz: {p.goalscorer.odds.toFixed(2)} · Šanca: {Math.round(p.goalscorer.prob * 100)}%
+                                                        </span>
+                                                        <span className="text-slate-400 text-[10px]">
+                                                            {p.goalscorer.source === 'fortuna_live' ? 'Fortuna Live Line' : `Očakávané xG tímu: ${p.goalscorer.teamExpectedGoals}`}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {p.top100Signal && (
+                                                <div className="flex flex-col gap-1 bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/50 col-span-2">
+                                                    <div className="flex justify-between items-center text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                                                        <span className="flex items-center gap-1">
+                                                            <Flame size={12} className={p.top100Signal.net > 0 ? "text-emerald-400" : "text-rose-400"} />
+                                                            Top 100 Manažéri (GW{top100Data?.closedDeadlineGw || 5} uzávierka)
+                                                        </span>
+                                                        <span className={p.top100Signal.net > 0 ? "text-emerald-400 font-mono font-bold" : "text-rose-400 font-mono font-bold"}>
+                                                            {p.top100Signal.net > 0 ? `Net +${p.top100Signal.net}` : `Net ${p.top100Signal.net}`}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-xs text-slate-300">
+                                                        <span>Kúpené: <b className="text-white font-mono">{p.top100Signal.in}x</b> · Predané: <b className="text-white font-mono">{p.top100Signal.out}x</b></span>
+                                                        <span className="text-[10px] text-slate-500 italic">Dáta z minulej uzávierky</span>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             <div className="flex flex-col gap-1 bg-slate-800/30 p-2.5 rounded-lg border border-slate-700/20">
                                                 <span className="text-[9px] text-slate-500 uppercase tracking-widest flex items-center gap-1">
                                                     Risk vs Form <HelpCircle size={8} />
@@ -432,6 +639,11 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                     Risk vs Output <HelpCircle size={8} />
                                                 </span>
                                                 <span className="text-xs font-mono text-blue-300">{p.eoPtsRatio.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex flex-col gap-1 bg-slate-800/30 p-2.5 rounded-lg border border-slate-700/20">
+                                                <span className="text-[9px] text-slate-500 uppercase tracking-widest">Projection</span>
+                                                <span className="text-xs font-mono text-purple-300">{p.expectedPoints.toFixed(1)} xPts</span>
+                                                <span className="text-[10px] text-slate-500">Start {Math.round(p.startProbability * 100)}% · Conf {Math.round(p.confidence * 100)}%</span>
                                             </div>
                                         </div>
 
@@ -479,7 +691,18 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                 />
                                 <SortHeader label="Price" sortKey="now_cost" align="right" />
                                 <SortHeader label="Ownership" sortKey="selected_by_percent" align="right" />
-                                <SortHeader label="Form" sortKey="form" align="right" />
+                                                                <SortHeader label="Form" sortKey="form" align="right" />
+                                <SortHeader label="xPts" sortKey="expectedPoints" align="right" />
+                                <SortHeader label="Start" sortKey="startProbability" align="right" />
+
+                                {(activePos === 3 || activePos === 4) && showOdds && (
+                                    <SortHeader
+                                        label="Goal Odds"
+                                        sortKey="goalProb"
+                                        align="center"
+                                        className="w-28 text-amber-400"
+                                    />
+                                )}
 
                                 {gwHeaders.map(gw => (
                                     <SortHeader key={gw} label={`GW${gw}`} sortKey={`GW${gw}`} align="center" className="w-16" />
@@ -501,7 +724,32 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                     >
                                         <td className="p-4 text-center text-slate-500 font-mono">{idx + 1}</td>
                                         <td className="p-4">
-                                            <div className="font-bold text-white">{p.web_name}</div>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <span className="font-bold text-white">{p.web_name}</span>
+                                                {p.top100Signal && (
+                                                    <span
+                                                        className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded font-mono ${
+                                                            p.top100Signal.net > 0
+                                                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                                                                : p.top100Signal.net < 0
+                                                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-[0_0_8px_rgba(244,63,94,0.15)]'
+                                                                : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                                        }`}
+                                                        title={`Top 100 manažéri (GW${top100Data?.closedDeadlineGw || 5} uzávierka): ${p.top100Signal.net > 0 ? '+' : ''}${p.top100Signal.net} (Kúpené: ${p.top100Signal.in}x, Predané: ${p.top100Signal.out}x). Pozn: Dáta z poslednej uzavretej uzávierky.`}
+                                                    >
+                                                        {p.top100Signal.net > 0 ? (
+                                                            <>🔥 Top 100: +{p.top100Signal.net}</>
+                                                        ) : p.top100Signal.net < 0 ? (
+                                                            <>⚠️ Top 100: {p.top100Signal.net}</>
+                                                        ) : (
+                                                            <>⚡ Top 100 Churn</>
+                                                        )}
+                                                        <span className="text-[8px] opacity-75 font-normal">
+                                                            (GW{top100Data?.closedDeadlineGw || 5})
+                                                        </span>
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div className="text-xs text-slate-500 flex items-center gap-1.5">
                                                 {getTeamShort(p.team)}
                                                 {horizon === 'next' && (p.chance_of_playing_next_round !== null && p.chance_of_playing_next_round < 75) && (
@@ -530,7 +778,47 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                         </td>
                                         <td className="p-4 text-right font-mono text-blue-300">£{p.now_cost / 10}</td>
                                         <td className="p-4 text-right font-mono text-slate-300">{p.selected_by_percent}%</td>
-                                        <td className="p-4 text-right font-bold text-white">{p.form}</td>
+                                                                                <td className="p-4 text-right font-bold text-white">{p.form}</td>
+                                        <td className="p-4 text-right font-mono text-purple-300" title="Projected points for the next gameweek">
+                                            {p.expectedPoints.toFixed(1)}
+                                        </td>
+                                        <td className="p-4 text-right font-mono text-slate-300" title={`Projection confidence: ${Math.round(p.confidence * 100)}%`}>
+                                            {Math.round(p.startProbability * 100)}%
+                                        </td>
+
+                                        {/* Goalscorer Odds for MID and FWD */}
+                                        {(activePos === 3 || activePos === 4) && showOdds && (
+                                            <td className="p-2 md:p-3 text-center">
+                                                {p.goalscorer ? (
+                                                    <div className="flex flex-col items-center justify-center gap-0.5">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="font-mono font-bold text-white text-xs md:text-sm">
+                                                                {p.goalscorer.odds.toFixed(2)}
+                                                            </span>
+                                                            <span
+                                                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono ${
+                                                                    p.goalscorer.prob >= 0.45
+                                                                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                                                                        : p.goalscorer.prob >= 0.30
+                                                                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                                                                        : p.goalscorer.prob >= 0.18
+                                                                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                                                        : 'bg-slate-700/60 text-slate-400'
+                                                                }`}
+                                                                title={`Šanca na gól: ${Math.round(p.goalscorer.prob * 100)}% (${p.goalscorer.source === 'fortuna_live' ? 'Fortuna live kurz' : 'Model xG tímu: ' + p.goalscorer.teamExpectedGoals})`}
+                                                            >
+                                                                {Math.round(p.goalscorer.prob * 100)}%
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-[10px] text-slate-400">
+                                                            vs {p.goalscorer.opponentShort} ({p.goalscorer.isHome ? 'H' : 'A'})
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-slate-600 font-mono text-xs">-</span>
+                                                )}
+                                            </td>
+                                        )}
 
                                         {/* Fixture Cells */}
                                         {gwHeaders.map(gw => {

@@ -23,6 +23,7 @@ export function computeTransferIndexForPlayers(args: {
     const leaguePositions = calculateLeaguePositions(teams, fixtures);
 
     const nextEvent = events.find(e => e.is_next) || events[0];
+    if (!nextEvent) return [];
     const startGw = nextEvent.id;
     const endGw = Math.min(38, startGw + lookahead - 1);
 
@@ -34,7 +35,9 @@ export function computeTransferIndexForPlayers(args: {
     });
 
     return players
-        .filter(p => p.total_points > 10) // Basic filter to remove inactive players
+        // Keep established players, but also include new/early-season assets when
+        // they have minutes or a meaningful availability signal.
+        .filter(p => p.total_points > 10 || p.minutes > 0 || p.chance_of_playing_next_round !== null)
         .map(p => {
             const nextFixtures = [];
             let difficultySum = 0;
@@ -44,7 +47,14 @@ export function computeTransferIndexForPlayers(args: {
 
                 const match = fixtureMap[`${p.team}-${gw}`];
                 if (match) {
-                    const difficultyData = getDynamicDifficulty(match.opponent, players, leaguePositions, !match.isHome);
+                    const opponent = teams.find(team => team.id === match.opponent);
+                    const difficultyData = getDynamicDifficulty(
+                        match.opponent,
+                        players,
+                        leaguePositions,
+                        !match.isHome,
+                        opponent?.strength,
+                    );
                     const diffScore = difficultyData.score;
                     difficultySum += diffScore;
                     nextFixtures.push({ event: gw, opponent: match.opponent, difficulty: diffScore, isHome: match.isHome });

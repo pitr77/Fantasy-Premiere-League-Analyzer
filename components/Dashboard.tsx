@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { BootstrapStatic, FPLPlayer, FPLFixture } from '../types';
-import { TrendingUp, TrendingDown, Lightbulb, Zap, CalendarRange, ChevronRight, Trophy, BrainCircuit, Sparkles } from 'lucide-react';
+import { TrendingUp, TrendingDown, Lightbulb, Zap, CalendarRange, ChevronRight, Trophy, BrainCircuit, Sparkles, Users } from 'lucide-react';
 import { View } from '../App';
 import { getDynamicDifficulty, calculateLeaguePositions } from '../lib/fdrModel';
 import { TeamIcon } from './TeamIcon';
@@ -437,6 +437,16 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
                             <div className="text-[11px] text-slate-500">Deep AI analysis and previews</div>
                         </div>
                     </a>
+                    <button
+                        onClick={() => onNavigate(View.TOP_MANAGERS, 'Top Managers')}
+                        className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700 hover:bg-amber-600/10 hover:border-amber-500/50 transition-all text-left group"
+                    >
+                        <div className="p-2 bg-amber-500/20 rounded-lg text-amber-400 group-hover:scale-110 transition-transform"><Users size={24} /></div>
+                        <div>
+                            <div className="text-white font-bold text-sm">Top 100 Managers</div>
+                            <div className="text-[11px] text-slate-500">Track elite transfer activity & trends</div>
+                        </div>
+                    </button>
                     <button
                         onClick={() => onNavigate(View.CHALLENGE, 'Mini Challenge')}
                         className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700 hover:bg-emerald-600/10 hover:border-emerald-500/50 transition-all text-left group"

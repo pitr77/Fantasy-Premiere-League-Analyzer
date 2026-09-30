@@ -320,6 +320,7 @@ function App() {
             <HeaderNavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" />
             <HeaderNavItem v={View.FIXTURES} label="Fixtures" />
             <HeaderNavItem v={View.TRANSFER_PICKS} label="Transfer Picks" />
+            <HeaderNavItem v={View.TOP_MANAGERS} label="Top Managers" />
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.OPTIMAL_SQUAD} label="Optimal 11" />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.TEAM} label="My Team" />}
             <button
@@ -379,9 +380,9 @@ function App() {
             <NavItem v={View.CHALLENGE} label="Mini Challenge" icon={Zap} requiresAuth={true} />
             <NavItem v={View.STATS} label="Player Stats" icon={BarChart2} />
             <NavItem v={View.DETAILED_STATS} label="Detailed Analyses" icon={Activity} />
+            <NavItem v={View.TOP_MANAGERS} label="Top Managers (Top 100)" icon={Users} />
             {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.OPTIMAL_SQUAD} label="Optimal 11" icon={Zap} />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.TEAM} label="My Team" icon={Shirt} />}
-            {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.TOP_MANAGERS} label="Top 100 Managers" icon={Users} />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.COMPARE_MODE} label="Compare Mode" icon={Split} />}
           </nav>
 
