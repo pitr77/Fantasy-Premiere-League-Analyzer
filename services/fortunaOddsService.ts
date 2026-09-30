@@ -270,10 +270,6 @@ export async function fetchAndSaveFortunaOdds(): Promise<OddsSnapshot> {
     });
   }
 
-  const outputDir = join(process.cwd(), 'data', 'odds');
-  const outputPath = join(outputDir, 'latest.json');
-  await mkdir(outputDir, { recursive: true });
-
   const resultSnapshot: OddsSnapshot = {
     provider: 'fortuna.sk',
     tournament: '1. Anglicko (Premier League)',
@@ -283,6 +279,18 @@ export async function fetchAndSaveFortunaOdds(): Promise<OddsSnapshot> {
     matches: processedMatches,
   };
 
-  await writeFile(outputPath, JSON.stringify(resultSnapshot, null, 2), 'utf8');
+  try {
+    const outputDir = join(process.cwd(), 'data', 'odds');
+    const outputPath = join(outputDir, 'latest.json');
+    await mkdir(outputDir, { recursive: true });
+    await writeFile(outputPath, JSON.stringify(resultSnapshot, null, 2), 'utf8');
+  } catch {
+    try {
+      await writeFile('/tmp/fpl_odds_latest.json', JSON.stringify(resultSnapshot, null, 2), 'utf8');
+    } catch {
+      // Ignored on serverless
+    }
+  }
+
   return resultSnapshot;
 }

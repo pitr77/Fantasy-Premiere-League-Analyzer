@@ -61,7 +61,12 @@ export async function readOddsSnapshot(): Promise<OddsSnapshot | null> {
     const file = await readFile(join(process.cwd(), 'data', 'odds', 'latest.json'), 'utf8');
     return JSON.parse(file) as OddsSnapshot;
   } catch {
-    return null;
+    try {
+      const tmpFile = await readFile('/tmp/fpl_odds_latest.json', 'utf8');
+      return JSON.parse(tmpFile) as OddsSnapshot;
+    } catch {
+      return null;
+    }
   }
 }
 

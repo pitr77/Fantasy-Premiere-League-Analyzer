@@ -332,6 +332,8 @@ export function parseTop100TemplateCsv(csvText: string): Top100TemplateAnalysis 
   };
 }
 
+let inMemoryTop100: Top100Snapshot | null = null;
+
 export async function fetchAndSaveTop100Snapshot(): Promise<Top100Snapshot> {
   const headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -361,18 +363,42 @@ export async function fetchAndSaveTop100Snapshot(): Promise<Top100Snapshot> {
     snapshot.templateAnalysis = parseTop100TemplateCsv(templateCsv);
   }
 
-  const dir = join(process.cwd(), 'data', 'top100');
-  await mkdir(dir, { recursive: true });
-  await writeFile(join(dir, 'latest.json'), JSON.stringify(snapshot, null, 2), 'utf8');
+  inMemoryTop100 = snapshot;
+
+  // Best-effort disk caching that never throws on read-only serverless filesystems (e.g. Vercel)
+  try {
+    const dir = join(process.cwd(), 'data', 'top100');
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, 'latest.json'), JSON.stringify(snapshot, null, 2), 'utf8');
+  } catch (fsErr) {
+    // If working directory is read-only (Vercel Lambda), write to /tmp
+    try {
+      await writeFile('/tmp/fpl_top100_latest.json', JSON.stringify(snapshot, null, 2), 'utf8');
+    } catch {
+      // Ignore: in-memory cache is fully operational
+    }
+  }
 
   return snapshot;
 }
 
 export async function readTop100Snapshot(): Promise<Top100Snapshot | null> {
+  if (inMemoryTop100) {
+    return inMemoryTop100;
+  }
+
   try {
     const file = await readFile(join(process.cwd(), 'data', 'top100', 'latest.json'), 'utf8');
-    return JSON.parse(file) as Top100Snapshot;
+    inMemoryTop100 = JSON.parse(file) as Top100Snapshot;
+    return inMemoryTop100;
   } catch {
-    return null;
+    // Fallback to /tmp if present
+    try {
+      const tmpFile = await readFile('/tmp/fpl_top100_latest.json', 'utf8');
+      inMemoryTop100 = JSON.parse(tmpFile) as Top100Snapshot;
+      return inMemoryTop100;
+    } catch {
+      return null;
+    }
   }
 }

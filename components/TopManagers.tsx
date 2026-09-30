@@ -27,6 +27,8 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
   // Top 100 Manager state
   const [top100Data, setTop100Data] = useState<Top100Snapshot | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingTop100, setIsLoadingTop100] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'top100' | 'template'>('top100');
 
   // Template tab states (Google Sheet gid 1772307187)
@@ -43,26 +45,39 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
   });
 
   useEffect(() => {
+    setIsLoadingTop100(true);
+    setLoadError(null);
     fetch('/api/top100')
       .then(res => res.json())
       .then(data => {
         if (data.available) {
           setTop100Data(data);
+        } else {
+          setLoadError(data.error || 'Nepodarilo sa načítať dáta z Google Sheets');
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        setLoadError(err?.message || 'Chyba siete pri načítaní');
+      })
+      .finally(() => {
+        setIsLoadingTop100(false);
+      });
   }, []);
 
   const handleRefreshTop100 = async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
+    setLoadError(null);
     try {
       const res = await fetch('/api/top100', { method: 'POST' });
       const data = await res.json();
-      if (data.success) {
+      if (data.available || data.success) {
         setTop100Data(data);
+      } else {
+        setLoadError(data.error || 'Aktualizácia zlyhala');
       }
-    } catch {
+    } catch (err: any) {
+      setLoadError(err?.message || 'Chyba siete');
     } finally {
       setIsRefreshing(false);
     }
@@ -292,6 +307,30 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
           </div>
         </div>
       </div>
+
+      {isLoadingTop100 && !top100Data && (
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-12 text-center shadow">
+          <RefreshCw className="w-8 h-8 text-purple-400 animate-spin mx-auto mb-3" />
+          <h4 className="text-white font-bold text-base mb-1">Načítavam analýzu Top 100 manažérov...</h4>
+          <p className="text-xs text-slate-400">Sťahujem aktuálne zostavy a prestupy z Google Sheets</p>
+        </div>
+      )}
+
+      {!isLoadingTop100 && !top100Data && (
+        <div className="bg-slate-800 border border-red-500/30 rounded-xl p-8 text-center shadow">
+          <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-3" />
+          <h4 className="text-white font-bold text-base mb-1">Dáta Top 100 momentálne nie sú k dispozícii</h4>
+          <p className="text-xs text-slate-400 mb-4">{loadError || 'Nastala chyba pri načítaní z Google Sheets.'}</p>
+          <button
+            onClick={handleRefreshTop100}
+            disabled={isRefreshing}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold transition-all inline-flex items-center gap-2"
+          >
+            <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+            Skúsiť načítať znova
+          </button>
+        </div>
+      )}
 
       {activeTab === 'top100' && top100Data && (
         <div className="space-y-6">
