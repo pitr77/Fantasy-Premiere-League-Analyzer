@@ -100,6 +100,10 @@ export interface FPLPlayerHistory {
   selected: number;
   transfers_in: number;
   transfers_out: number;
+  expected_goals?: string;
+  expected_assists?: string;
+  expected_goal_involvements?: string;
+  expected_goals_conceded?: string;
 }
 
 export interface FPLElementSummary {

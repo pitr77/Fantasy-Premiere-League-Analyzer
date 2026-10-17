@@ -241,6 +241,169 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
     templateSortConfig,
   ]);
 
+  // Churn / Divided Opinion sort state
+  const [churnSortConfig, setChurnSortConfig] = useState<{
+    key: 'rank' | 'player' | 'price' | 'in' | 'out' | 'net' | 'ownership';
+    direction: 'asc' | 'desc';
+  }>({
+    key: 'rank',
+    direction: 'asc'
+  });
+
+  const handleChurnSort = (key: 'player' | 'price' | 'in' | 'out' | 'net' | 'ownership') => {
+    setChurnSortConfig(current => {
+      if (current.key === key) {
+        return {
+          key,
+          direction: current.direction === 'desc' ? 'asc' : 'desc'
+        };
+      }
+      return {
+        key,
+        direction: key === 'player' ? 'asc' : 'desc'
+      };
+    });
+  };
+
+  const ChurnSortIcon = ({ colKey }: { colKey: 'player' | 'price' | 'in' | 'out' | 'net' | 'ownership' }) => {
+    if (churnSortConfig.key !== colKey) return <ArrowUpDown size={12} className="text-slate-600 inline ml-1 group-hover:text-slate-400 transition-colors" />;
+    return churnSortConfig.direction === 'asc' 
+      ? <ChevronUp size={12} className="text-amber-400 inline ml-1" /> 
+      : <ChevronDown size={12} className="text-amber-400 inline ml-1" />;
+  };
+
+  const sortedDividedOpinion = useMemo(() => {
+    const list = top100Data?.dividedOpinion || [];
+    return [...list].sort((a, b) => {
+      if (churnSortConfig.key === 'player') {
+        const cmp = (a.player || '').localeCompare(b.player || '');
+        return churnSortConfig.direction === 'asc' ? cmp : -cmp;
+      }
+
+      let valA: number = 0;
+      let valB: number = 0;
+
+      if (churnSortConfig.key === 'price') {
+        valA = parseFloat((a.price || '').replace(/[^0-9.]/g, '')) || 0;
+        valB = parseFloat((b.price || '').replace(/[^0-9.]/g, '')) || 0;
+      } else if (churnSortConfig.key === 'ownership') {
+        valA = parseFloat((a.ownership || '').replace(/[^0-9.]/g, '')) || 0;
+        valB = parseFloat((b.ownership || '').replace(/[^0-9.]/g, '')) || 0;
+      } else {
+        valA = Number((a as any)[churnSortConfig.key]) || 0;
+        valB = Number((b as any)[churnSortConfig.key]) || 0;
+      }
+
+      if (valA < valB) return churnSortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return churnSortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [top100Data?.dividedOpinion, churnSortConfig]);
+
+  // Net Buys sort state
+  const [buySortConfig, setBuySortConfig] = useState<{
+    key: 'rank' | 'pos' | 'player' | 'form' | 'net' | 'in';
+    direction: 'asc' | 'desc';
+  }>({
+    key: 'rank',
+    direction: 'asc'
+  });
+
+  // Net Sells sort state
+  const [sellSortConfig, setSellSortConfig] = useState<{
+    key: 'rank' | 'pos' | 'player' | 'form' | 'net' | 'out';
+    direction: 'asc' | 'desc';
+  }>({
+    key: 'rank',
+    direction: 'asc'
+  });
+
+  const handleBuySort = (key: 'rank' | 'pos' | 'player' | 'form' | 'net' | 'in') => {
+    setBuySortConfig(current => {
+      if (current.key === key) {
+        return {
+          key,
+          direction: current.direction === 'desc' ? 'asc' : 'desc'
+        };
+      }
+      return {
+        key,
+        direction: (key === 'rank' || key === 'player' || key === 'pos') ? 'asc' : 'desc'
+      };
+    });
+  };
+
+  const handleSellSort = (key: 'rank' | 'pos' | 'player' | 'form' | 'net' | 'out') => {
+    setSellSortConfig(current => {
+      if (current.key === key) {
+        return {
+          key,
+          direction: current.direction === 'desc' ? 'asc' : 'desc'
+        };
+      }
+      return {
+        key,
+        direction: (key === 'rank' || key === 'player' || key === 'pos') ? 'asc' : (key === 'net' ? 'asc' : 'desc')
+      };
+    });
+  };
+
+  const BuySortIcon = ({ colKey }: { colKey: 'rank' | 'pos' | 'player' | 'form' | 'net' | 'in' }) => {
+    if (buySortConfig.key !== colKey) return <ArrowUpDown size={11} className="text-slate-600 inline ml-0.5 group-hover:text-slate-400 transition-colors" />;
+    return buySortConfig.direction === 'asc' 
+      ? <ChevronUp size={11} className="text-emerald-400 inline ml-0.5" /> 
+      : <ChevronDown size={11} className="text-emerald-400 inline ml-0.5" />;
+  };
+
+  const SellSortIcon = ({ colKey }: { colKey: 'rank' | 'pos' | 'player' | 'form' | 'net' | 'out' }) => {
+    if (sellSortConfig.key !== colKey) return <ArrowUpDown size={11} className="text-slate-600 inline ml-0.5 group-hover:text-slate-400 transition-colors" />;
+    return sellSortConfig.direction === 'asc' 
+      ? <ChevronUp size={11} className="text-rose-400 inline ml-0.5" /> 
+      : <ChevronDown size={11} className="text-rose-400 inline ml-0.5" />;
+  };
+
+  const sortedNetBuys = useMemo(() => {
+    const list = top100Data?.netBuys || [];
+    return [...list].sort((a, b) => {
+      if (buySortConfig.key === 'player') {
+        const cmp = (a.player || '').localeCompare(b.player || '');
+        return buySortConfig.direction === 'asc' ? cmp : -cmp;
+      }
+      if (buySortConfig.key === 'pos') {
+        const cmp = (a.pos || '').localeCompare(b.pos || '');
+        return buySortConfig.direction === 'asc' ? cmp : -cmp;
+      }
+
+      const valA = Number((a as any)[buySortConfig.key]) || 0;
+      const valB = Number((b as any)[buySortConfig.key]) || 0;
+
+      if (valA < valB) return buySortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return buySortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [top100Data?.netBuys, buySortConfig]);
+
+  const sortedNetSells = useMemo(() => {
+    const list = top100Data?.netSells || [];
+    return [...list].sort((a, b) => {
+      if (sellSortConfig.key === 'player') {
+        const cmp = (a.player || '').localeCompare(b.player || '');
+        return sellSortConfig.direction === 'asc' ? cmp : -cmp;
+      }
+      if (sellSortConfig.key === 'pos') {
+        const cmp = (a.pos || '').localeCompare(b.pos || '');
+        return sellSortConfig.direction === 'asc' ? cmp : -cmp;
+      }
+
+      const valA = Number((a as any)[sellSortConfig.key]) || 0;
+      const valB = Number((b as any)[sellSortConfig.key]) || 0;
+
+      if (valA < valB) return sellSortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sellSortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [top100Data?.netSells, sellSortConfig]);
+
   return (
     <div className="space-y-6">
       
@@ -397,7 +560,7 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Net Buys Leaderboard */}
             <div className="bg-slate-800 rounded-xl border border-slate-700 p-5 shadow">
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-700/60">
+              <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-700/60">
                 <div className="flex items-center gap-2">
                   <span className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg">
                     <TrendingUp size={16} />
@@ -412,20 +575,75 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
                 </span>
               </div>
 
+              {/* Net Buys Header Bar with Sorting */}
+              <div className="flex items-center justify-between px-2.5 py-1.5 mb-2 bg-slate-900/60 rounded-lg border border-slate-700/50 text-[10px] font-bold uppercase tracking-wider text-slate-400 select-none">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <span
+                    onClick={() => handleBuySort('rank')}
+                    className="w-7 text-center cursor-pointer hover:text-white transition-colors group shrink-0"
+                    title="Zoradiť podľa pôvodného poradia"
+                  >
+                    # <BuySortIcon colKey="rank" />
+                  </span>
+                  <span
+                    onClick={() => handleBuySort('pos')}
+                    className="cursor-pointer hover:text-white transition-colors group shrink-0 ml-1"
+                    title="Zoradiť podľa pozície"
+                  >
+                    Poz <BuySortIcon colKey="pos" />
+                  </span>
+                  <span
+                    onClick={() => handleBuySort('player')}
+                    className="cursor-pointer hover:text-white transition-colors group truncate ml-1"
+                    title="Zoradiť podľa mena hráča"
+                  >
+                    Hráč / Tím <BuySortIcon colKey="player" />
+                  </span>
+                  <span
+                    onClick={() => handleBuySort('form')}
+                    className="cursor-pointer hover:text-white transition-colors group ml-auto px-2 shrink-0"
+                    title="Zoradiť podľa formy"
+                  >
+                    Forma <BuySortIcon colKey="form" />
+                  </span>
+                </div>
+                <div className="text-right shrink-0 min-w-[85px] flex items-center justify-end gap-2">
+                  <span
+                    onClick={() => handleBuySort('net')}
+                    className="cursor-pointer hover:text-white transition-colors group"
+                    title="Zoradiť podľa čistého prírastku (Net)"
+                  >
+                    Net <BuySortIcon colKey="net" />
+                  </span>
+                  <span
+                    onClick={() => handleBuySort('in')}
+                    className="cursor-pointer hover:text-white transition-colors group"
+                    title="Zoradiť podľa počtu nákupov (IN)"
+                  >
+                    IN/OUT <BuySortIcon colKey="in" />
+                  </span>
+                </div>
+              </div>
+
               <div className="space-y-2">
-                {top100Data.netBuys.map((b) => (
+                {sortedNetBuys.map((b) => (
                   <div key={b.player} className="flex items-center justify-between p-2.5 bg-slate-900/50 hover:bg-slate-900 rounded-lg border border-slate-700/40 transition-colors">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="text-xs font-mono font-bold text-slate-500 w-4">#{b.rank}</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${getPosColor(b.pos)}`}>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="text-xs font-mono font-bold text-slate-500 w-7 text-center shrink-0">#{b.rank}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border shrink-0 ${getPosColor(b.pos)}`}>
                         {b.pos}
                       </span>
-                      <div className="truncate">
+                      <div className="truncate min-w-0 flex-1 ml-1">
                         <span className="font-bold text-white text-sm block truncate">{b.player}</span>
-                        <span className="text-[10px] text-slate-400">{b.team} · Form {b.form}</span>
+                        <span className="text-[10px] text-slate-400">{b.team}</span>
+                      </div>
+                      <div className="text-right shrink-0 px-2">
+                        <span className="text-xs font-mono font-semibold text-slate-300 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700/60" title={`Forma: ${b.form}`}>
+                          {b.form}
+                        </span>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
+                    <div className="text-right shrink-0 min-w-[85px]">
                       <div className="font-mono font-bold text-emerald-400 text-sm">+{b.net}</div>
                       <div className="text-[10px] text-slate-500 font-mono">{b.in} IN / {b.out} OUT</div>
                     </div>
@@ -436,7 +654,7 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
 
             {/* Net Sells Leaderboard */}
             <div className="bg-slate-800 rounded-xl border border-slate-700 p-5 shadow">
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-700/60">
+              <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-700/60">
                 <div className="flex items-center gap-2">
                   <span className="p-1.5 bg-rose-500/20 text-rose-400 rounded-lg">
                     <TrendingDown size={16} />
@@ -451,20 +669,75 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
                 </span>
               </div>
 
+              {/* Net Sells Header Bar with Sorting */}
+              <div className="flex items-center justify-between px-2.5 py-1.5 mb-2 bg-slate-900/60 rounded-lg border border-slate-700/50 text-[10px] font-bold uppercase tracking-wider text-slate-400 select-none">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <span
+                    onClick={() => handleSellSort('rank')}
+                    className="w-7 text-center cursor-pointer hover:text-white transition-colors group shrink-0"
+                    title="Zoradiť podľa pôvodného poradia"
+                  >
+                    # <SellSortIcon colKey="rank" />
+                  </span>
+                  <span
+                    onClick={() => handleSellSort('pos')}
+                    className="cursor-pointer hover:text-white transition-colors group shrink-0 ml-1"
+                    title="Zoradiť podľa pozície"
+                  >
+                    Poz <SellSortIcon colKey="pos" />
+                  </span>
+                  <span
+                    onClick={() => handleSellSort('player')}
+                    className="cursor-pointer hover:text-white transition-colors group truncate ml-1"
+                    title="Zoradiť podľa mena hráča"
+                  >
+                    Hráč / Tím <SellSortIcon colKey="player" />
+                  </span>
+                  <span
+                    onClick={() => handleSellSort('form')}
+                    className="cursor-pointer hover:text-white transition-colors group ml-auto px-2 shrink-0"
+                    title="Zoradiť podľa formy"
+                  >
+                    Forma <SellSortIcon colKey="form" />
+                  </span>
+                </div>
+                <div className="text-right shrink-0 min-w-[85px] flex items-center justify-end gap-2">
+                  <span
+                    onClick={() => handleSellSort('net')}
+                    className="cursor-pointer hover:text-white transition-colors group"
+                    title="Zoradiť podľa čistej bilancie (Net)"
+                  >
+                    Net <SellSortIcon colKey="net" />
+                  </span>
+                  <span
+                    onClick={() => handleSellSort('out')}
+                    className="cursor-pointer hover:text-white transition-colors group"
+                    title="Zoradiť podľa počtu predajov (OUT)"
+                  >
+                    IN/OUT <SellSortIcon colKey="out" />
+                  </span>
+                </div>
+              </div>
+
               <div className="space-y-2">
-                {top100Data.netSells.map((s) => (
+                {sortedNetSells.map((s) => (
                   <div key={s.player} className="flex items-center justify-between p-2.5 bg-slate-900/50 hover:bg-slate-900 rounded-lg border border-slate-700/40 transition-colors">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="text-xs font-mono font-bold text-slate-500 w-4">#{s.rank}</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${getPosColor(s.pos)}`}>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="text-xs font-mono font-bold text-slate-500 w-7 text-center shrink-0">#{s.rank}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border shrink-0 ${getPosColor(s.pos)}`}>
                         {s.pos}
                       </span>
-                      <div className="truncate">
+                      <div className="truncate min-w-0 flex-1 ml-1">
                         <span className="font-bold text-white text-sm block truncate">{s.player}</span>
-                        <span className="text-[10px] text-slate-400">{s.team} · Form {s.form}</span>
+                        <span className="text-[10px] text-slate-400">{s.team}</span>
+                      </div>
+                      <div className="text-right shrink-0 px-2">
+                        <span className="text-xs font-mono font-semibold text-slate-300 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700/60" title={`Forma: ${s.form}`}>
+                          {s.form}
+                        </span>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
+                    <div className="text-right shrink-0 min-w-[85px]">
                       <div className="font-mono font-bold text-rose-400 text-sm">{s.net}</div>
                       <div className="text-[10px] text-slate-500 font-mono">{s.in} IN / {s.out} OUT</div>
                     </div>
@@ -493,18 +766,54 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="text-slate-400 uppercase font-semibold border-b border-slate-700/60 pb-2">
-                      <th className="pb-2">Hráč</th>
-                      <th className="pb-2">Cena</th>
-                      <th className="pb-2 text-center">IN</th>
-                      <th className="pb-2 text-center">OUT</th>
-                      <th className="pb-2 text-right">Net</th>
-                      <th className="pb-2 text-right">Celk. Vlastníctvo</th>
+                    <tr className="text-slate-400 uppercase font-semibold border-b border-slate-700/60 pb-2 select-none">
+                      <th
+                        onClick={() => handleChurnSort('player')}
+                        className="pb-2 cursor-pointer hover:text-white transition-colors group"
+                        title="Zoradiť podľa mena hráča"
+                      >
+                        Hráč <ChurnSortIcon colKey="player" />
+                      </th>
+                      <th
+                        onClick={() => handleChurnSort('price')}
+                        className="pb-2 cursor-pointer hover:text-white transition-colors group"
+                        title="Zoradiť podľa ceny"
+                      >
+                        Cena <ChurnSortIcon colKey="price" />
+                      </th>
+                      <th
+                        onClick={() => handleChurnSort('in')}
+                        className="pb-2 text-center cursor-pointer hover:text-white transition-colors group"
+                        title="Zoradiť podľa počtu prestupov do tímov (IN)"
+                      >
+                        IN <ChurnSortIcon colKey="in" />
+                      </th>
+                      <th
+                        onClick={() => handleChurnSort('out')}
+                        className="pb-2 text-center cursor-pointer hover:text-white transition-colors group"
+                        title="Zoradiť podľa počtu predajov z tímov (OUT)"
+                      >
+                        OUT <ChurnSortIcon colKey="out" />
+                      </th>
+                      <th
+                        onClick={() => handleChurnSort('net')}
+                        className="pb-2 text-right cursor-pointer hover:text-white transition-colors group"
+                        title="Zoradiť podľa čistej bilancie (Net)"
+                      >
+                        Net <ChurnSortIcon colKey="net" />
+                      </th>
+                      <th
+                        onClick={() => handleChurnSort('ownership')}
+                        className="pb-2 text-right cursor-pointer hover:text-white transition-colors group"
+                        title="Zoradiť podľa celkového vlastníctva"
+                      >
+                        Celk. Vlastníctvo <ChurnSortIcon colKey="ownership" />
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/40">
-                    {top100Data.dividedOpinion.map(d => (
-                      <tr key={d.player} className="hover:bg-slate-700/30">
+                    {sortedDividedOpinion.map(d => (
+                      <tr key={d.player} className="hover:bg-slate-700/30 transition-colors">
                         <td className="py-2.5 font-bold text-white">
                           {d.player} <span className="text-[10px] text-slate-500 font-normal">({d.team})</span>
                         </td>

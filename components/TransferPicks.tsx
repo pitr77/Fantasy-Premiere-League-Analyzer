@@ -10,6 +10,7 @@ import { FortunaMatch } from '../services/oddsSnapshotService';
 import { getGoalscorerOdds, GoalscorerOddsResult } from '../lib/goalscorerModel';
 import { Top100Snapshot, Top100PlayerSignal } from '../services/top100Service';
 import { findTop100Signal } from '../lib/top100Matcher';
+import { PlayerDetailModal } from './PlayerDetailModal';
 
 interface TransferPicksProps {
     players: FPLPlayer[];
@@ -22,7 +23,7 @@ interface PlayerTransferStats extends FPLPlayer {
     transferIndex: number; // 0.00 - 1.00
     fixtureDifficultySum: number; // Lower is better
     nextFixtures: { event: number; opponent: number; difficulty: number; isHome: boolean }[];
-        eoFormRatio: number;
+    eoFormRatio: number;
     eoPtsRatio: number;
     expectedPoints: number;
     startProbability: number;
@@ -40,6 +41,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
         direction: 'desc'
     });
     const [expandedPlayerId, setExpandedPlayerId] = useState<number | null>(null);
+    const [selectedPlayerForDetail, setSelectedPlayerForDetail] = useState<FPLPlayer | null>(null);
 
     // Fortuna odds states
     const [oddsData, setOddsData] = useState<FortunaMatch[] | null>(null);
@@ -668,6 +670,17 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                 ))}
                                             </div>
                                         </div>
+
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedPlayerForDetail(p);
+                                            }}
+                                            className="w-full mt-3 py-2 px-3 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 hover:text-white border border-blue-500/40 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                                        >
+                                            <Activity size={14} />
+                                            <span>Zobraziť GW históriu a ligové rebríčky</span>
+                                        </button>
                                     </div>
                                 )
                             }
@@ -725,7 +738,14 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                         <td className="p-4 text-center text-slate-500 font-mono">{idx + 1}</td>
                                         <td className="p-4">
                                             <div className="flex items-center gap-1.5 flex-wrap">
-                                                <span className="font-bold text-white">{p.web_name}</span>
+                                                <button
+                                                    onClick={() => setSelectedPlayerForDetail(p)}
+                                                    className="text-left font-bold text-white hover:text-blue-400 transition-colors flex items-center gap-1.5 group/p cursor-pointer"
+                                                    title="Kliknutím zobrazíte detail, ligové rebríčky a kompletnú GW históriu hráča"
+                                                >
+                                                    <span className="group-hover/p:underline underline-offset-2">{p.web_name}</span>
+                                                    <Info size={13} className="text-slate-500 group-hover/p:text-blue-400 opacity-60 group-hover/p:opacity-100 transition-all shrink-0" />
+                                                </button>
                                                 {p.top100Signal && (
                                                     <span
                                                         className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded font-mono ${
@@ -861,6 +881,17 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                     </div>
                 )
             }
+
+            {/* Player Detail Modal */}
+            <PlayerDetailModal
+                player={selectedPlayerForDetail}
+                isOpen={!!selectedPlayerForDetail}
+                onClose={() => setSelectedPlayerForDetail(null)}
+                teams={teams}
+                allPlayers={players}
+                top100Snapshot={top100Data}
+                fixtures={fixtures}
+            />
 
         </div >
     );

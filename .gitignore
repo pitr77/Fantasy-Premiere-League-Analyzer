@@ -12,9 +12,10 @@ dist
 dist-ssr
 *.local
 
-# Local odds & top100 snapshots should not be committed.
+# Local odds & top100 snapshots should not be committed (except latest.json as seed fallback for Vercel).
 data/odds/*.json
 data/top100/*.json
+!data/top100/latest.json
 *.tsbuildinfo
 
 

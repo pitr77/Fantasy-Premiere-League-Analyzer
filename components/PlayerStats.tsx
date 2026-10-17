@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { FPLPlayer, FPLTeam } from '../types';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Search, Filter, ArrowUpDown, ChevronUp, ChevronDown, User, TrendingUp, DollarSign } from 'lucide-react';
+import { Search, Filter, ArrowUpDown, ChevronUp, ChevronDown, User } from 'lucide-react';
+import { PlayerDetailModal } from './PlayerDetailModal';
 
 interface PlayerStatsProps {
   players: FPLPlayer[];
@@ -23,34 +23,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams }) => {
     key: 'total_points', 
     direction: 'desc' 
   });
-
-  // --- Chart Data ---
-
-  const topScorers = useMemo(() => {
-    return [...players]
-      .sort((a, b) => b.total_points - a.total_points)
-      .slice(0, 10) // Top 10 for bar chart
-      .map(p => ({
-        name: p.web_name,
-        points: p.total_points,
-        cost: p.now_cost / 10,
-        team: teams.find(t => t.id === p.team)?.short_name
-      }));
-  }, [players, teams]);
-
-  // Replaced complex scatter plot with a clear "Value" list
-  const topValuePlayers = useMemo(() => {
-    // Value = Points / Price. Filter for players with decent minutes/points to avoid cheap bench fodder noise
-    return [...players]
-        .filter(p => p.total_points > 30) 
-        .map(p => ({
-            ...p,
-            valueRatio: p.total_points / (p.now_cost / 10)
-        }))
-        .sort((a, b) => b.valueRatio - a.valueRatio)
-        .slice(0, 8);
-  }, [players]);
-
+  const [selectedPlayerForDetail, setSelectedPlayerForDetail] = useState<FPLPlayer | null>(null);
 
   // --- Leaderboard Data ---
 
@@ -109,24 +82,8 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams }) => {
     return sortConfig.direction === 'asc' ? <ChevronUp size={14} className="text-green-400" /> : <ChevronDown size={14} className="text-green-400" />;
   };
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-slate-900 p-3 border border-slate-700 rounded shadow-xl">
-          <p className="text-white font-bold">{data.name}</p>
-          <p className="text-slate-400 text-sm">{data.team}</p>
-          <p className="text-green-400 text-sm mt-1">Points: {data.y || data.points}</p>
-          <p className="text-blue-400 text-sm">Price: £{data.x || data.cost}</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  // Helper to render position badge color
   const getPosColor = (pos: number) => {
-    switch(pos) {
+    switch (pos) {
       case 1: return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
       case 2: return "bg-blue-500/20 text-blue-400 border-blue-500/30";
       case 3: return "bg-green-500/20 text-green-400 border-green-500/30";
@@ -136,61 +93,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams }) => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-        
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Top Scorers Chart */}
-            <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
-                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                    <TrendingUp className="text-green-400" /> Top 10 Scorers
-                </h2>
-                <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={topScorers} layout="vertical" margin={{ left: 40, right: 20 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
-                            <XAxis type="number" stroke="#94a3b8" />
-                            <YAxis dataKey="name" type="category" stroke="#f8fafc" width={80} tick={{fontSize: 11}} />
-                            <Tooltip content={<CustomTooltip />} cursor={{fill: '#334155', opacity: 0.4}} />
-                            <Bar dataKey="points" fill="#00ff85" radius={[0, 4, 4, 0]} barSize={20} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-            </div>
-
-            {/* Best Value List (Simplified from Scatter) */}
-            <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg flex flex-col">
-                <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                    <DollarSign className="text-blue-400" /> Best Value (ROI)
-                </h2>
-                <p className="text-slate-400 text-xs mb-4">Top return on investment (Points per £ Million cost).</p>
-                
-                <div className="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-                    {topValuePlayers.map((p, idx) => (
-                        <div key={p.id} className="relative group">
-                            <div className="flex items-center justify-between z-10 relative">
-                                <div className="flex items-center gap-3">
-                                    <div className="text-xl font-bold text-slate-600 w-6 text-center">#{idx + 1}</div>
-                                    <div>
-                                        <div className="font-bold text-white">{p.web_name}</div>
-                                        <div className="text-xs text-slate-400">{teams.find(t=>t.id===p.team)?.short_name} • £{p.now_cost/10}m</div>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-blue-400 font-bold text-lg">{p.valueRatio.toFixed(1)}</div>
-                                    <div className="text-[10px] text-slate-500 uppercase font-bold">Pts/£M</div>
-                                </div>
-                            </div>
-                            {/* Visual Bar Background */}
-                            <div className="absolute bottom-0 left-0 h-1 bg-slate-700 w-full rounded-full mt-1 overflow-hidden">
-                                <div className="h-full bg-blue-500" style={{ width: `${(p.valueRatio / topValuePlayers[0].valueRatio) * 100}%` }}></div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-
+    <div className="space-y-6 animate-in fade-in duration-500">
         {/* Leaderboard Section */}
         <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-lg overflow-hidden">
             <div className="p-6 border-b border-slate-700">
@@ -266,7 +169,13 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams }) => {
                         {filteredAndSortedPlayers.map((player) => (
                             <tr key={player.id} className="hover:bg-slate-700/50 transition-colors group">
                                 <td className="p-4 font-medium text-white flex flex-col">
-                                    <span>{player.web_name}</span>
+                                    <button
+                                        onClick={() => setSelectedPlayerForDetail(player)}
+                                        className="text-left font-bold text-white hover:text-purple-400 transition-colors flex items-center gap-1.5 group/p cursor-pointer"
+                                        title="Kliknutím zobrazíte detail, ligové rebríčky a kompletnú GW históriu hráča"
+                                    >
+                                        <span className="group-hover/p:underline underline-offset-2">{player.web_name}</span>
+                                    </button>
                                     <span className="text-xs text-slate-500 font-normal md:hidden">{player.first_name} {player.second_name}</span>
                                 </td>
                                 <td className="p-4 text-slate-300">{teams.find(t => t.id === player.team)?.name}</td>
@@ -295,6 +204,15 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams }) => {
                 Showing top {Math.min(filteredAndSortedPlayers.length, 50)} results
             </div>
         </div>
+
+        {/* Player Detail Modal */}
+        <PlayerDetailModal
+            player={selectedPlayerForDetail}
+            isOpen={!!selectedPlayerForDetail}
+            onClose={() => setSelectedPlayerForDetail(null)}
+            teams={teams}
+            allPlayers={players}
+        />
     </div>
   );
 };
