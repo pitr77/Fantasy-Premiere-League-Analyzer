@@ -1,11 +1,14 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { FPLPlayer, FPLTeam } from '../types';
-import { ArrowUpDown, ChevronUp, ChevronDown, Search, Crown, Info, Flame, TrendingUp, TrendingDown, RefreshCw, AlertTriangle, Users, Sparkles, Filter } from 'lucide-react';
+import { FPLPlayer, FPLTeam, FPLFixture } from '../types';
+import { ArrowUpDown, ChevronUp, ChevronDown, Search, Crown, Info, Flame, TrendingUp, TrendingDown, RefreshCw, AlertTriangle, Users, Sparkles, Filter, ExternalLink } from 'lucide-react';
 import { Top100Snapshot, Top100TemplateTierPlayer, Top100PositionLeader } from '../services/top100Service';
+import { PlayerDetailModal } from './PlayerDetailModal';
+import { findFplPlayerFromTop100 } from '../lib/top100Matcher';
 
 interface TopManagersProps {
   players: FPLPlayer[];
   teams: FPLTeam[];
+  fixtures?: FPLFixture[];
 }
 
 const POSITION_MAP: Record<number, string> = {
@@ -15,7 +18,7 @@ const POSITION_MAP: Record<number, string> = {
   4: "FWD"
 };
 
-const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
+const TopManagers: React.FC<TopManagersProps> = ({ players, teams, fixtures }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [teamFilter, setTeamFilter] = useState<number | 'all'>('all');
   const [posFilter, setPosFilter] = useState<number | 'all'>('all');
@@ -23,6 +26,16 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
     key: 'sel_num', 
     direction: 'desc' 
   });
+
+  // Selected player for detail modal
+  const [selectedPlayerForDetail, setSelectedPlayerForDetail] = useState<FPLPlayer | null>(null);
+
+  const handleOpenPlayerDetail = (playerName: string, teamHint?: string) => {
+    const matched = findFplPlayerFromTop100(playerName, players, teams, teamHint);
+    if (matched) {
+      setSelectedPlayerForDetail(matched);
+    }
+  };
 
   // Top 100 Manager state
   const [top100Data, setTop100Data] = useState<Top100Snapshot | null>(null);
@@ -499,12 +512,19 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
         <div className="space-y-6">
           {/* 4 Summary KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            <div className="bg-slate-800 border border-slate-700 p-4 rounded-xl shadow">
+            <div 
+              onClick={() => handleOpenPlayerDetail(top100Data.mostBought.player, top100Data.mostBought.team)}
+              className="bg-slate-800 border border-slate-700 hover:border-emerald-500/50 hover:bg-slate-800/90 p-4 rounded-xl shadow cursor-pointer transition-all group"
+              title="Klikni pre detail a štatistiky hráča"
+            >
               <div className="text-[10px] uppercase font-bold text-slate-400 mb-1 flex items-center justify-between">
                 <span>Najkupovanejší</span>
-                <TrendingUp size={14} className="text-emerald-400" />
+                <div className="flex items-center gap-1">
+                  <ExternalLink size={11} className="opacity-0 group-hover:opacity-100 text-slate-400 transition-opacity" />
+                  <TrendingUp size={14} className="text-emerald-400" />
+                </div>
               </div>
-              <div className="text-lg md:text-xl font-black text-white truncate">
+              <div className="text-lg md:text-xl font-black text-white group-hover:text-emerald-300 transition-colors truncate">
                 {top100Data.mostBought.player}
               </div>
               <div className="text-xs text-slate-400 flex items-center justify-between mt-1">
@@ -513,12 +533,19 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
               </div>
             </div>
 
-            <div className="bg-slate-800 border border-slate-700 p-4 rounded-xl shadow">
+            <div 
+              onClick={() => handleOpenPlayerDetail(top100Data.mostSold.player, top100Data.mostSold.team)}
+              className="bg-slate-800 border border-slate-700 hover:border-rose-500/50 hover:bg-slate-800/90 p-4 rounded-xl shadow cursor-pointer transition-all group"
+              title="Klikni pre detail a štatistiky hráča"
+            >
               <div className="text-[10px] uppercase font-bold text-slate-400 mb-1 flex items-center justify-between">
                 <span>Najpredávanejší</span>
-                <TrendingDown size={14} className="text-rose-400" />
+                <div className="flex items-center gap-1">
+                  <ExternalLink size={11} className="opacity-0 group-hover:opacity-100 text-slate-400 transition-opacity" />
+                  <TrendingDown size={14} className="text-rose-400" />
+                </div>
               </div>
-              <div className="text-lg md:text-xl font-black text-white truncate">
+              <div className="text-lg md:text-xl font-black text-white group-hover:text-rose-300 transition-colors truncate">
                 {top100Data.mostSold.player}
               </div>
               <div className="text-xs text-slate-400 flex items-center justify-between mt-1">
@@ -527,12 +554,19 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
               </div>
             </div>
 
-            <div className="bg-slate-800 border border-slate-700 p-4 rounded-xl shadow">
+            <div 
+              onClick={() => handleOpenPlayerDetail(top100Data.strongestNetBuy.player, top100Data.strongestNetBuy.team)}
+              className="bg-slate-800 border border-slate-700 hover:border-emerald-500/50 hover:bg-slate-800/90 p-4 rounded-xl shadow cursor-pointer transition-all group"
+              title="Klikni pre detail a štatistiky hráča"
+            >
               <div className="text-[10px] uppercase font-bold text-slate-400 mb-1 flex items-center justify-between">
                 <span>Čistý prírastok (Net Buy)</span>
-                <Flame size={14} className="text-emerald-400" />
+                <div className="flex items-center gap-1">
+                  <ExternalLink size={11} className="opacity-0 group-hover:opacity-100 text-slate-400 transition-opacity" />
+                  <Flame size={14} className="text-emerald-400" />
+                </div>
               </div>
-              <div className="text-lg md:text-xl font-black text-white truncate">
+              <div className="text-lg md:text-xl font-black text-white group-hover:text-emerald-300 transition-colors truncate">
                 {top100Data.strongestNetBuy.player}
               </div>
               <div className="text-xs text-slate-400 flex items-center justify-between mt-1">
@@ -541,12 +575,19 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
               </div>
             </div>
 
-            <div className="bg-slate-800 border border-slate-700 p-4 rounded-xl shadow">
+            <div 
+              onClick={() => handleOpenPlayerDetail(top100Data.strongestNetSell.player, top100Data.strongestNetSell.team)}
+              className="bg-slate-800 border border-slate-700 hover:border-rose-500/50 hover:bg-slate-800/90 p-4 rounded-xl shadow cursor-pointer transition-all group"
+              title="Klikni pre detail a štatistiky hráča"
+            >
               <div className="text-[10px] uppercase font-bold text-slate-400 mb-1 flex items-center justify-between">
                 <span>Čistý odliv (Net Sell)</span>
-                <AlertTriangle size={14} className="text-rose-400" />
+                <div className="flex items-center gap-1">
+                  <ExternalLink size={11} className="opacity-0 group-hover:opacity-100 text-slate-400 transition-opacity" />
+                  <AlertTriangle size={14} className="text-rose-400" />
+                </div>
               </div>
-              <div className="text-lg md:text-xl font-black text-white truncate">
+              <div className="text-lg md:text-xl font-black text-white group-hover:text-rose-300 transition-colors truncate">
                 {top100Data.strongestNetSell.player}
               </div>
               <div className="text-xs text-slate-400 flex items-center justify-between mt-1">
@@ -627,14 +668,22 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
 
               <div className="space-y-2">
                 {sortedNetBuys.map((b) => (
-                  <div key={b.player} className="flex items-center justify-between p-2.5 bg-slate-900/50 hover:bg-slate-900 rounded-lg border border-slate-700/40 transition-colors">
+                  <div 
+                    key={b.player}
+                    onClick={() => handleOpenPlayerDetail(b.player, b.team)}
+                    className="flex items-center justify-between p-2.5 bg-slate-900/50 hover:bg-slate-900 hover:border-emerald-500/40 rounded-lg border border-slate-700/40 transition-all cursor-pointer group"
+                    title={`Klikni pre detail a štatistiky hráča ${b.player}`}
+                  >
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <span className="text-xs font-mono font-bold text-slate-500 w-7 text-center shrink-0">#{b.rank}</span>
                       <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border shrink-0 ${getPosColor(b.pos)}`}>
                         {b.pos}
                       </span>
                       <div className="truncate min-w-0 flex-1 ml-1">
-                        <span className="font-bold text-white text-sm block truncate">{b.player}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-white group-hover:text-emerald-300 text-sm block truncate transition-colors">{b.player}</span>
+                          <ExternalLink size={11} className="text-slate-500 group-hover:text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                        </div>
                         <span className="text-[10px] text-slate-400">{b.team}</span>
                       </div>
                       <div className="text-right shrink-0 px-2">
@@ -721,14 +770,22 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
 
               <div className="space-y-2">
                 {sortedNetSells.map((s) => (
-                  <div key={s.player} className="flex items-center justify-between p-2.5 bg-slate-900/50 hover:bg-slate-900 rounded-lg border border-slate-700/40 transition-colors">
+                  <div 
+                    key={s.player}
+                    onClick={() => handleOpenPlayerDetail(s.player, s.team)}
+                    className="flex items-center justify-between p-2.5 bg-slate-900/50 hover:bg-slate-900 hover:border-rose-500/40 rounded-lg border border-slate-700/40 transition-all cursor-pointer group"
+                    title={`Klikni pre detail a štatistiky hráča ${s.player}`}
+                  >
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <span className="text-xs font-mono font-bold text-slate-500 w-7 text-center shrink-0">#{s.rank}</span>
                       <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border shrink-0 ${getPosColor(s.pos)}`}>
                         {s.pos}
                       </span>
                       <div className="truncate min-w-0 flex-1 ml-1">
-                        <span className="font-bold text-white text-sm block truncate">{s.player}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-white group-hover:text-rose-300 text-sm block truncate transition-colors">{s.player}</span>
+                          <ExternalLink size={11} className="text-slate-500 group-hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                        </div>
                         <span className="text-[10px] text-slate-400">{s.team}</span>
                       </div>
                       <div className="text-right shrink-0 px-2">
@@ -813,9 +870,18 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
                   </thead>
                   <tbody className="divide-y divide-slate-700/40">
                     {sortedDividedOpinion.map(d => (
-                      <tr key={d.player} className="hover:bg-slate-700/30 transition-colors">
-                        <td className="py-2.5 font-bold text-white">
-                          {d.player} <span className="text-[10px] text-slate-500 font-normal">({d.team})</span>
+                      <tr 
+                        key={d.player}
+                        onClick={() => handleOpenPlayerDetail(d.player, d.team)}
+                        className="hover:bg-slate-700/40 transition-colors cursor-pointer group"
+                        title={`Klikni pre detail a štatistiky hráča ${d.player}`}
+                      >
+                        <td className="py-2.5 font-bold text-white group-hover:text-purple-300 transition-colors">
+                          <div className="flex items-center gap-1.5">
+                            <span>{d.player}</span>
+                            <span className="text-[10px] text-slate-500 font-normal">({d.team})</span>
+                            <ExternalLink size={11} className="opacity-0 group-hover:opacity-100 text-slate-400 transition-opacity" />
+                          </div>
                         </td>
                         <td className="py-2.5 font-mono text-blue-300">{d.price}</td>
                         <td className="py-2.5 text-center font-mono text-emerald-400 font-bold">{d.in}</td>
@@ -912,11 +978,19 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
 
                   <div className="space-y-2.5">
                     {(top100Data?.templateAnalysis?.templateByPos?.GK || []).map(p => (
-                      <div key={p.player} className="flex items-center justify-between p-2 rounded-lg bg-slate-800/70 border border-slate-700/40">
+                      <div 
+                        key={p.player}
+                        onClick={() => handleOpenPlayerDetail(p.player, p.team)}
+                        className="flex items-center justify-between p-2 rounded-lg bg-slate-800/70 hover:bg-slate-800 hover:border-yellow-500/40 border border-slate-700/40 cursor-pointer transition-all group"
+                        title={`Klikni pre detail a štatistiky hráča ${p.player}`}
+                      >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <span className="text-xs font-mono font-bold text-slate-500 w-4">#{p.rank}</span>
                           <div className="min-w-0">
-                            <div className="text-xs font-bold text-white truncate">{p.player}</div>
+                            <div className="text-xs font-bold text-white group-hover:text-yellow-300 transition-colors truncate flex items-center gap-1">
+                              <span>{p.player}</span>
+                              <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 text-slate-400 shrink-0" />
+                            </div>
                             <div className="text-[10px] text-slate-400">{p.team}</div>
                           </div>
                         </div>
@@ -947,11 +1021,19 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
 
                   <div className="space-y-2.5">
                     {(top100Data?.templateAnalysis?.templateByPos?.DEF || []).map(p => (
-                      <div key={p.player} className="flex items-center justify-between p-2 rounded-lg bg-slate-800/70 border border-slate-700/40">
+                      <div 
+                        key={p.player}
+                        onClick={() => handleOpenPlayerDetail(p.player, p.team)}
+                        className="flex items-center justify-between p-2 rounded-lg bg-slate-800/70 hover:bg-slate-800 hover:border-blue-500/40 border border-slate-700/40 cursor-pointer transition-all group"
+                        title={`Klikni pre detail a štatistiky hráča ${p.player}`}
+                      >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <span className="text-xs font-mono font-bold text-slate-500 w-4">#{p.rank}</span>
                           <div className="min-w-0">
-                            <div className="text-xs font-bold text-white truncate">{p.player}</div>
+                            <div className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors truncate flex items-center gap-1">
+                              <span>{p.player}</span>
+                              <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 text-slate-400 shrink-0" />
+                            </div>
                             <div className="text-[10px] text-slate-400">{p.team}</div>
                           </div>
                         </div>
@@ -982,11 +1064,19 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
 
                   <div className="space-y-2.5">
                     {(top100Data?.templateAnalysis?.templateByPos?.MID || []).map(p => (
-                      <div key={p.player} className="flex items-center justify-between p-2 rounded-lg bg-slate-800/70 border border-slate-700/40">
+                      <div 
+                        key={p.player}
+                        onClick={() => handleOpenPlayerDetail(p.player, p.team)}
+                        className="flex items-center justify-between p-2 rounded-lg bg-slate-800/70 hover:bg-slate-800 hover:border-emerald-500/40 border border-slate-700/40 cursor-pointer transition-all group"
+                        title={`Klikni pre detail a štatistiky hráča ${p.player}`}
+                      >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <span className="text-xs font-mono font-bold text-slate-500 w-4">#{p.rank}</span>
                           <div className="min-w-0">
-                            <div className="text-xs font-bold text-white truncate">{p.player}</div>
+                            <div className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors truncate flex items-center gap-1">
+                              <span>{p.player}</span>
+                              <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 text-slate-400 shrink-0" />
+                            </div>
                             <div className="text-[10px] text-slate-400">{p.team}</div>
                           </div>
                         </div>
@@ -1017,11 +1107,19 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
 
                   <div className="space-y-2.5">
                     {(top100Data?.templateAnalysis?.templateByPos?.FWD || []).map(p => (
-                      <div key={p.player} className="flex items-center justify-between p-2 rounded-lg bg-slate-800/70 border border-slate-700/40">
+                      <div 
+                        key={p.player}
+                        onClick={() => handleOpenPlayerDetail(p.player, p.team)}
+                        className="flex items-center justify-between p-2 rounded-lg bg-slate-800/70 hover:bg-slate-800 hover:border-rose-500/40 border border-slate-700/40 cursor-pointer transition-all group"
+                        title={`Klikni pre detail a štatistiky hráča ${p.player}`}
+                      >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <span className="text-xs font-mono font-bold text-slate-500 w-4">#{p.rank}</span>
                           <div className="min-w-0">
-                            <div className="text-xs font-bold text-white truncate">{p.player}</div>
+                            <div className="text-xs font-bold text-white group-hover:text-rose-300 transition-colors truncate flex items-center gap-1">
+                              <span>{p.player}</span>
+                              <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 text-slate-400 shrink-0" />
+                            </div>
                             <div className="text-[10px] text-slate-400">{p.team}</div>
                           </div>
                         </div>
@@ -1157,13 +1255,21 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
                     const isNegativeDelta = p.delta <= -5;
 
                     return (
-                      <tr key={`${p.rank}-${p.player}`} className="hover:bg-slate-700/40 transition-colors group">
+                      <tr 
+                        key={`${p.rank}-${p.player}`} 
+                        onClick={() => handleOpenPlayerDetail(p.player, p.team)}
+                        className="hover:bg-slate-700/40 transition-colors group cursor-pointer"
+                        title={`Klikni pre detail a štatistiky hráča ${p.player}`}
+                      >
                         <td className="p-3 font-mono text-slate-500 text-xs">
                           #{p.rank}
                         </td>
                         <td className="p-3">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-white text-sm">{p.player}</span>
+                            <span className="font-bold text-white group-hover:text-purple-300 transition-colors text-sm flex items-center gap-1.5">
+                              {p.player}
+                              <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 text-slate-400 transition-opacity shrink-0" />
+                            </span>
                             <span className="text-[10px] text-slate-400 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 font-medium">
                               {p.team}
                             </span>
@@ -1240,6 +1346,17 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams }) => {
           </div>
         </div>
       )}
+
+      {/* Player Detail Modal */}
+      <PlayerDetailModal
+        player={selectedPlayerForDetail}
+        isOpen={!!selectedPlayerForDetail}
+        onClose={() => setSelectedPlayerForDetail(null)}
+        teams={teams}
+        allPlayers={players}
+        top100Snapshot={top100Data}
+        fixtures={fixtures}
+      />
 
     </div>
   );

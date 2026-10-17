@@ -433,7 +433,7 @@ function App() {
             {view === View.TEAM && <TeamBuilder allPlayers={data.elements} teams={data.teams} events={data.events} myTeam={myTeam} setMyTeam={setMyTeam} />}
             {view === View.STATS && <PlayerStats players={data.elements} teams={data.teams} />}
             {view === View.DETAILED_STATS && <DetailedStats players={data.elements} teams={data.teams} />}
-            {view === View.TOP_MANAGERS && <TopManagers players={data.elements} teams={data.teams} />}
+            {view === View.TOP_MANAGERS && <TopManagers players={data.elements} teams={data.teams} fixtures={fixtures} />}
             {view === View.COMPARE_MODE && <CompareMode data={data} fixtures={fixtures} />}
             {view === View.CHALLENGE && <MiniChallenge players={data.elements} teams={data.teams} fixtures={fixtures} events={data.events} />}
           </div>
