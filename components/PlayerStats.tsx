@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { FPLPlayer, FPLTeam } from '../types';
+import { FPLPlayer, FPLTeam, FPLFixture } from '../types';
 import { Search, Filter, ArrowUpDown, ChevronUp, ChevronDown, User } from 'lucide-react';
 import { PlayerDetailModal } from './PlayerDetailModal';
 
 interface PlayerStatsProps {
   players: FPLPlayer[];
   teams: FPLTeam[];
+  fixtures?: FPLFixture[];
 }
 
 const POSITION_MAP: Record<number, string> = {
@@ -15,7 +16,7 @@ const POSITION_MAP: Record<number, string> = {
   4: "FWD"
 };
 
-const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams }) => {
+const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtures }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [teamFilter, setTeamFilter] = useState<number | 'all'>('all');
   const [posFilter, setPosFilter] = useState<number | 'all'>('all');
@@ -212,6 +213,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams }) => {
             onClose={() => setSelectedPlayerForDetail(null)}
             teams={teams}
             allPlayers={players}
+            fixtures={fixtures}
         />
     </div>
   );

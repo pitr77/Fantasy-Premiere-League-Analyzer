@@ -431,7 +431,7 @@ function App() {
             {view === View.TRANSFER_PICKS && <TransferPicks players={data.elements} teams={data.teams} fixtures={fixtures} events={data.events} />}
             {view === View.OPTIMAL_SQUAD && <OptimalSquad players={data.elements} teams={data.teams} />}
             {view === View.TEAM && <TeamBuilder allPlayers={data.elements} teams={data.teams} events={data.events} myTeam={myTeam} setMyTeam={setMyTeam} />}
-            {view === View.STATS && <PlayerStats players={data.elements} teams={data.teams} />}
+            {view === View.STATS && <PlayerStats players={data.elements} teams={data.teams} fixtures={fixtures} />}
             {view === View.DETAILED_STATS && <DetailedStats players={data.elements} teams={data.teams} />}
             {view === View.TOP_MANAGERS && <TopManagers players={data.elements} teams={data.teams} fixtures={fixtures} />}
             {view === View.COMPARE_MODE && <CompareMode data={data} fixtures={fixtures} />}

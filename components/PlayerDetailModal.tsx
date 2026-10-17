@@ -186,6 +186,74 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
   const pointsHistory = summary?.history || [];
   const pastSeasons = summary?.history_past || [];
 
+  // Upcoming 5-6 fixtures
+  const upcomingFixtures = useMemo(() => {
+    if (!player) return [];
+
+    // 1. Try summary.fixtures from FPL API element-summary first
+    if (summary?.fixtures && Array.isArray(summary.fixtures) && summary.fixtures.length > 0) {
+      return summary.fixtures
+        .filter((f: any) => !f.finished)
+        .slice(0, 6)
+        .map((f: any) => {
+          const isHome = Boolean(f.is_home);
+          const oppId = isHome ? f.team_a : f.team_h;
+          const oppTeam = teams.find((t) => t.id === oppId);
+          return {
+            id: f.id,
+            event: f.event,
+            isHome,
+            opponentShort: oppTeam?.short_name || (isHome ? `T${f.team_a}` : `T${f.team_h}`),
+            opponentName: oppTeam?.name || 'Unknown',
+            difficulty: f.difficulty || 3,
+            kickoffTime: f.kickoff_time,
+          };
+        });
+    }
+
+    // 2. Fallback to fixtures prop if summary is still loading or empty
+    if (fixtures && fixtures.length > 0) {
+      return fixtures
+        .filter((f) => !f.finished && (f.team_h === player.team || f.team_a === player.team))
+        .sort((a, b) => (a.event || 99) - (b.event || 99))
+        .slice(0, 6)
+        .map((f) => {
+          const isHome = f.team_h === player.team;
+          const oppId = isHome ? f.team_a : f.team_h;
+          const oppTeam = teams.find((t) => t.id === oppId);
+          const difficulty = isHome ? (f.team_h_difficulty || 3) : (f.team_a_difficulty || 3);
+          return {
+            id: f.id,
+            event: f.event,
+            isHome,
+            opponentShort: oppTeam?.short_name || 'UNK',
+            opponentName: oppTeam?.name || 'Unknown',
+            difficulty,
+            kickoffTime: f.kickoff_time,
+          };
+        });
+    }
+
+    return [];
+  }, [player, summary?.fixtures, fixtures, teams]);
+
+  const getDifficultyColor = (score: number) => {
+    switch (score) {
+      case 1:
+        return 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50';
+      case 2:
+        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+      case 3:
+        return 'bg-slate-700/50 text-slate-300 border-slate-600/50';
+      case 4:
+        return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+      case 5:
+        return 'bg-rose-500/20 text-rose-300 border-rose-500/50';
+      default:
+        return 'bg-slate-800 text-slate-400 border-slate-700';
+    }
+  };
+
   // Calculate highest & average gameweek points
   const maxGwPoints = pointsHistory.reduce((max, h) => Math.max(max, h.total_points), 0);
   const avgGwPoints = pointsHistory.length > 0
@@ -323,6 +391,46 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Nadchádzajúce zápasy (Next 5-6 fixtures) */}
+          {upcomingFixtures.length > 0 && (
+            <div className="mt-4 bg-slate-950/60 border border-slate-800/80 p-3 rounded-xl shadow-inner">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <Calendar size={12} className="text-blue-400" />
+                  Najbližších {upcomingFixtures.length} zápasov (FDR obtiažnosť)
+                </span>
+                <span className="text-[10px] font-mono text-slate-500 hidden sm:inline">
+                  2 = výhodný · 3 = vyrovnaný · 4–5 = náročný
+                </span>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {upcomingFixtures.map((fix) => {
+                  const diffCls = getDifficultyColor(fix.difficulty);
+                  return (
+                    <div
+                      key={fix.id || fix.event}
+                      className={`flex flex-col items-center justify-center p-2 rounded-lg border font-mono transition-all hover:scale-105 shadow-sm ${diffCls}`}
+                      title={`${fix.opponentName} (${fix.isHome ? 'Doma' : 'Vonku'}) · Kolo ${fix.event} · FDR ${fix.difficulty}/5`}
+                    >
+                      <div className="flex items-center justify-between w-full text-[9px] font-bold opacity-80 px-0.5">
+                        <span>GW{fix.event}</span>
+                        <span className="text-[8px] font-extrabold px-1 rounded bg-black/40">
+                          {fix.isHome ? 'DOMA' : 'VON'}
+                        </span>
+                      </div>
+                      <div className="text-xs sm:text-sm font-black tracking-tight my-1 truncate max-w-full">
+                        {fix.opponentShort}
+                      </div>
+                      <div className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-black/30 border border-white/10">
+                        FDR {fix.difficulty}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Navigation Tabs */}
           <div className="flex items-center gap-2 mt-5 border-t border-slate-800 pt-3">
