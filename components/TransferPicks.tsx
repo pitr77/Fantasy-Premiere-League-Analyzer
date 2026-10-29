@@ -712,10 +712,10 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                     align="left"
                                     className="w-28 min-w-[110px]"
                                 />
-                                <SortHeader label="Price" sortKey="now_cost" align="right" className="w-20" />
-                                <SortHeader label="Ownership" sortKey="selected_by_percent" align="right" className="w-24" />
-                                <SortHeader label="Form" sortKey="form" align="right" className="w-16" />
-                                <SortHeader label="Start" sortKey="startProbability" align="right" className="w-16" />
+                                <SortHeader label="Price" sortKey="now_cost" align="center" className="w-20" />
+                                <SortHeader label="Ownership" sortKey="selected_by_percent" align="center" className="w-24" />
+                                <SortHeader label="Form" sortKey="form" align="center" className="w-16" />
+                                <SortHeader label="Start" sortKey="startProbability" align="center" className="w-16" />
 
                                 {(activePos === 3 || activePos === 4) && showOdds && (
                                     <SortHeader
@@ -811,10 +811,10 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="py-3 px-3 text-right font-mono text-blue-300 text-sm">£{p.now_cost / 10}</td>
-                                        <td className="py-3 px-3 text-right font-mono text-slate-300 text-sm">{p.selected_by_percent}%</td>
-                                        <td className="py-3 px-3 text-right font-bold text-white text-sm">{p.form}</td>
-                                        <td className="py-3 px-3 text-right font-mono text-slate-300 text-sm" title={`Istota štartu hráča: ${Math.round(p.startProbability * 100)}%`}>
+                                        <td className="py-3 px-3 text-center font-mono text-blue-300 text-sm">£{p.now_cost / 10}</td>
+                                        <td className="py-3 px-3 text-center font-mono text-slate-300 text-sm">{p.selected_by_percent}%</td>
+                                        <td className="py-3 px-3 text-center font-bold text-white text-sm">{p.form}</td>
+                                        <td className="py-3 px-3 text-center font-mono text-slate-300 text-sm" title={`Istota štartu hráča: ${Math.round(p.startProbability * 100)}%`}>
                                             {Math.round(p.startProbability * 100)}%
                                         </td>
 
