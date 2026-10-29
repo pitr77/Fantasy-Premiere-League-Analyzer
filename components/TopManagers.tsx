@@ -1348,15 +1348,17 @@ const TopManagers: React.FC<TopManagersProps> = ({ players, teams, fixtures }) =
       )}
 
       {/* Player Detail Modal */}
-      <PlayerDetailModal
-        player={selectedPlayerForDetail}
-        isOpen={!!selectedPlayerForDetail}
-        onClose={() => setSelectedPlayerForDetail(null)}
-        teams={teams}
-        allPlayers={players}
-        top100Snapshot={top100Data}
-        fixtures={fixtures}
-      />
+      {selectedPlayerForDetail && (
+        <PlayerDetailModal
+          player={selectedPlayerForDetail}
+          isOpen={Boolean(selectedPlayerForDetail)}
+          onClose={() => setSelectedPlayerForDetail(null)}
+          teams={teams}
+          allPlayers={players}
+          top100Snapshot={top100Data}
+          fixtures={fixtures}
+        />
+      )}
 
     </div>
   );

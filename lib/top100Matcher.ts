@@ -22,8 +22,8 @@ export function findTop100Signal(
   const full = cleanStr(`${player.first_name}${player.second_name}`);
 
   // 1. Direct key match in playerLookup
-  if (top100Data.playerLookup[full]) return top100Data.playerLookup[full];
-  if (top100Data.playerLookup[wn]) return top100Data.playerLookup[wn];
+  if (top100Data.playerLookup?.[full]) return top100Data.playerLookup[full];
+  if (top100Data.playerLookup?.[wn]) return top100Data.playerLookup[wn];
 
   // 2. Iterate all signals and fuzzy match names
   const allSignals = [

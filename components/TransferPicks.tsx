@@ -556,8 +556,8 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                     p.goalscorer.prob >= 0.45
                                                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
                                                         : p.goalscorer.prob >= 0.30
-                                                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                                                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                                        : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                                                 }`}>
                                                     {Math.round(p.goalscorer.prob * 100)}% šanca
                                                 </span>
@@ -820,9 +820,9 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                                     p.goalscorer.prob >= 0.45
                                                                         ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
                                                                         : p.goalscorer.prob >= 0.30
-                                                                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                                                                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.15)]'
                                                                         : p.goalscorer.prob >= 0.18
-                                                                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                                                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                                                                         : 'bg-slate-700/60 text-slate-400'
                                                                 }`}
                                                                 title={`Šanca na gól: ${Math.round(p.goalscorer.prob * 100)}% (${p.goalscorer.source === 'fortuna_live' ? 'Fortuna live kurz' : 'Model xG tímu: ' + p.goalscorer.teamExpectedGoals})`}
@@ -883,15 +883,17 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
             }
 
             {/* Player Detail Modal */}
-            <PlayerDetailModal
-                player={selectedPlayerForDetail}
-                isOpen={!!selectedPlayerForDetail}
-                onClose={() => setSelectedPlayerForDetail(null)}
-                teams={teams}
-                allPlayers={players}
-                top100Snapshot={top100Data}
-                fixtures={fixtures}
-            />
+            {selectedPlayerForDetail && (
+                <PlayerDetailModal
+                    player={selectedPlayerForDetail}
+                    isOpen={Boolean(selectedPlayerForDetail)}
+                    onClose={() => setSelectedPlayerForDetail(null)}
+                    teams={teams}
+                    allPlayers={players}
+                    top100Snapshot={top100Data}
+                    fixtures={fixtures}
+                />
+            )}
 
         </div >
     );

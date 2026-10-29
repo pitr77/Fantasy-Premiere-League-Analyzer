@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { FPLPlayer, FPLTeam, FPLElementSummary, FPLFixture } from '../types';
-import { getPlayerSummary, getPlayerImageUrl } from '../services/fplService';
+import { getPlayerSummary, getPlayerImageUrl, getTeamShirtUrl } from '../services/fplService';
 import { Top100Snapshot, Top100PlayerSignal } from '../services/top100Service';
 import { findTop100Signal } from '../lib/top100Matcher';
+import { calculateLeaguePositions, getDynamicDifficulty } from '../lib/fdrModel';
 import {
   X,
   Trophy,
@@ -22,8 +23,11 @@ import {
   Zap,
   Sparkles,
   BarChart3,
-  History
+  History,
+  Info,
+  ArrowLeftRight
 } from 'lucide-react';
+import { useLanguage } from '../lib/language';
 
 interface PlayerDetailModalProps {
   player: FPLPlayer | null;
@@ -49,12 +53,15 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
   player,
   isOpen,
   onClose,
-  teams,
+  teams = [],
   allPlayers = [],
   top100Snapshot,
   fixtures = [],
 }) => {
   const [activeTab, setActiveTab] = useState<'history' | 'rankings' | 'past'>('history');
+  const [matchLogTab, setMatchLogTab] = useState<'overview' | 'attack' | 'defense' | 'transfers'>('overview');
+  const [activeMatchTooltip, setActiveMatchTooltip] = useState<string | null>(null);
+  const [lang] = useLanguage();
   const [summary, setSummary] = useState<FPLElementSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +113,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
 
   const team = useMemo(() => {
     if (!player) return null;
-    return teams.find((t) => t.id === player.team) || null;
+    return teams?.find?.((t) => t.id === player.team) || null;
   }, [player, teams]);
 
   const posInfo = useMemo(() => {
@@ -122,24 +129,31 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
 
   // Top 100 Template Tier if available
   const templateTier = useMemo(() => {
-    if (!player || !top100Snapshot?.templateAnalysis?.templateTiers) return null;
-    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!player?.web_name || !top100Snapshot?.templateAnalysis?.templateTiers) return null;
+    const norm = (s?: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const playerNorm = norm(player.web_name);
-    return top100Snapshot.templateAnalysis.templateTiers.find((t) => norm(t.player).includes(playerNorm) || playerNorm.includes(norm(t.player)));
+    if (!playerNorm || playerNorm.length < 2) return null;
+    return top100Snapshot.templateAnalysis.templateTiers.find((t) => {
+      if (!t?.player) return false;
+      const tNorm = norm(t.player);
+      if (!tNorm || tNorm.length < 2) return false;
+      return tNorm.includes(playerNorm) || playerNorm.includes(tNorm);
+    }) || null;
   }, [player, top100Snapshot]);
 
   // League Rankings within position and overall
   const rankings = useMemo(() => {
-    if (!player || allPlayers.length === 0) return null;
+    if (!player || !allPlayers || allPlayers.length === 0) return null;
 
-    const samePos = allPlayers.filter((p) => p.element_type === player.element_type);
+    const samePos = allPlayers.filter((p) => p && p.element_type === player.element_type);
     const totalInPos = samePos.length;
     const totalOverall = allPlayers.length;
 
     // Helper to calculate rank (1-based)
     const getRank = (list: FPLPlayer[], scoreFn: (p: FPLPlayer) => number) => {
-      const sorted = [...list].sort((a, b) => scoreFn(b) - scoreFn(a));
-      const idx = sorted.findIndex((p) => p.id === player.id);
+      if (!list || list.length === 0) return null;
+      const sorted = [...list].sort((a, b) => (scoreFn(b) || 0) - (scoreFn(a) || 0));
+      const idx = sorted.findIndex((p) => p?.id === player.id);
       return idx >= 0 ? idx + 1 : null;
     };
 
@@ -181,52 +195,74 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
     };
   }, [player, allPlayers]);
 
-  if (!isOpen || !player) return null;
-
-  const pointsHistory = summary?.history || [];
-  const pastSeasons = summary?.history_past || [];
-
-  // Upcoming 5-6 fixtures
+  // Upcoming 5-6 fixtures using Dynamic FDR consistent with Transfer Picks & Dashboard
   const upcomingFixtures = useMemo(() => {
     if (!player) return [];
 
-    // 1. Try summary.fixtures from FPL API element-summary first
-    if (summary?.fixtures && Array.isArray(summary.fixtures) && summary.fixtures.length > 0) {
-      return summary.fixtures
-        .filter((f: any) => !f.finished)
+    const leaguePositions = (teams && fixtures) ? calculateLeaguePositions(teams, fixtures) : {};
+
+    // 1. If fixtures array is available, sort and get next 6
+    if (fixtures && Array.isArray(fixtures) && fixtures.length > 0) {
+      return fixtures
+        .filter((f) => f && !f.finished && (f.team_h === player.team || f.team_a === player.team))
+        .sort((a, b) => (a.event || 99) - (b.event || 99))
         .slice(0, 6)
-        .map((f: any) => {
-          const isHome = Boolean(f.is_home);
+        .map((f) => {
+          const isHome = f.team_h === player.team;
           const oppId = isHome ? f.team_a : f.team_h;
-          const oppTeam = teams.find((t) => t.id === oppId);
+          const oppTeam = teams?.find?.((t) => t.id === oppId);
+
+          let difficulty = 3;
+          if (allPlayers && allPlayers.length > 0) {
+            const dynamicData = getDynamicDifficulty(
+              oppId,
+              allPlayers,
+              leaguePositions,
+              !isHome,
+              oppTeam?.strength
+            );
+            difficulty = dynamicData.score;
+          } else {
+            difficulty = isHome ? (f.team_h_difficulty || 3) : (f.team_a_difficulty || 3);
+          }
+
           return {
             id: f.id,
             event: f.event,
             isHome,
             opponentShort: oppTeam?.short_name || (isHome ? `T${f.team_a}` : `T${f.team_h}`),
             opponentName: oppTeam?.name || 'Unknown',
-            difficulty: f.difficulty || 3,
+            difficulty,
             kickoffTime: f.kickoff_time,
           };
         });
     }
 
-    // 2. Fallback to fixtures prop if summary is still loading or empty
-    if (fixtures && fixtures.length > 0) {
-      return fixtures
-        .filter((f) => !f.finished && (f.team_h === player.team || f.team_a === player.team))
-        .sort((a, b) => (a.event || 99) - (b.event || 99))
+    // 2. Fallback to summary.fixtures
+    if (summary?.fixtures && Array.isArray(summary.fixtures) && summary.fixtures.length > 0) {
+      return summary.fixtures
+        .filter((f: any) => f && !f.finished)
         .slice(0, 6)
-        .map((f) => {
-          const isHome = f.team_h === player.team;
+        .map((f: any) => {
+          const isHome = Boolean(f.is_home);
           const oppId = isHome ? f.team_a : f.team_h;
-          const oppTeam = teams.find((t) => t.id === oppId);
-          const difficulty = isHome ? (f.team_h_difficulty || 3) : (f.team_a_difficulty || 3);
+          const oppTeam = teams?.find?.((t) => t.id === oppId);
+          let difficulty = f.difficulty || 3;
+          if (allPlayers && allPlayers.length > 0) {
+            const dynamicData = getDynamicDifficulty(
+              oppId,
+              allPlayers,
+              leaguePositions,
+              !isHome,
+              oppTeam?.strength
+            );
+            difficulty = dynamicData.score;
+          }
           return {
             id: f.id,
             event: f.event,
             isHome,
-            opponentShort: oppTeam?.short_name || 'UNK',
+            opponentShort: oppTeam?.short_name || (isHome ? `T${f.team_a}` : `T${f.team_h}`),
             opponentName: oppTeam?.name || 'Unknown',
             difficulty,
             kickoffTime: f.kickoff_time,
@@ -235,22 +271,29 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
     }
 
     return [];
-  }, [player, summary?.fixtures, fixtures, teams]);
+  }, [player, summary?.fixtures, fixtures, teams, allPlayers]);
+
+  if (!isOpen || !player) return null;
+
+  const pointsHistory = Array.isArray(summary?.history) ? summary.history : [];
+  const pastSeasons = Array.isArray(summary?.history_past) ? summary.history_past : [];
 
   const getDifficultyColor = (score: number) => {
     switch (score) {
       case 1:
-        return 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50';
+        return 'bg-green-600 text-white border-green-700'; // Easy
       case 2:
-        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+        return 'bg-green-500 text-white border-green-600'; // Good
       case 3:
-        return 'bg-slate-700/50 text-slate-300 border-slate-600/50';
+        return 'bg-slate-500 text-white border-slate-600'; // Moderate
       case 4:
-        return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+        return 'bg-orange-500 text-white border-orange-600'; // Hard
       case 5:
-        return 'bg-rose-500/20 text-rose-300 border-rose-500/50';
+        return 'bg-red-600 text-white border-red-700'; // Very Hard
+      case 6:
+        return 'bg-slate-900 text-slate-500 border-slate-800'; // Blank
       default:
-        return 'bg-slate-800 text-slate-400 border-slate-700';
+        return 'bg-slate-800 text-white border-slate-700';
     }
   };
 
@@ -279,7 +322,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-150">
       <div
         className="fixed inset-0"
         onClick={onClose}
@@ -313,10 +356,14 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                     onError={() => setImgError(true)}
                   />
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-500">
-                    <Shield size={28} className={posInfo.color} />
-                    <span className="text-[10px] font-bold mt-1 uppercase font-mono">{team?.short_name || 'FPL'}</span>
-                  </div>
+                  <img
+                    src={getTeamShirtUrl(team?.code, player.element_type === 1)}
+                    alt={player.web_name}
+                    className="w-full h-full object-contain filter drop-shadow p-1"
+                    onError={e => {
+                      (e.target as HTMLImageElement).src = 'https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_0-110.png';
+                    }}
+                  />
                 )}
               </div>
               <span className={`absolute -bottom-2 -right-1 px-2 py-0.5 rounded-full text-[10px] font-black border font-mono shadow ${posInfo.bg} ${posInfo.color} ${posInfo.border}`}>
@@ -410,19 +457,19 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                   return (
                     <div
                       key={fix.id || fix.event}
-                      className={`flex flex-col items-center justify-center p-2 rounded-lg border font-mono transition-all hover:scale-105 shadow-sm ${diffCls}`}
-                      title={`${fix.opponentName} (${fix.isHome ? 'Doma' : 'Vonku'}) · Kolo ${fix.event} · FDR ${fix.difficulty}/5`}
+                      className={`flex flex-col items-center justify-center p-2 rounded-lg border-b-2 font-mono transition-all hover:scale-105 shadow-sm ${diffCls}`}
+                      title={`${fix.opponentName} (${fix.isHome ? 'H' : 'A'}) · GW${fix.event} · FDR ${fix.difficulty}/5`}
                     >
-                      <div className="flex items-center justify-between w-full text-[9px] font-bold opacity-80 px-0.5">
+                      <div className="flex items-center justify-between w-full text-[9px] font-bold opacity-90 px-0.5">
                         <span>GW{fix.event}</span>
-                        <span className="text-[8px] font-extrabold px-1 rounded bg-black/40">
-                          {fix.isHome ? 'DOMA' : 'VON'}
+                        <span className="text-[8px] font-extrabold px-1 rounded bg-black/25">
+                          {fix.isHome ? '(H)' : '(A)'}
                         </span>
                       </div>
-                      <div className="text-xs sm:text-sm font-black tracking-tight my-1 truncate max-w-full">
+                      <div className="text-xs sm:text-sm font-black tracking-tight my-1 truncate max-w-full text-white">
                         {fix.opponentShort}
                       </div>
-                      <div className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-black/30 border border-white/10">
+                      <div className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-black/25 border border-white/10 text-white">
                         FDR {fix.difficulty}
                       </div>
                     </div>
@@ -507,13 +554,15 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                   {/* Horizontal Points Bars */}
                   <div className="flex items-end gap-1.5 h-24 pt-4 px-2 border-b border-slate-700/50">
                     {pointsHistory.map((h) => {
-                      const opp = teams.find((t) => t.id === h.opponent_team)?.short_name || 'UNK';
+                      const opp = teams?.find?.((t) => t.id === h.opponent_team)?.short_name || 'UNK';
+                      const matchFixture = fixtures?.find((f) => f.id === h.fixture);
+                      const fdrVal = matchFixture ? (h.was_home ? matchFixture.team_h_difficulty : matchFixture.team_a_difficulty) : null;
                       const heightPercent = maxGwPoints > 0 ? Math.max(12, (h.total_points / Math.max(maxGwPoints, 12)) * 100) : 10;
                       return (
                         <div key={h.round} className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end">
                           {/* Tooltip on hover */}
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full mb-1 bg-slate-950 text-white text-[10px] font-mono py-1 px-1.5 rounded border border-slate-700 pointer-events-none whitespace-nowrap z-20 shadow-lg">
-                            GW{h.round}: {h.total_points} pts vs {opp} ({h.was_home ? 'H' : 'A'}) · {h.minutes}'
+                            GW{h.round}: {h.total_points} pts vs {opp} ({h.was_home ? 'H' : 'A'}){fdrVal ? ` · FDR ${fdrVal}` : ''} · {h.minutes}'
                           </div>
                           <span className="text-[10px] font-mono font-bold text-slate-300 group-hover:text-white">
                             {h.total_points}
@@ -540,60 +589,267 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                 </div>
               )}
 
-              {/* Detailed Match History Table */}
-              <div className="bg-slate-800/40 border border-slate-700/60 rounded-xl overflow-hidden shadow">
-                <div className="px-4 py-3 bg-slate-800/80 border-b border-slate-700/60 flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase text-slate-300 flex items-center gap-1.5">
-                    <Activity size={14} className="text-emerald-400" />
-                    Zápasový denník (Aktuálna sezóna)
-                  </h3>
-                  <span className="text-[11px] text-slate-400">
-                    Spolu odohraných: <strong className="text-white font-mono">{player.minutes} minút</strong>
-                  </span>
+              {/* Detailed Match History Table with Sub-Tabs */}
+              <div className="bg-slate-800/40 border border-slate-700/60 rounded-xl overflow-visible shadow">
+                {/* Match Log Header with Sub-Tabs */}
+                <div className="p-3 sm:p-4 bg-slate-800/80 border-b border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-bold uppercase text-slate-200 flex items-center gap-1.5">
+                      <Activity size={14} className="text-emerald-400" />
+                      {lang === 'sk' ? 'Zápasový denník (Aktuálna sezóna)' : 'Match Log (This Season)'}
+                    </h3>
+                    <span className="text-[11px] text-slate-400">
+                      {lang === 'sk' ? 'Spolu odohraných:' : 'Total played:'} <strong className="text-white font-mono">{player.minutes} {lang === 'sk' ? 'minút' : 'mins'}</strong>
+                    </span>
+                  </div>
+
+                  {/* Sub-Tab Switcher */}
+                  <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-700/80 rounded-xl p-1 self-start sm:self-auto overflow-x-auto max-w-full">
+                    <button
+                      type="button"
+                      onClick={() => setMatchLogTab('overview')}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                        matchLogTab === 'overview'
+                          ? 'bg-blue-600 text-white shadow'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <Activity size={12} />
+                      <span>{lang === 'sk' ? 'Prehľad' : 'Overview'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMatchLogTab('attack')}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                        matchLogTab === 'attack'
+                          ? 'bg-blue-600 text-white shadow'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <Flame size={12} />
+                      <span>{lang === 'sk' ? 'Útok & xG' : 'Attack & xG'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMatchLogTab('defense')}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                        matchLogTab === 'defense'
+                          ? 'bg-blue-600 text-white shadow'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <Shield size={12} />
+                      <span>{lang === 'sk' ? 'Obrana' : 'Defense'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMatchLogTab('transfers')}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                        matchLogTab === 'transfers'
+                          ? 'bg-blue-600 text-white shadow'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <ArrowLeftRight size={12} />
+                      <span>{lang === 'sk' ? 'Prestupy' : 'Transfers'}</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="bg-slate-900/60 text-slate-400 uppercase font-semibold text-[10px] border-b border-slate-700/60 select-none">
-                        <th className="py-2.5 px-3">Kolo</th>
-                        <th className="py-2.5 px-3">Súper</th>
-                        <th className="py-2.5 px-3 text-center">Výsledok</th>
-                        <th className="py-2.5 px-3 text-right">Minúty</th>
-                        <th className="py-2.5 px-3 text-right font-bold text-white">Body</th>
-                        <th className="py-2.5 px-2 text-center" title="Góly">G</th>
-                        <th className="py-2.5 px-2 text-center" title="Asistencie">A</th>
-                        <th className="py-2.5 px-2 text-center" title="Čisté konto">CS</th>
-                        <th className="py-2.5 px-2 text-center" title="Bonusové body">Bonus</th>
-                        <th className="py-2.5 px-3 text-right" title="Bonus Points System">BPS</th>
-                        <th className="py-2.5 px-3 text-right" title="Expected Goals (xG)">xG</th>
-                        <th className="py-2.5 px-3 text-right" title="Expected Assists (xA)">xA</th>
-                        <th className="py-2.5 px-3 text-right">Cena</th>
+                      <tr className="bg-slate-900/80 text-slate-400 uppercase font-bold text-[10px] border-b border-slate-700/60 select-none">
+                        <th className="py-2.5 px-2.5 w-12">{lang === 'sk' ? 'Kolo' : 'GW'}</th>
+                        <th className="py-2.5 px-3 min-w-[120px]">{lang === 'sk' ? 'Súper' : 'Opponent'}</th>
+                        <th className="py-2.5 px-2.5 text-center w-20">{lang === 'sk' ? 'Výsledok' : 'Result'}</th>
+
+                        {/* TAB 1: OVERVIEW COLUMNS */}
+                        {matchLogTab === 'overview' && (
+                          <>
+                            <th className="py-2.5 px-2 text-right">
+                              <span className="inline-flex items-center gap-1">
+                                <span>{lang === 'sk' ? 'Min' : 'Mins'}</span>
+                                <div className="relative inline-flex group/info" onMouseEnter={() => setActiveMatchTooltip('min')} onMouseLeave={() => setActiveMatchTooltip(null)}>
+                                  <button type="button" onClick={() => setActiveMatchTooltip(curr => curr === 'min' ? null : 'min')} className="text-slate-500 hover:text-blue-400">
+                                    <Info size={11} />
+                                  </button>
+                                  <div className={`${activeMatchTooltip === 'min' ? 'visible opacity-100' : 'invisible opacity-0 group-hover/info:visible group-hover/info:opacity-100'} transition-all absolute z-50 bottom-full mb-1 right-0 w-48 p-2 bg-slate-900 text-slate-200 text-[11px] rounded-lg shadow-xl border border-slate-700 font-normal normal-case`}>
+                                    {lang === 'sk' ? 'Odohrané minúty v zápase.' : 'Minutes played in the match.'}
+                                  </div>
+                                </div>
+                              </span>
+                            </th>
+                            <th className="py-2.5 px-2 text-right text-white">
+                              <span className="inline-flex items-center gap-1">
+                                <span>{lang === 'sk' ? 'Body' : 'Pts'}</span>
+                                <div className="relative inline-flex group/info" onMouseEnter={() => setActiveMatchTooltip('pts')} onMouseLeave={() => setActiveMatchTooltip(null)}>
+                                  <button type="button" onClick={() => setActiveMatchTooltip(curr => curr === 'pts' ? null : 'pts')} className="text-slate-500 hover:text-blue-400">
+                                    <Info size={11} />
+                                  </button>
+                                  <div className={`${activeMatchTooltip === 'pts' ? 'visible opacity-100' : 'invisible opacity-0 group-hover/info:visible group-hover/info:opacity-100'} transition-all absolute z-50 bottom-full mb-1 right-0 w-48 p-2 bg-slate-900 text-slate-200 text-[11px] rounded-lg shadow-xl border border-slate-700 font-normal normal-case`}>
+                                    {lang === 'sk' ? 'Celkový počet získaných FPL bodov v tomto zápase.' : 'Total FPL points earned in this fixture.'}
+                                  </div>
+                                </div>
+                              </span>
+                            </th>
+                            <th className="py-2.5 px-2 text-center" title="Góly">G</th>
+                            <th className="py-2.5 px-2 text-center" title="Asistencie">A</th>
+                            <th className="py-2.5 px-2 text-center" title="Čisté konto">CS</th>
+                            <th className="py-2.5 px-2 text-center" title="Bonusové body">Bonus</th>
+                            <th className="py-2.5 px-2.5 text-right" title="Bonus Points System">BPS</th>
+                            <th className="py-2.5 px-2.5 text-right" title="Expected Goals">xG</th>
+                            <th className="py-2.5 px-2.5 text-right" title="Expected Assists">xA</th>
+                            <th className="py-2.5 px-2.5 text-right">{lang === 'sk' ? 'Cena' : 'Price'}</th>
+                          </>
+                        )}
+
+                        {/* TAB 2: ATTACK & xG COLUMNS */}
+                        {matchLogTab === 'attack' && (
+                          <>
+                            <th className="py-2.5 px-2 text-right">{lang === 'sk' ? 'Min' : 'Mins'}</th>
+                            <th className="py-2.5 px-2 text-right text-white">{lang === 'sk' ? 'Body' : 'Pts'}</th>
+                            <th className="py-2.5 px-2 text-center" title="Góly">G</th>
+                            <th className="py-2.5 px-2 text-center" title="Asistencie">A</th>
+                            <th className="py-2.5 px-2.5 text-right">
+                              <span className="inline-flex items-center gap-1">
+                                <span>xG</span>
+                                <div className="relative inline-flex group/info" onMouseEnter={() => setActiveMatchTooltip('xg')} onMouseLeave={() => setActiveMatchTooltip(null)}>
+                                  <button type="button" onClick={() => setActiveMatchTooltip(curr => curr === 'xg' ? null : 'xg')} className="text-slate-500 hover:text-blue-400">
+                                    <Info size={11} />
+                                  </button>
+                                  <div className={`${activeMatchTooltip === 'xg' ? 'visible opacity-100' : 'invisible opacity-0 group-hover/info:visible group-hover/info:opacity-100'} transition-all absolute z-50 bottom-full mb-1 right-0 w-52 p-2 bg-slate-900 text-slate-200 text-[11px] rounded-lg shadow-xl border border-slate-700 font-normal normal-case`}>
+                                    {lang === 'sk' ? 'Expected Goals: Kvalita a pravdepodobnosť strelených gólov.' : 'Expected Goals: Statistical shot quality.'}
+                                  </div>
+                                </div>
+                              </span>
+                            </th>
+                            <th className="py-2.5 px-2.5 text-right">
+                              <span className="inline-flex items-center gap-1">
+                                <span>xA</span>
+                                <div className="relative inline-flex group/info" onMouseEnter={() => setActiveMatchTooltip('xa')} onMouseLeave={() => setActiveMatchTooltip(null)}>
+                                  <button type="button" onClick={() => setActiveMatchTooltip(curr => curr === 'xa' ? null : 'xa')} className="text-slate-500 hover:text-blue-400">
+                                    <Info size={11} />
+                                  </button>
+                                  <div className={`${activeMatchTooltip === 'xa' ? 'visible opacity-100' : 'invisible opacity-0 group-hover/info:visible group-hover/info:opacity-100'} transition-all absolute z-50 bottom-full mb-1 right-0 w-52 p-2 bg-slate-900 text-slate-200 text-[11px] rounded-lg shadow-xl border border-slate-700 font-normal normal-case`}>
+                                    {lang === 'sk' ? 'Expected Assists: Pravdepodobnosť asistencie z prihrávok.' : 'Expected Assists: Likelihood of passes resulting in assists.'}
+                                  </div>
+                                </div>
+                              </span>
+                            </th>
+                            <th className="py-2.5 px-2.5 text-right text-purple-300">
+                              <span className="inline-flex items-center gap-1">
+                                <span>xGI</span>
+                                <div className="relative inline-flex group/info" onMouseEnter={() => setActiveMatchTooltip('xgi')} onMouseLeave={() => setActiveMatchTooltip(null)}>
+                                  <button type="button" onClick={() => setActiveMatchTooltip(curr => curr === 'xgi' ? null : 'xgi')} className="text-slate-500 hover:text-blue-400">
+                                    <Info size={11} />
+                                  </button>
+                                  <div className={`${activeMatchTooltip === 'xgi' ? 'visible opacity-100' : 'invisible opacity-0 group-hover/info:visible group-hover/info:opacity-100'} transition-all absolute z-50 bottom-full mb-1 right-0 w-52 p-2 bg-slate-900 text-slate-200 text-[11px] rounded-lg shadow-xl border border-slate-700 font-normal normal-case`}>
+                                    {lang === 'sk' ? 'Expected Goal Involvement: Súčet xG a xA hráča v zápase.' : 'Expected Goal Involvement: Combined xG + xA in fixture.'}
+                                  </div>
+                                </div>
+                              </span>
+                            </th>
+                            <th className="py-2.5 px-2.5 text-right" title="Threat">{lang === 'sk' ? 'Hrozba' : 'Threat'}</th>
+                            <th className="py-2.5 px-2.5 text-right" title="Creativity">{lang === 'sk' ? 'Kreativita' : 'Creativity'}</th>
+                          </>
+                        )}
+
+                        {/* TAB 3: DEFENSE COLUMNS */}
+                        {matchLogTab === 'defense' && (
+                          <>
+                            <th className="py-2.5 px-2 text-right">{lang === 'sk' ? 'Min' : 'Mins'}</th>
+                            <th className="py-2.5 px-2 text-right text-white">{lang === 'sk' ? 'Body' : 'Pts'}</th>
+                            <th className="py-2.5 px-2 text-center" title="Clean Sheet">CS</th>
+                            <th className="py-2.5 px-2 text-center" title="Goals Conceded">GC</th>
+                            <th className="py-2.5 px-2.5 text-right">
+                              <span className="inline-flex items-center gap-1">
+                                <span>xGC</span>
+                                <div className="relative inline-flex group/info" onMouseEnter={() => setActiveMatchTooltip('xgc')} onMouseLeave={() => setActiveMatchTooltip(null)}>
+                                  <button type="button" onClick={() => setActiveMatchTooltip(curr => curr === 'xgc' ? null : 'xgc')} className="text-slate-500 hover:text-blue-400">
+                                    <Info size={11} />
+                                  </button>
+                                  <div className={`${activeMatchTooltip === 'xgc' ? 'visible opacity-100' : 'invisible opacity-0 group-hover/info:visible group-hover/info:opacity-100'} transition-all absolute z-50 bottom-full mb-1 right-0 w-52 p-2 bg-slate-900 text-slate-200 text-[11px] rounded-lg shadow-xl border border-slate-700 font-normal normal-case`}>
+                                    {lang === 'sk' ? 'Expected Goals Conceded: Štatistická kvalita šancí, ktorým obrana čelila.' : 'Expected Goals Conceded: Quality of chances conceded by team.'}
+                                  </div>
+                                </div>
+                              </span>
+                            </th>
+                            <th className="py-2.5 px-2 text-center" title="Zákroky / Saves">S</th>
+                            <th className="py-2.5 px-2 text-center" title="Žlté karty">YC</th>
+                            <th className="py-2.5 px-2 text-center" title="Červené karty">RC</th>
+                            <th className="py-2.5 px-2 text-center" title="Chytené penalty">PS</th>
+                            <th className="py-2.5 px-2.5 text-right" title="BPS Score">BPS</th>
+                          </>
+                        )}
+
+                        {/* TAB 4: TRANSFERS COLUMNS */}
+                        {matchLogTab === 'transfers' && (
+                          <>
+                            <th className="py-2.5 px-2 text-right text-white">{lang === 'sk' ? 'Body' : 'Pts'}</th>
+                            <th className="py-2.5 px-2.5 text-right">{lang === 'sk' ? 'Cena' : 'Price'}</th>
+                            <th className="py-2.5 px-2.5 text-right text-emerald-400">{lang === 'sk' ? 'Kúpené' : 'In'}</th>
+                            <th className="py-2.5 px-2.5 text-right text-rose-400">{lang === 'sk' ? 'Predané' : 'Out'}</th>
+                            <th className="py-2.5 px-2.5 text-right">
+                              <span className="inline-flex items-center gap-1">
+                                <span>{lang === 'sk' ? 'Net' : 'Net'}</span>
+                                <div className="relative inline-flex group/info" onMouseEnter={() => setActiveMatchTooltip('net')} onMouseLeave={() => setActiveMatchTooltip(null)}>
+                                  <button type="button" onClick={() => setActiveMatchTooltip(curr => curr === 'net' ? null : 'net')} className="text-slate-500 hover:text-blue-400">
+                                    <Info size={11} />
+                                  </button>
+                                  <div className={`${activeMatchTooltip === 'net' ? 'visible opacity-100' : 'invisible opacity-0 group-hover/info:visible group-hover/info:opacity-100'} transition-all absolute z-50 bottom-full mb-1 right-0 w-52 p-2 bg-slate-900 text-slate-200 text-[11px] rounded-lg shadow-xl border border-slate-700 font-normal normal-case`}>
+                                    {lang === 'sk' ? 'Čistá bilancia nákupov a predajov pred daným kolom.' : 'Net transfer balance (In minus Out) before the deadline.'}
+                                  </div>
+                                </div>
+                              </span>
+                            </th>
+                            <th className="py-2.5 px-3 text-right">{lang === 'sk' ? 'Vlastníkov' : 'Owners'}</th>
+                            <th className="py-2.5 px-2.5 text-right text-purple-300" title="ICT Index">ICT</th>
+                          </>
+                        )}
                       </tr>
                     </thead>
+
                     <tbody className="divide-y divide-slate-700/40 font-mono">
                       {pointsHistory.length === 0 ? (
                         <tr>
                           <td colSpan={13} className="py-8 text-center text-slate-400 font-sans text-xs">
-                            Zatiaľ žiadne odohrané zápasy v tejto sezóne.
+                            {lang === 'sk' ? 'Zatiaľ žiadne odohrané zápasy v tejto sezóne.' : 'No matches played yet this season.'}
                           </td>
                         </tr>
                       ) : (
                         [...pointsHistory].reverse().map((h) => {
-                          const opp = teams.find((t) => t.id === h.opponent_team)?.short_name || `ID ${h.opponent_team}`;
+                          const opp = teams?.find?.((t) => t.id === h.opponent_team)?.short_name || `ID ${h.opponent_team}`;
+                          const matchFixture = fixtures?.find((f) => f.id === h.fixture);
+                          const fdrVal = matchFixture ? (h.was_home ? matchFixture.team_h_difficulty : matchFixture.team_a_difficulty) : null;
                           const res = getResultBadge(h);
                           const hasScore = h.team_h_score !== null && h.team_a_score !== null && h.team_h_score !== undefined && h.team_a_score !== undefined;
                           const scoreText = hasScore ? (h.was_home ? `${h.team_h_score}-${h.team_a_score}` : `${h.team_a_score}-${h.team_h_score}`) : '-';
+                          const xgiVal = h.expected_goal_involvements || (parseFloat(h.expected_goals || '0') + parseFloat(h.expected_assists || '0')).toFixed(2);
+                          const netTransfers = h.transfers_balance ?? (h.transfers_in - h.transfers_out);
+
                           return (
                             <tr key={h.round} className="hover:bg-slate-800/60 transition-colors">
-                              <td className="py-2 px-3 font-bold text-white">GW{h.round}</td>
+                              {/* Fixed: Round */}
+                              <td className="py-2 px-2.5 font-bold text-white">GW{h.round}</td>
+
+                              {/* Fixed: Opponent */}
                               <td className="py-2 px-3">
-                                <span className="font-semibold text-slate-200">{opp}</span>
-                                <span className="text-[10px] text-slate-500 ml-1 font-sans">
-                                  ({h.was_home ? 'Doma' : 'Vonku'})
-                                </span>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-semibold text-slate-200">{opp}</span>
+                                  <span className="text-[10px] text-slate-500 font-sans">
+                                    ({h.was_home ? (lang === 'sk' ? 'Doma' : 'H') : (lang === 'sk' ? 'Vonku' : 'A')})
+                                  </span>
+                                  {fdrVal && (
+                                    <span className={`px-1 py-0.2 rounded text-[9px] font-bold border ${getDifficultyColor(fdrVal)}`}>
+                                      FDR {fdrVal}
+                                    </span>
+                                  )}
+                                </div>
                               </td>
-                              <td className="py-2 px-3 text-center">
+
+                              {/* Fixed: Result */}
+                              <td className="py-2 px-2.5 text-center">
                                 {hasScore ? (
                                   <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border ${res.cls}`}>
                                     {scoreText} ({res.text})
@@ -602,28 +858,146 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                                   <span className="text-slate-500 font-mono text-[11px]">-</span>
                                 )}
                               </td>
-                              <td className="py-2 px-3 text-right text-slate-300">{h.minutes}'</td>
-                              <td className="py-2 px-3 text-right">
-                                <span className={`inline-block px-2 py-0.5 rounded border text-xs ${getPointsBadgeClass(h.total_points)}`}>
-                                  {h.total_points}
-                                </span>
-                              </td>
-                              <td className={`py-2 px-2 text-center ${h.goals_scored > 0 ? 'text-emerald-400 font-black' : 'text-slate-500'}`}>
-                                {h.goals_scored}
-                              </td>
-                              <td className={`py-2 px-2 text-center ${h.assists > 0 ? 'text-blue-400 font-black' : 'text-slate-500'}`}>
-                                {h.assists}
-                              </td>
-                              <td className={`py-2 px-2 text-center ${h.clean_sheets > 0 ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
-                                {h.clean_sheets}
-                              </td>
-                              <td className={`py-2 px-2 text-center ${h.bonus > 0 ? 'text-amber-400 font-black' : 'text-slate-500'}`}>
-                                {h.bonus > 0 ? `+${h.bonus}` : '-'}
-                              </td>
-                              <td className="py-2 px-3 text-right text-slate-400">{h.bps}</td>
-                              <td className="py-2 px-3 text-right text-slate-400 font-sans text-[11px]">{h.expected_goals}</td>
-                              <td className="py-2 px-3 text-right text-slate-400 font-sans text-[11px]">{h.expected_assists}</td>
-                              <td className="py-2 px-3 text-right text-blue-300">£{(h.value / 10).toFixed(1)}</td>
+
+                              {/* DYNAMIC TAB 1: OVERVIEW */}
+                              {matchLogTab === 'overview' && (
+                                <>
+                                  <td className="py-2 px-2 text-right text-slate-300">{h.minutes}'</td>
+                                  <td className="py-2 px-2 text-right">
+                                    <span className={`inline-block px-1.5 py-0.5 rounded border text-xs ${getPointsBadgeClass(h.total_points)}`}>
+                                      {h.total_points}
+                                    </span>
+                                  </td>
+                                  <td className={`py-2 px-2 text-center ${h.goals_scored > 0 ? 'text-emerald-400 font-black' : 'text-slate-500'}`}>
+                                    {h.goals_scored}
+                                  </td>
+                                  <td className={`py-2 px-2 text-center ${h.assists > 0 ? 'text-blue-400 font-black' : 'text-slate-500'}`}>
+                                    {h.assists}
+                                  </td>
+                                  <td className={`py-2 px-2 text-center ${h.clean_sheets > 0 ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                                    {h.clean_sheets}
+                                  </td>
+                                  <td className={`py-2 px-2 text-center ${h.bonus > 0 ? 'text-amber-400 font-black' : 'text-slate-500'}`}>
+                                    {h.bonus > 0 ? `+${h.bonus}` : '-'}
+                                  </td>
+                                  <td className="py-2 px-2.5 text-right text-slate-400">{h.bps}</td>
+                                  <td className="py-2 px-2.5 text-right text-slate-400 font-sans text-[11px]">{h.expected_goals || '0.00'}</td>
+                                  <td className="py-2 px-2.5 text-right text-slate-400 font-sans text-[11px]">{h.expected_assists || '0.00'}</td>
+                                  <td className="py-2 px-2.5 text-right text-blue-300">£{(h.value / 10).toFixed(1)}m</td>
+                                </>
+                              )}
+
+                              {/* DYNAMIC TAB 2: ATTACK */}
+                              {matchLogTab === 'attack' && (
+                                <>
+                                  <td className="py-2 px-2 text-right text-slate-300">{h.minutes}'</td>
+                                  <td className="py-2 px-2 text-right">
+                                    <span className={`inline-block px-1.5 py-0.5 rounded border text-xs ${getPointsBadgeClass(h.total_points)}`}>
+                                      {h.total_points}
+                                    </span>
+                                  </td>
+                                  <td className={`py-2 px-2 text-center ${h.goals_scored > 0 ? 'text-emerald-400 font-black' : 'text-slate-500'}`}>
+                                    {h.goals_scored}
+                                  </td>
+                                  <td className={`py-2 px-2 text-center ${h.assists > 0 ? 'text-blue-400 font-black' : 'text-slate-500'}`}>
+                                    {h.assists}
+                                  </td>
+                                  <td className="py-2 px-2.5 text-right text-emerald-300 font-sans text-[11px] font-semibold">
+                                    {h.expected_goals || '0.00'}
+                                  </td>
+                                  <td className="py-2 px-2.5 text-right text-blue-300 font-sans text-[11px] font-semibold">
+                                    {h.expected_assists || '0.00'}
+                                  </td>
+                                  <td className="py-2 px-2.5 text-right text-purple-300 font-sans text-[11px] font-bold">
+                                    {xgiVal}
+                                  </td>
+                                  <td className="py-2 px-2.5 text-right text-slate-300">
+                                    {Number(h.threat || 0).toFixed(0)}
+                                  </td>
+                                  <td className="py-2 px-2.5 text-right text-slate-300">
+                                    {Number(h.creativity || 0).toFixed(0)}
+                                  </td>
+                                </>
+                              )}
+
+                              {/* DYNAMIC TAB 3: DEFENSE */}
+                              {matchLogTab === 'defense' && (
+                                <>
+                                  <td className="py-2 px-2 text-right text-slate-300">{h.minutes}'</td>
+                                  <td className="py-2 px-2 text-right">
+                                    <span className={`inline-block px-1.5 py-0.5 rounded border text-xs ${getPointsBadgeClass(h.total_points)}`}>
+                                      {h.total_points}
+                                    </span>
+                                  </td>
+                                  <td className={`py-2 px-2 text-center ${h.clean_sheets > 0 ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                                    {h.clean_sheets}
+                                  </td>
+                                  <td className="py-2 px-2 text-center text-slate-400">{h.goals_conceded}</td>
+                                  <td className="py-2 px-2.5 text-right text-rose-300 font-sans text-[11px]">
+                                    {h.expected_goals_conceded || '-'}
+                                  </td>
+                                  <td className={`py-2 px-2 text-center ${h.saves > 0 ? 'text-amber-300 font-bold' : 'text-slate-500'}`}>
+                                    {h.saves}
+                                  </td>
+                                  <td className="py-2 px-2 text-center">
+                                    {h.yellow_cards > 0 ? (
+                                      <span className="px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 text-[10px] font-bold">
+                                        {h.yellow_cards}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-600">-</span>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-2 text-center">
+                                    {h.red_cards > 0 ? (
+                                      <span className="px-1.5 py-0.2 rounded bg-rose-500/25 text-rose-300 text-[10px] font-bold">
+                                        {h.red_cards}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-600">-</span>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-2 text-center">
+                                    {h.penalties_saved > 0 ? (
+                                      <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-black">
+                                        +{h.penalties_saved}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-600">-</span>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-2.5 text-right text-amber-300 font-bold">{h.bps}</td>
+                                </>
+                              )}
+
+                              {/* DYNAMIC TAB 4: TRANSFERS */}
+                              {matchLogTab === 'transfers' && (
+                                <>
+                                  <td className="py-2 px-2 text-right">
+                                    <span className={`inline-block px-1.5 py-0.5 rounded border text-xs ${getPointsBadgeClass(h.total_points)}`}>
+                                      {h.total_points}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 px-2.5 text-right text-blue-300">£{(h.value / 10).toFixed(1)}m</td>
+                                  <td className="py-2 px-2.5 text-right text-emerald-400">
+                                    +{h.transfers_in.toLocaleString()}
+                                  </td>
+                                  <td className="py-2 px-2.5 text-right text-rose-400">
+                                    -{h.transfers_out.toLocaleString()}
+                                  </td>
+                                  <td className="py-2 px-2.5 text-right font-bold">
+                                    <span className={netTransfers > 0 ? 'text-emerald-400' : netTransfers < 0 ? 'text-rose-400' : 'text-slate-400'}>
+                                      {netTransfers > 0 ? `+${netTransfers.toLocaleString()}` : netTransfers.toLocaleString()}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 px-3 text-right text-slate-300 text-[11px]">
+                                    {h.selected.toLocaleString()}
+                                  </td>
+                                  <td className="py-2 px-2.5 text-right text-purple-300 font-bold">
+                                    {Number(h.ict_index || 0).toFixed(1)}
+                                  </td>
+                                </>
+                              )}
                             </tr>
                           );
                         })

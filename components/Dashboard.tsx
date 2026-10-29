@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { BootstrapStatic, FPLPlayer, FPLFixture } from '../types';
-import { TrendingUp, TrendingDown, Lightbulb, Zap, CalendarRange, ChevronRight, Trophy, BrainCircuit, Sparkles, Users } from 'lucide-react';
+import { TrendingUp, TrendingDown, Lightbulb, Zap, CalendarRange, ChevronRight, Trophy, BrainCircuit, Sparkles, Users, ArrowLeftRight } from 'lucide-react';
 import { View } from '../App';
 import { getDynamicDifficulty, calculateLeaguePositions } from '../lib/fdrModel';
 import { TeamIcon } from './TeamIcon';
@@ -445,6 +445,19 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
                         <div>
                             <div className="text-white font-bold text-sm">Top 100 Managers</div>
                             <div className="text-[11px] text-slate-500">Track elite transfer activity & trends</div>
+                        </div>
+                    </button>
+                    <button
+                        onClick={() => onNavigate(View.SQUAD_SIMULATOR, 'Squad Simulator')}
+                        className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-lg border border-purple-500/30 hover:bg-purple-600/10 hover:border-purple-500/60 transition-all text-left group"
+                    >
+                        <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400 group-hover:scale-110 transition-transform"><ArrowLeftRight size={24} /></div>
+                        <div>
+                            <div className="text-white font-bold text-sm flex items-center gap-2">
+                                <span>Squad & Transfers</span>
+                                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500 text-slate-950 font-black">NEW</span>
+                            </div>
+                            <div className="text-[11px] text-slate-400">Import your team & simulate transfers</div>
                         </div>
                     </button>
                     <button

@@ -17,8 +17,10 @@ import TeamAnalysis from './components/TeamAnalysis';
 import PeriodAnalysis from './components/PeriodAnalysis';
 import CompareMode from './components/CompareMode';
 import MiniChallenge from './components/MiniChallenge';
+import SquadSimulator from './components/SquadSimulator';
 import AnalyticsTracker from './components/AnalyticsTracker';
 import { initGA } from './lib/analytics';
+import { useLanguage } from './lib/language';
 import {
   LayoutDashboard,
   Calendar,
@@ -54,7 +56,8 @@ export enum View {
   COMPARE_MODE,
   LOCKED,
   SCOUT,
-  CHALLENGE
+  CHALLENGE,
+  SQUAD_SIMULATOR
 }
 
 function App() {
@@ -74,6 +77,7 @@ function App() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [lockedReason, setLockedReason] = useState<string | null>(null);
   const [tier, setTier] = useState<'free' | 'pro'>('free');
+  const [lang, setLang] = useLanguage();
 
   const fetchData = async () => {
     setLoading(true);
@@ -267,7 +271,37 @@ function App() {
   );
 
   const AccountBar = () => (
-    <div className="flex items-center">
+    <div className="flex items-center gap-3">
+      {/* Global Language Toggle */}
+      <div className="flex items-center bg-slate-900/80 border border-slate-800 rounded-lg p-0.5 shadow-sm">
+        <button
+          type="button"
+          onClick={() => setLang('sk')}
+          className={`px-2 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 ${
+            lang === 'sk'
+              ? 'bg-purple-600 text-white shadow-sm'
+              : 'text-slate-400 hover:text-white'
+          }`}
+          title="Slovenčina"
+        >
+          <span className="text-[11px]">🇸🇰</span>
+          <span>SK</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setLang('en')}
+          className={`px-2 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 ${
+            lang === 'en'
+              ? 'bg-purple-600 text-white shadow-sm'
+              : 'text-slate-400 hover:text-white'
+          }`}
+          title="English"
+        >
+          <span className="text-[11px]">🇬🇧</span>
+          <span>EN</span>
+        </button>
+      </div>
+
       {userEmail ? (
         <div className="flex items-center gap-3 bg-slate-900/60 border border-slate-800 rounded-lg px-2.5 py-1.5">
           <span className="hidden lg:inline text-[11px] text-slate-400">
@@ -320,6 +354,7 @@ function App() {
             <HeaderNavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" />
             <HeaderNavItem v={View.FIXTURES} label="Fixtures" />
             <HeaderNavItem v={View.TRANSFER_PICKS} label="Transfer Picks" />
+            <HeaderNavItem v={View.SQUAD_SIMULATOR} label="Squad Simulator" />
             <HeaderNavItem v={View.TOP_MANAGERS} label="Top Managers" />
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.OPTIMAL_SQUAD} label="Optimal 11" />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.TEAM} label="My Team" />}
@@ -377,6 +412,7 @@ function App() {
             <NavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" icon={CalendarRange} />
             <NavItem v={View.FIXTURES} label="Fixtures" icon={Calendar} />
             <NavItem v={View.TRANSFER_PICKS} label="Transfer Picks" icon={ArrowLeftRight} />
+            <NavItem v={View.SQUAD_SIMULATOR} label="Squad Simulator" icon={Shirt} />
             <NavItem v={View.CHALLENGE} label="Mini Challenge" icon={Zap} requiresAuth={true} />
             <NavItem v={View.STATS} label="Player Stats" icon={BarChart2} />
             <NavItem v={View.DETAILED_STATS} label="Detailed Analyses" icon={Activity} />
@@ -429,6 +465,14 @@ function App() {
             {view === View.PERIOD_ANALYSIS && <PeriodAnalysis players={data.elements} teams={data.teams} events={data.events} />}
             {view === View.FIXTURES && <Fixtures fixtures={fixtures} teams={data.teams} events={data.events} players={data.elements} />}
             {view === View.TRANSFER_PICKS && <TransferPicks players={data.elements} teams={data.teams} fixtures={fixtures} events={data.events} />}
+            {view === View.SQUAD_SIMULATOR && (
+              <SquadSimulator
+                allPlayers={data.elements}
+                teams={data.teams}
+                events={data.events}
+                fixtures={fixtures}
+              />
+            )}
             {view === View.OPTIMAL_SQUAD && <OptimalSquad players={data.elements} teams={data.teams} />}
             {view === View.TEAM && <TeamBuilder allPlayers={data.elements} teams={data.teams} events={data.events} myTeam={myTeam} setMyTeam={setMyTeam} />}
             {view === View.STATS && <PlayerStats players={data.elements} teams={data.teams} fixtures={fixtures} />}

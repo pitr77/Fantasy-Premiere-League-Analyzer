@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FPLPlayer, FPLTeam, FPLEvent } from '../types';
-import { getPlayerImageUrl, getUserPicks } from '../services/fplService';
+import { getPlayerImageUrl, getUserPicks, getTeamShirtUrl } from '../services/fplService';
 import { User, Plus, X, DownloadCloud, AlertCircle, LogIn, Lock } from 'lucide-react';
 
 interface TeamBuilderProps {
@@ -123,7 +123,15 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ allPlayers, teams, events, my
                 src={getPlayerImageUrl(player.photo)} 
                 alt={player.web_name} 
                 className="h-full object-cover translate-y-2"
-                onError={(e) => { (e.target as HTMLImageElement).src = 'https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_0-66.png'; }} 
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  const shirtUrl = getTeamShirtUrl(teamObj?.code, player.element_type === 1);
+                  if (target.src !== shirtUrl) {
+                    target.src = shirtUrl;
+                  } else {
+                    target.src = 'https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_0-110.png';
+                  }
+                }} 
               />
               <div className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-slate-900/80 text-[8px] sm:text-[10px] text-green-400 font-mono px-1 rounded z-10">
                 {player.total_points}

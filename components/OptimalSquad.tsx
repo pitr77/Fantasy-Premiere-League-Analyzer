@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { FPLPlayer, FPLTeam } from '../types';
-import { getPlayerImageUrl } from '../services/fplService';
+import { getPlayerImageUrl, getTeamShirtUrl } from '../services/fplService';
 import { projectPlayer } from '../lib/playerProjection';
 import { Zap, DollarSign, Trophy, TrendingUp, RefreshCw, AlertTriangle, Shield, Calculator } from 'lucide-react';
 
@@ -201,7 +201,15 @@ const OptimalSquad: React.FC<OptimalSquadProps> = ({ players, teams }) => {
                 src={getPlayerImageUrl(player.photo)} 
                 alt={player.web_name} 
                 className="h-full object-cover translate-y-2"
-                onError={(e) => { (e.target as HTMLImageElement).src = 'https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_0-66.png'; }} 
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  const shirtUrl = getTeamShirtUrl(teamObj?.code, player.element_type === 1);
+                  if (target.src !== shirtUrl) {
+                    target.src = shirtUrl;
+                  } else {
+                    target.src = 'https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_0-110.png';
+                  }
+                }} 
               />
               <div className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-slate-900/90 text-[8px] sm:text-[10px] text-purple-400 font-mono px-1 rounded border border-purple-500/30 z-10">
                 {score.toFixed(1)} <span className="text-[6px] sm:text-[8px] uppercase opacity-70 hidden sm:inline">{scoreLabel}</span>

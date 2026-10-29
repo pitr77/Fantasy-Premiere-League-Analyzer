@@ -9,6 +9,7 @@ import { FortunaMatch } from '../services/oddsSnapshotService';
 
 import { calculateLeaguePositions, getDynamicDifficulty } from '../lib/fdrModel';
 import { computeTransferIndexForPlayers, TransferIndexResult } from '../lib/transferIndex';
+import FDRRealityAnalysis from './FDRRealityAnalysis';
 
 
 interface FixturesProps {
@@ -19,7 +20,7 @@ interface FixturesProps {
 }
 
 const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players }) => {
-    const [activeTab, setActiveTab] = useState<'schedule' | 'planner'>('schedule');
+    const [activeTab, setActiveTab] = useState<'schedule' | 'planner' | 'reality'>('schedule');
     const [showInfo, setShowInfo] = useState(false);
     const [plannerSortMode, setPlannerSortMode] = useState<'none' | 'asc' | 'desc'>('none');
     const [expandedTeamId, setExpandedTeamId] = useState<number | null>(null);
@@ -951,10 +952,21 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                         >
                             <LayoutGrid size={12} className="md:w-3.5 md:h-3.5" /> FDR Matrix
                         </button>
+                        <button
+                            onClick={() => {
+                                setActiveTab('reality');
+                            }}
+                            className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 py-1 md:py-2 rounded-md text-[10px] md:text-sm font-bold transition-all ${activeTab === 'reality' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            <TrendingUp size={12} className="md:w-3.5 md:h-3.5 text-amber-400" />
+                            <span>FDR Reality Check</span>
+                            <span className="text-[8px] px-1 py-0.2 rounded-full bg-emerald-500 text-white font-black leading-none ml-0.5">NEW</span>
+                        </button>
                     </div>
                 </div>
 
-                {/* Filter Controls Row */}
+                {/* Filter Controls Row (Schedule & Matrix only) */}
+                {activeTab !== 'reality' && (
                 <div className="mt-3 md:mt-6 flex flex-col sm:flex-row gap-2 md:gap-4 items-center bg-slate-900/50 p-1.5 md:p-3 rounded-lg border border-slate-700">
 
                     {/* Month Selector */}
@@ -1062,6 +1074,7 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                         </button>
                     </div>
                 </div>
+                )}
 
                 {/* New Premium Collapsible Info Section */}
                 <div className="mt-3 md:mt-6 bg-slate-900/40 border border-slate-700/60 rounded-xl overflow-hidden shadow-lg transition-all border-l-4 border-l-purple-500/50">
@@ -1168,7 +1181,16 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                 </div>
             </div>
 
-            {activeTab === 'schedule' ? renderSchedule() : renderPlanner()}
+            {activeTab === 'schedule' && renderSchedule()}
+            {activeTab === 'planner' && renderPlanner()}
+            {activeTab === 'reality' && (
+                <FDRRealityAnalysis
+                    fixtures={fixtures}
+                    teams={teams}
+                    players={players}
+                    events={events}
+                />
+            )}
         </div>
     );
 };

@@ -21,8 +21,33 @@ export interface FPLPlayer {
   penalties_saved: number;
   bonus: number;
   minutes: number;
+  goals_scored?: number;
+  assists?: number;
+  goals_conceded?: number;
+  yellow_cards?: number;
+  red_cards?: number;
+  starts?: number;
+  expected_goals?: string;
+  expected_assists?: string;
+  expected_goal_involvements?: string;
+  expected_goals_conceded?: string;
   chance_of_playing_this_round: number | null;
   chance_of_playing_next_round: number | null;
+  clearances_blocks_interceptions?: number;
+  recoveries?: number;
+  tackles?: number;
+  defensive_contribution?: number;
+  own_goals?: number;
+  penalties_missed?: number;
+  transfers_in?: number;
+  transfers_out?: number;
+  transfers_in_event?: number;
+  transfers_out_event?: number;
+  cost_change_start?: number;
+  cost_change_event?: number;
+  value_season?: string;
+  value_form?: string;
+  [key: string]: any;
 }
 
 export interface FPLTeam {
@@ -31,6 +56,7 @@ export interface FPLTeam {
   short_name: string;
   strength: number;
   pulse_id: number;
+  code?: number;
 }
 
 export interface FPLEvent {

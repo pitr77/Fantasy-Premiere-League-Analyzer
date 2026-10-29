@@ -93,13 +93,47 @@ export const getEventLive = async (gw: number): Promise<any> => {
   }
 };
 
-export const getUserPicks = async (teamId: number, eventId: number): Promise<{ picks: { element: number, position: number }[] }> => {
+export const getUserPicks = async (
+  teamId: number,
+  eventId: number
+): Promise<{
+  picks: {
+    element: number;
+    position: number;
+    multiplier?: number;
+    is_captain?: boolean;
+    is_vice_captain?: boolean;
+  }[];
+  entry_history?: {
+    event: number;
+    points: number;
+    total_points: number;
+    rank: number;
+    rank_sort: number;
+    overall_rank: number;
+    bank: number;
+    value: number;
+    event_transfers: number;
+    event_transfers_cost: number;
+    points_on_bench: number;
+  };
+  active_chip?: string | null;
+}> => {
   try {
     return await fetchFromBackend(`/api/fpl/entry/${teamId}/event/${eventId}/picks`);
   } catch {
     return fetchViaProxy(`${BASE_URL}/entry/${teamId}/event/${eventId}/picks/`);
   }
 };
+
+export const getTeamEntry = async (teamId: number): Promise<any> => {
+  try {
+    return await fetchFromBackend(`/api/fpl/entry/${teamId}`);
+  } catch {
+    return fetchViaProxy(`${BASE_URL}/entry/${teamId}/`);
+  }
+};
+
 
 export const getPlayerSummary = async (playerId: number): Promise<FPLElementSummary> => {
   try {
@@ -109,10 +143,19 @@ export const getPlayerSummary = async (playerId: number): Promise<FPLElementSumm
   }
 };
 
-export const getPlayerImageUrl = (photoCode: string) => {
+export const getPlayerImageUrl = (photoCode?: string) => {
+  if (!photoCode) return 'https://resources.premierleague.com/premierleague/photos/players/110x140/p0.png';
   // Remove .jpg extension from API if present and use the png raw endpoint
-  const id = photoCode.replace('.jpg', '');
+  const id = String(photoCode).replace('.jpg', '');
   return `https://resources.premierleague.com/premierleague/photos/players/110x140/p${id}.png`;
+};
+
+export const getTeamShirtUrl = (teamCode?: number, isGoalkeeper: boolean = false) => {
+  if (!teamCode) {
+    return 'https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_0-110.png';
+  }
+  const suffix = isGoalkeeper ? '_1-110.png' : '-110.png';
+  return `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${teamCode}${suffix}`;
 };
 
 export const getTeamLogoUrl = (teamCode: number) => {
