@@ -206,7 +206,6 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
     const SortHeader: React.FC<{ label: string, sortKey: string, align?: "left" | "right" | "center", className?: string }> = ({ label, sortKey, align = "left", className = "" }) => {
         const isActive = sortConfig.key === sortKey;
         const alignClass = align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
-        const justifyClass = align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start";
         const pxClass = className.split(' ').some(c => c.startsWith('px-')) ? '' : 'px-3';
         const pyClass = className.split(' ').some(c => c.startsWith('py-')) ? '' : 'py-3';
         return (
@@ -214,14 +213,29 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                 className={`${pyClass} ${pxClass} cursor-pointer hover:text-white transition-colors group select-none ${alignClass} ${className}`.trim()}
                 onClick={() => handleSort(sortKey)}
             >
-                <div className={`flex items-center gap-1 ${justifyClass}`}>
-                    <span>{label}</span>
-                    {isActive ? (
-                        sortConfig.direction === 'asc' ? <ChevronUp size={13} className="text-blue-400 shrink-0" /> : <ChevronDown size={13} className="text-blue-400 shrink-0" />
-                    ) : (
-                        <ArrowUpDown size={13} className="text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                    )}
-                </div>
+                {align === "center" ? (
+                    <div className="w-full flex items-center justify-center">
+                        <div className="relative inline-flex items-center justify-center">
+                            <span>{label}</span>
+                            <span className="absolute left-full ml-1 flex items-center">
+                                {isActive ? (
+                                    sortConfig.direction === 'asc' ? <ChevronUp size={13} className="text-blue-400 shrink-0" /> : <ChevronDown size={13} className="text-blue-400 shrink-0" />
+                                ) : (
+                                    <ArrowUpDown size={13} className="text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                                )}
+                            </span>
+                        </div>
+                    </div>
+                ) : (
+                    <div className={`flex items-center gap-1 ${align === "right" ? "justify-end" : "justify-start"}`}>
+                        <span>{label}</span>
+                        {isActive ? (
+                            sortConfig.direction === 'asc' ? <ChevronUp size={13} className="text-blue-400 shrink-0" /> : <ChevronDown size={13} className="text-blue-400 shrink-0" />
+                        ) : (
+                            <ArrowUpDown size={13} className="text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                        )}
+                    </div>
+                )}
             </th>
         );
     };
@@ -714,8 +728,8 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                 />
                                 <SortHeader label="Price" sortKey="now_cost" align="center" className="w-20" />
                                 <SortHeader label="Ownership" sortKey="selected_by_percent" align="center" className="w-24" />
-                                <SortHeader label="Form" sortKey="form" align="center" className="w-16" />
-                                <SortHeader label="Start" sortKey="startProbability" align="center" className="w-16" />
+                                <SortHeader label="Form" sortKey="form" align="center" className="w-20" />
+                                <SortHeader label="Start" sortKey="startProbability" align="center" className="w-20" />
 
                                 {(activePos === 3 || activePos === 4) && showOdds && (
                                     <SortHeader
