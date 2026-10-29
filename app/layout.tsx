@@ -48,6 +48,9 @@ export const metadata: Metadata = {
   applicationName: 'FPL Studio',
   verification: {
     google: '0RIP_wCZtvClwTFXGrqwjp1jIOB2EcnfPHzOXEt8M4M',
+    other: {
+      'msvalidate.01': 'D38361735CA3BFCD9C15DA383FFB20A3',
+    },
   },
   keywords: [
     'FPL', 'Fantasy Premier League', 'FPL analytics', 'FPL tools', 'FPL planner',
@@ -105,6 +108,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="google-site-verification" content="0RIP_wCZtvClwTFXGrqwjp1jIOB2EcnfPHzOXEt8M4M" />
+        <meta name="msvalidate.01" content="D38361735CA3BFCD9C15DA383FFB20A3" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdData) }}
