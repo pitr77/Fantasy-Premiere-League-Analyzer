@@ -719,12 +719,12 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                         <thead>
                             <tr className="bg-slate-900/60 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700">
                                 <th className="py-3 px-2 w-10 text-center text-xs">#</th>
-                                <SortHeader label="Player" sortKey="web_name" align="left" className="w-full min-w-[170px]" />
+                                <SortHeader label="Player" sortKey="web_name" align="left" className="w-64 min-w-[190px]" />
                                 <SortHeader
                                     label={horizon === 'next' ? 'GW SCORE' : 'INDEX'}
                                     sortKey="transferIndex"
                                     align="left"
-                                    className="w-28 min-w-[110px]"
+                                    className="w-36 min-w-[120px]"
                                 />
                                 <SortHeader label="Price" sortKey="now_cost" align="center" className="w-20" />
                                 <SortHeader label="Ownership" sortKey="selected_by_percent" align="center" className="w-24" />
@@ -741,11 +741,11 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                 )}
 
                                 {gwHeaders.map(gw => (
-                                    <SortHeader key={gw} label={`GW${gw}`} sortKey={`GW${gw}`} align="center" className="w-[48px] min-w-[44px] max-w-[52px] px-0.5" />
+                                    <SortHeader key={gw} label={`GW${gw}`} sortKey={`GW${gw}`} align="center" className="w-14 min-w-[50px] px-0.5" />
                                 ))}
 
                                 {horizon === 'next5' && (
-                                    <SortHeader label="Diff" sortKey="fixtureDifficultySum" align="center" className="w-14" />
+                                    <SortHeader label="Diff" sortKey="fixtureDifficultySum" align="center" className="w-16" />
                                 )}
                             </tr>
                         </thead>
@@ -869,8 +869,8 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                             const fix = p.nextFixtures.find(f => f.event === gw);
                                             if (!fix || fix.opponent === 0) {
                                                 return (
-                                                    <td key={gw} className="py-2 px-0.5 text-center w-[48px] min-w-[44px] max-w-[52px]">
-                                                        <div className="w-full max-w-[46px] h-[1.95rem] mx-auto bg-slate-800 rounded flex items-center justify-center text-[10px] text-slate-600">-</div>
+                                                    <td key={gw} className="py-2 px-0.5 text-center w-14 min-w-[50px]">
+                                                        <div className="w-full h-[1.95rem] bg-slate-800 rounded flex items-center justify-center text-[10px] text-slate-600">-</div>
                                                     </td>
                                                 );
                                             }
@@ -879,8 +879,8 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                             const colorClass = getDifficultyColor(fix.difficulty);
 
                                             return (
-                                                <td key={gw} className="py-2 px-0.5 text-center w-[48px] min-w-[44px] max-w-[52px]">
-                                                    <div className={`w-full max-w-[46px] h-[1.95rem] mx-auto rounded flex flex-col items-center justify-center shadow-sm ${colorClass}`}>
+                                                <td key={gw} className="py-2 px-0.5 text-center w-14 min-w-[50px]">
+                                                    <div className={`w-full h-[1.95rem] rounded flex flex-col items-center justify-center shadow-sm ${colorClass}`}>
                                                         <span className="text-[10px] font-bold leading-tight">{oppShort}</span>
                                                         <span className="text-[8px] opacity-80 leading-tight">({fix.isHome ? 'H' : 'A'})</span>
                                                     </div>
