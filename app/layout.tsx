@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     template: '%s | FPL Studio',
   },
   description:
-    'Free AI-powered Fantasy Premier League analytics: Top 100 manager tracker, dynamic FDR fixture difficulty, bookmaker clean sheet & goalscorer odds, transfer planner, and AI gameweek previews.',
+    'Free AI-powered Fantasy Premier League analytics: Top 100 manager tracker, dynamic FDR fixture difficulty, bookmaker odds, and AI gameweek previews.',
   metadataBase: new URL(siteUrl),
   alternates: {
     canonical: siteUrl,
