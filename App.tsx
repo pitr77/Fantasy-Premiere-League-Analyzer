@@ -21,6 +21,7 @@ import SquadSimulator from './components/SquadSimulator';
 import AnalyticsTracker from './components/AnalyticsTracker';
 import { initGA } from './lib/analytics';
 import { useLanguage } from './lib/language';
+import { t } from './lib/translations';
 import {
   LayoutDashboard,
   Calendar,
@@ -269,7 +270,7 @@ function App() {
         : "px-3 py-1.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/40 transition-all"
       }
     >
-      <span>FPL Scout</span>
+      <span>{t('nav_scout', lang)}</span>
     </a>
   );
 
@@ -314,7 +315,7 @@ function App() {
             onClick={() => supabase.auth.signOut()}
             className="text-xs font-bold bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded px-3 py-1.5 transition-colors"
           >
-            Sign out
+            {t('nav_sign_out', lang)}
           </button>
         </div>
       )}
@@ -335,15 +336,15 @@ function App() {
           </button>
 
           <nav className="flex items-center gap-1">
-            <HeaderNavItem v={View.LEAGUE_TABLE} label="League Table" />
-            <HeaderNavItem v={View.TEAM_ANALYSIS} label="Team Analysis" />
-            <HeaderNavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" />
-            <HeaderNavItem v={View.FIXTURES} label="Fixtures" />
-            <HeaderNavItem v={View.TRANSFER_PICKS} label="Transfer Picks" />
-            <HeaderNavItem v={View.TOP_MANAGERS} label="Top Managers" />
-            {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.OPTIMAL_SQUAD} label="Optimal 11" />}
-            {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.TEAM} label="My Team" />}
-            <HeaderNavItem v={View.STATS} label="Player Stats" />
+            <HeaderNavItem v={View.LEAGUE_TABLE} label={t('nav_league_table', lang)} />
+            <HeaderNavItem v={View.TEAM_ANALYSIS} label={t('nav_team_analysis', lang)} />
+            <HeaderNavItem v={View.PERIOD_ANALYSIS} label={t('nav_period_analysis', lang)} />
+            <HeaderNavItem v={View.FIXTURES} label={t('nav_fixtures', lang)} />
+            <HeaderNavItem v={View.TRANSFER_PICKS} label={t('nav_transfer_picks', lang)} />
+            <HeaderNavItem v={View.TOP_MANAGERS} label={t('nav_top_managers', lang)} />
+            {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.OPTIMAL_SQUAD} label={t('nav_optimal_squad', lang)} />}
+            {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.TEAM} label={t('nav_my_team', lang)} />}
+            <HeaderNavItem v={View.STATS} label={t('nav_player_stats', lang)} />
           </nav>
         </div>
 
@@ -400,17 +401,17 @@ function App() {
           </div>
 
           <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto custom-scrollbar">
-            <NavItem v={View.LEAGUE_TABLE} label="League Table" icon={Trophy} />
-            <NavItem v={View.TEAM_ANALYSIS} label="Team Analysis" icon={Search} />
-            <NavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" icon={CalendarRange} />
-            <NavItem v={View.FIXTURES} label="Fixtures" icon={Calendar} />
-            <NavItem v={View.TRANSFER_PICKS} label="Transfer Picks" icon={ArrowLeftRight} />
-            <NavItem v={View.STATS} label="Player Stats" icon={BarChart2} />
-            <NavItem v={View.DETAILED_STATS} label="Detailed Analyses" icon={Activity} />
-            <NavItem v={View.TOP_MANAGERS} label="Top Managers (Top 100)" icon={Users} />
-            {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.OPTIMAL_SQUAD} label="Optimal 11" icon={Zap} />}
-            {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.TEAM} label="My Team" icon={Shirt} />}
-            {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.COMPARE_MODE} label="Compare Mode" icon={Split} />}
+            <NavItem v={View.LEAGUE_TABLE} label={t('nav_league_table', lang)} icon={Trophy} />
+            <NavItem v={View.TEAM_ANALYSIS} label={t('nav_team_analysis', lang)} icon={Search} />
+            <NavItem v={View.PERIOD_ANALYSIS} label={t('nav_period_analysis', lang)} icon={CalendarRange} />
+            <NavItem v={View.FIXTURES} label={t('nav_fixtures', lang)} icon={Calendar} />
+            <NavItem v={View.TRANSFER_PICKS} label={t('nav_transfer_picks', lang)} icon={ArrowLeftRight} />
+            <NavItem v={View.STATS} label={t('nav_player_stats', lang)} icon={BarChart2} />
+            <NavItem v={View.DETAILED_STATS} label={lang === 'sk' ? 'Detailné analýzy' : 'Detailed Analyses'} icon={Activity} />
+            <NavItem v={View.TOP_MANAGERS} label={t('nav_top_managers', lang)} icon={Users} />
+            {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.OPTIMAL_SQUAD} label={t('nav_optimal_squad', lang)} icon={Zap} />}
+            {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.TEAM} label={t('nav_my_team', lang)} icon={Shirt} />}
+            {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.COMPARE_MODE} label={lang === 'sk' ? 'Porovnanie' : 'Compare Mode'} icon={Split} />}
             <ScoutLink mobile={true} />
           </nav>
 

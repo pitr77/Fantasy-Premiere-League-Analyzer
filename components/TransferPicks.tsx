@@ -11,6 +11,8 @@ import { getGoalscorerOdds, GoalscorerOddsResult } from '../lib/goalscorerModel'
 import { Top100Snapshot, Top100PlayerSignal, Top100TemplateTierPlayer } from '../services/top100Service';
 import { findTop100Signal, findTop100TemplateTier } from '../lib/top100Matcher';
 import { PlayerDetailModal } from './PlayerDetailModal';
+import { useLanguage } from '../lib/language';
+import { t } from '../lib/translations';
 
 interface TransferPicksProps {
     players: FPLPlayer[];
@@ -34,6 +36,7 @@ interface PlayerTransferStats extends FPLPlayer {
 }
 
 const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures, events }) => {
+    const [lang] = useLanguage();
     const [activePos, setActivePos] = useState<number>(1); // Default GKP
     const [horizon, setHorizon] = useState<'next' | 'next5'>('next5');
     const [showInfo, setShowInfo] = useState(false);
@@ -251,12 +254,12 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                     <div className="flex justify-between items-start gap-4">
                         <div className="flex-1">
                             <h2 className="text-xl md:text-2xl font-bold text-white mb-2 flex items-center gap-2">
-                                <ArrowLeftRight className="text-blue-400 shrink-0" /> {horizon === 'next' ? 'Next GW Rankings' : 'Transfer Algorithm Picks'}
+                                <ArrowLeftRight className="text-blue-400 shrink-0" /> {horizon === 'next' ? t('tp_next_gw_rankings', lang) : t('tp_algo_picks', lang)}
                             </h2>
                             <p className="text-slate-400 text-sm leading-relaxed max-w-2xl">
                                 {horizon === 'next'
-                                    ? "Optimized for next Gameweek only (form + next fixture)."
-                                    : "Ranks players using current form + upcoming 5 fixtures."}
+                                    ? t('tp_algo_desc_next', lang)
+                                    : t('tp_algo_desc_5', lang)}
                             </p>
                         </div>
                         <div className="mt-2 shrink-0 bg-slate-700/50 p-1.5 rounded-lg group-hover:bg-slate-700 transition-colors">
@@ -273,12 +276,12 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                             {/* The Algo */}
                             <div className="space-y-3">
                                 <h4 className="font-bold text-white uppercase tracking-wider text-xs">
-                                    The Algorithm
+                                    {t('tp_the_algo', lang)}
                                 </h4>
                                 {horizon === 'next' ? (
                                     <>
                                         <p className="text-slate-300 leading-relaxed text-[11px]">
-                                            Optimized for the immediate gameweek. Combines fixture difficulty, predicted minutes, and current form.
+                                            {t('tp_algo_expl_next', lang)}
                                         </p>
                                         <div className="flex flex-wrap gap-2 text-[10px] text-slate-400 font-mono">
                                             <span className="bg-slate-900 px-2 py-1 rounded border border-slate-700 text-blue-400 whitespace-nowrap">50% Next Fixture</span>
@@ -387,10 +390,10 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                             }}
                             className={`px-2 md:px-6 py-3 rounded-lg font-bold text-xs md:text-sm flex items-center justify-center gap-2 transition-all ${activePos === pos ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
                         >
-                            {pos === 1 && "GKP"}
-                            {pos === 2 && "DEF"}
-                            {pos === 3 && "MID"}
-                            {pos === 4 && "FWD"}
+                            {pos === 1 && t('tp_pos_gkp', lang)}
+                            {pos === 2 && t('tp_pos_def', lang)}
+                            {pos === 3 && t('tp_pos_mid', lang)}
+                            {pos === 4 && t('tp_pos_fwd', lang)}
                         </button>
                     ))}
                 </div>
@@ -402,13 +405,13 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                             onClick={() => setHorizon('next')}
                             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${horizon === 'next' ? 'bg-slate-700 text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
                         >
-                            Next GW
+                            {t('tp_horizon_next', lang)}
                         </button>
                         <button
                             onClick={() => setHorizon('next5')}
                             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${horizon === 'next5' ? 'bg-slate-700 text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
                         >
-                            Next 5 GWs
+                            {t('tp_horizon_next5', lang)}
                         </button>
                     </div>
 
@@ -718,21 +721,21 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                         <thead>
                             <tr className="bg-slate-900/60 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700">
                                 <th className="py-3 px-2 w-10 text-center text-xs">#</th>
-                                <SortHeader label="Player" sortKey="web_name" align="left" className="w-64 min-w-[190px]" />
+                                <SortHeader label={t('tp_th_player', lang)} sortKey="web_name" align="left" className="w-64 min-w-[190px]" />
                                 <SortHeader
-                                    label={horizon === 'next' ? 'GW SCORE' : 'INDEX'}
+                                    label={horizon === 'next' ? t('tp_th_gw_score', lang) : t('tp_th_index', lang)}
                                     sortKey="transferIndex"
                                     align="left"
                                     className="w-36 min-w-[120px]"
                                 />
-                                <SortHeader label="Price" sortKey="now_cost" align="center" className="w-20" />
-                                <SortHeader label="Ownership" sortKey="selected_by_percent" align="center" className="w-24" />
-                                <SortHeader label="Form" sortKey="form" align="center" className="w-20" />
-                                <SortHeader label="Start" sortKey="startProbability" align="center" className="w-20" />
+                                <SortHeader label={t('tp_th_price', lang)} sortKey="now_cost" align="center" className="w-20" />
+                                <SortHeader label={t('tp_th_ownership', lang)} sortKey="selected_by_percent" align="center" className="w-24" />
+                                <SortHeader label={t('tp_th_form', lang)} sortKey="form" align="center" className="w-20" />
+                                <SortHeader label={t('tp_th_start', lang)} sortKey="startProbability" align="center" className="w-20" />
 
                                 {(activePos === 3 || activePos === 4) && showOdds && (
                                     <SortHeader
-                                        label="Goal Odds"
+                                        label={t('tp_th_goal_odds', lang)}
                                         sortKey="goalProb"
                                         align="center"
                                         className="w-28 text-amber-400"
@@ -749,7 +752,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                 })}
 
                                 {horizon === 'next5' ? (
-                                    <SortHeader label="Diff" sortKey="fixtureDifficultySum" align="center" className="w-16" />
+                                    <SortHeader label={t('tp_th_diff', lang)} sortKey="fixtureDifficultySum" align="center" className="w-16" />
                                 ) : (
                                     <th className="w-16" aria-hidden="true" />
                                 )}
@@ -770,7 +773,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                 <button
                                                     onClick={() => setSelectedPlayerForDetail(p)}
                                                     className="text-left font-bold text-white hover:text-blue-400 transition-colors flex items-center gap-1.5 group/p cursor-pointer"
-                                                    title="Kliknutím zobrazíte detail, ligové rebríčky a kompletnú GW históriu hráča"
+                                                    title={t('tp_click_detail', lang)}
                                                 >
                                                     <span className="group-hover/p:underline underline-offset-2">{p.web_name}</span>
                                                     <Info size={13} className="text-slate-500 group-hover/p:text-blue-400 opacity-60 group-hover/p:opacity-100 transition-all shrink-0" />
@@ -779,10 +782,11 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                     const top100Own = p.top100Template?.top100Own;
                                                     const net = p.top100Signal?.net;
                                                     let text = '';
+                                                    const ownWord = t('tp_top100_own', lang);
                                                     if (top100Own != null && net != null && net !== 0) {
-                                                        text = `Top 100: ${top100Own}% own (${net > 0 ? `+${net}` : net})`;
+                                                        text = `Top 100: ${top100Own}% ${ownWord} (${net > 0 ? `+${net}` : net})`;
                                                     } else if (top100Own != null) {
-                                                        text = `Top 100: ${top100Own}% own`;
+                                                        text = `Top 100: ${top100Own}% ${ownWord}`;
                                                     } else if (net != null) {
                                                         text = `Top 100: ${net > 0 ? `+${net}` : net} (GW${top100Data?.closedDeadlineGw || 8})`;
                                                     }
@@ -798,7 +802,10 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                                     ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-[0_0_8px_rgba(244,63,94,0.15)]'
                                                                     : 'bg-slate-700/60 text-slate-300 border border-slate-600/50'
                                                             }`}
-                                                            title={`Top 100 manažéri: ${top100Own != null ? `Vlastnené ${top100Own}% tímov` : ''}${net != null ? ` (Zmena v uzávierke: ${net > 0 ? `+${net}` : net})` : ''}`}
+                                                            title={lang === 'sk' 
+                                                                ? `Top 100 manažéri: ${top100Own != null ? `Vlastnené ${top100Own}% tímov` : ''}${net != null ? ` (Zmena v uzávierke: ${net > 0 ? `+${net}` : net})` : ''}`
+                                                                : `Top 100 managers: ${top100Own != null ? `Owned by ${top100Own}% of teams` : ''}${net != null ? ` (Deadline change: ${net > 0 ? `+${net}` : net})` : ''}`
+                                                            }
                                                         >
                                                             {text}
                                                         </span>
@@ -818,7 +825,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                             <div className="flex flex-col gap-1">
                                                 <span
                                                     className={`font-bold font-mono text-sm leading-none ${p.transferIndex > 0.7 ? 'text-green-400' : p.transferIndex > 0.5 ? 'text-blue-400' : 'text-slate-400'}`}
-                                                    title="Transfer Index je kombinované skóre formy a náročnosti vyžrebovania. Vyššie = lepšie."
+                                                    title={t('tp_index_tooltip', lang)}
                                                 >
                                                     {Math.round(p.transferIndex * 100)}
                                                 </span>
@@ -834,7 +841,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                         <td className="py-3 px-3 text-center font-mono text-blue-300 text-sm">£{p.now_cost / 10}</td>
                                         <td className="py-3 px-3 text-center font-mono text-slate-300 text-sm">{p.selected_by_percent}%</td>
                                         <td className="py-3 px-3 text-center font-bold text-white text-sm">{p.form}</td>
-                                        <td className="py-3 px-3 text-center font-mono text-slate-300 text-sm" title={`Istota štartu hráča: ${Math.round(p.startProbability * 100)}%`}>
+                                        <td className="py-3 px-3 text-center font-mono text-slate-300 text-sm" title={lang === 'sk' ? `Istota štartu hráča: ${Math.round(p.startProbability * 100)}%` : `Starting probability: ${Math.round(p.startProbability * 100)}%`}>
                                             {Math.round(p.startProbability * 100)}%
                                         </td>
 
@@ -855,13 +862,13 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                                         ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.15)]'
                                                                         : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                                                                 }`}
-                                                                title={`Šanca na gól: ${Math.round(p.goalscorer.prob * 100)}%`}
+                                                                title={lang === 'sk' ? `Šanca na gól: ${Math.round(p.goalscorer.prob * 100)}%` : `Goal probability: ${Math.round(p.goalscorer.prob * 100)}%`}
                                                             >
                                                                 {Math.round(p.goalscorer.prob * 100)}%
                                                             </span>
                                                         </div>
                                                         <span className="text-[9px] text-slate-400">
-                                                            vs {p.goalscorer.opponentShort} ({p.goalscorer.isHome ? 'H' : 'A'})
+                                                            vs {p.goalscorer.opponentShort} ({p.goalscorer.isHome ? (lang === 'sk' ? 'D' : 'H') : (lang === 'sk' ? 'V' : 'A')})
                                                         </span>
                                                     </div>
                                                 ) : (
@@ -892,7 +899,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                 <td key={gw} className="py-2 px-0.5 text-center w-14 min-w-[50px]">
                                                     <div className={`w-full h-[1.95rem] rounded flex flex-col items-center justify-center shadow-sm ${colorClass}`}>
                                                         <span className="text-[10px] font-bold leading-tight">{oppShort}</span>
-                                                        <span className="text-[8px] opacity-80 leading-tight">({fix.isHome ? 'H' : 'A'})</span>
+                                                        <span className="text-[8px] opacity-80 leading-tight">({fix.isHome ? (lang === 'sk' ? 'D' : 'H') : (lang === 'sk' ? 'V' : 'A')})</span>
                                                     </div>
                                                 </td>
                                             );

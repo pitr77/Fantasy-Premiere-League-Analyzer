@@ -4,6 +4,8 @@ import { TrendingUp, TrendingDown, Lightbulb, Zap, CalendarRange, ChevronRight, 
 import { View } from '../App';
 import { getDynamicDifficulty, calculateLeaguePositions } from '../lib/fdrModel';
 import { TeamIcon } from './TeamIcon';
+import { useLanguage } from '../lib/language';
+import { t } from '../lib/translations';
 
 interface DashboardProps {
     data: BootstrapStatic;
@@ -13,6 +15,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigate }) => {
+    const [lang] = useLanguage();
     const [swingTab, setSwingTab] = useState<'improving' | 'worsening'>('improving');
 
     const nextEvent = data.events.find(e => e.is_next);
@@ -108,16 +111,16 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
             <div className="bg-gradient-to-r from-purple-950 via-slate-900 to-slate-900 px-6 py-5 rounded-2xl shadow-xl border border-purple-500/20 relative overflow-hidden">
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h2 className="text-xl md:text-2xl font-bold text-white mb-1">Welcome to FPL STUDIO</h2>
+                        <h2 className="text-xl md:text-2xl font-bold text-white mb-1">{t('dash_welcome', lang)}</h2>
                         <p className="text-purple-200/80 text-xs md:text-sm max-w-xl">
-                            The ultimate portal for Fantasy Premier League statistics, team planning, and advanced analytics.
+                            {t('dash_welcome_sub', lang)}
                         </p>
                     </div>
 
                     {nextEvent && (
                         <div className="inline-flex items-center bg-slate-800/80 backdrop-blur px-3.5 py-1.5 rounded-lg border border-purple-500/40 shrink-0 self-start md:self-center">
-                            <span className="text-emerald-400 font-black text-xs mr-2">NEXT DEADLINE:</span>
-                            <span className="text-white text-xs font-mono font-semibold">{nextEvent.name} - {new Date(nextEvent.deadline_time).toLocaleString()}</span>
+                            <span className="text-emerald-400 font-black text-xs mr-2">{lang === 'sk' ? 'NAJBLIŽŠIA UZÁVIERKA:' : 'NEXT DEADLINE:'}</span>
+                            <span className="text-white text-xs font-mono font-semibold">{nextEvent.name} - {new Date(nextEvent.deadline_time).toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-GB')}</span>
                         </div>
                     )}
                 </div>
@@ -135,16 +138,16 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
                     </div>
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <span className="text-white font-black text-lg tracking-tight">AI GW Preview</span>
-                            <span className="px-2 py-0.5 bg-purple-600 text-white text-[10px] font-black rounded-full animate-pulse">NEW</span>
+                            <span className="text-white font-black text-lg tracking-tight">{t('dash_ai_banner_title', lang)}</span>
+                            <span className="px-2 py-0.5 bg-purple-600 text-white text-[10px] font-black rounded-full animate-pulse">{lang === 'sk' ? 'NOVÉ' : 'NEW'}</span>
                         </div>
                         <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
-                            Get AI-generated gameweek reports, differential picks, and captaincy advice.
+                            {t('dash_ai_banner_desc', lang)}
                         </p>
                     </div>
                 </div>
                 <div className="hidden sm:flex items-center gap-1 text-purple-400 font-bold text-xs group-hover:translate-x-1 transition-transform shrink-0">
-                    <span>Open Scout</span>
+                    <span>{t('dash_open_scout', lang)}</span>
                     <ChevronRight size={16} />
                 </div>
             </a>
@@ -156,7 +159,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
                     <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 flex flex-col h-full">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400"><Zap size={20} /></div>
-                            <h3 className="text-slate-200 font-bold text-sm uppercase">Fixtures to Target (Next GW)</h3>
+                            <h3 className="text-slate-200 font-bold text-sm uppercase">{t('dash_target_fixtures', lang)}</h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {targetFixtures.length > 0 ? (
@@ -165,13 +168,13 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
                                         <div className="flex justify-between items-start mb-4">
                                             <div className="flex flex-col">
                                                 <div className="font-black text-white text-lg">{fix.team}</div>
-                                                <div className="text-[11px] text-slate-500">v {fix.opponent} ({fix.isHome ? 'H' : 'A'})</div>
+                                                <div className="text-[11px] text-slate-500">v {fix.opponent} ({fix.isHome ? (lang === 'sk' ? 'D' : 'H') : (lang === 'sk' ? 'V' : 'A')})</div>
                                             </div>
                                             <TeamIcon code={fix.team} alt={fix.team} size={32} />
                                         </div>
                                         <div className="space-y-2">
                                             <div className="flex justify-between text-[10px] uppercase font-bold tracking-wider">
-                                                <span className="text-slate-500">Difficulty</span>
+                                                <span className="text-slate-500">{t('dash_difficulty', lang)}</span>
                                                 <span className={fix.difficulty.score <= 2 ? 'text-emerald-400' : 'text-slate-300'}>{fix.difficulty.label}</span>
                                             </div>
                                             <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
@@ -196,7 +199,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400"><TrendingUp size={20} /></div>
-                                <h3 className="text-slate-200 font-bold text-sm uppercase">In-Form Leaders</h3>
+                                <h3 className="text-slate-200 font-bold text-sm uppercase">{t('dash_in_form_leaders', lang)}</h3>
                             </div>
                         </div>
                         <div className="flex-1 space-y-3">
@@ -224,7 +227,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
                         <div className="bg-slate-800 p-4 md:p-6 rounded-xl border border-slate-700 h-full">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                    <CalendarRange className="w-5 h-5 text-blue-400" /> <span className="hidden sm:inline">Fixture Swing (Next 5 GWs)</span><span className="sm:hidden">Fixture Swing</span>
+                                    <CalendarRange className="w-5 h-5 text-blue-400" /> <span className="hidden sm:inline">{t('dash_swing_title', lang)}</span><span className="sm:hidden">{lang === 'sk' ? 'Zmena žrebu' : 'Fixture Swing'}</span>
                                 </h3>
 
                                 {/* Mobile/Tablet Toggle */}
@@ -233,13 +236,13 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
                                         onClick={() => setSwingTab('improving')}
                                         className={`flex-1 sm:px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 ${swingTab === 'improving' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                                     >
-                                        <TrendingUp size={12} /> Improving
+                                        <TrendingUp size={12} /> {t('dash_improving', lang)}
                                     </button>
                                     <button
                                         onClick={() => setSwingTab('worsening')}
                                         className={`flex-1 sm:px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 ${swingTab === 'worsening' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                                     >
-                                        <TrendingDown size={12} /> Worsening
+                                        <TrendingDown size={12} /> {t('dash_worsening', lang)}
                                     </button>
                                 </div>
                             </div>
@@ -248,7 +251,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
                                 {/* Improving List */}
                                 <div className={`${swingTab === 'improving' ? 'block' : 'hidden'} lg:block`}>
                                     <h4 className="hidden lg:flex text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-4 items-center gap-2">
-                                        <TrendingUp size={14} /> Improving Schedule
+                                        <TrendingUp size={14} /> {lang === 'sk' ? 'Zlepšujúci sa žreb' : 'Improving Schedule'}
                                     </h4>
                                     <div className="space-y-3">
                                         {fixtureSwing.improving.map(item => (
@@ -287,7 +290,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
                                 {/* Worsening List */}
                                 <div className={`${swingTab === 'worsening' ? 'block' : 'hidden'} lg:block`}>
                                     <h4 className="hidden lg:flex text-[10px] font-bold text-red-400 uppercase tracking-widest mb-4 items-center gap-2">
-                                        <TrendingDown size={14} /> Worsening Schedule
+                                        <TrendingDown size={14} /> {lang === 'sk' ? 'Zhoršujúci sa žreb' : 'Worsening Schedule'}
                                     </h4>
                                     <div className="space-y-3">
                                         {fixtureSwing.worsening.map(item => (
@@ -332,7 +335,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
                     <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 flex flex-col h-full">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="p-2 bg-yellow-500/20 rounded-lg text-yellow-400"><Lightbulb size={20} /></div>
-                            <h3 className="text-slate-200 font-bold text-sm uppercase">Hidden Gems</h3>
+                            <h3 className="text-slate-200 font-bold text-sm uppercase">{t('dash_hidden_gems', lang)}</h3>
                         </div>
                         <div className="flex-1 space-y-3">
                             {hiddenGems.length > 0 ? hiddenGems.map((p) => (

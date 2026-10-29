@@ -10,7 +10,7 @@ import { FortunaMatch } from '../services/oddsSnapshotService';
 import { calculateLeaguePositions, getDynamicDifficulty } from '../lib/fdrModel';
 import { computeTransferIndexForPlayers, TransferIndexResult } from '../lib/transferIndex';
 import FDRRealityAnalysis from './FDRRealityAnalysis';
-
+import { useLanguage } from '../lib/language';
 
 interface FixturesProps {
     fixtures: FPLFixture[];
@@ -20,6 +20,7 @@ interface FixturesProps {
 }
 
 const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players }) => {
+    const [lang] = useLanguage();
     const [activeTab, setActiveTab] = useState<'schedule' | 'planner' | 'reality'>('schedule');
     const [showInfo, setShowInfo] = useState(false);
     const [plannerSortMode, setPlannerSortMode] = useState<'none' | 'asc' | 'desc'>('none');
@@ -933,7 +934,7 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                     <div>
                         <h2 className="text-lg md:text-2xl font-bold flex items-center gap-2 text-white mb-0.5 md:mb-2">
                             <Calendar className="w-4 h-4 md:w-6 md:h-6 text-purple-400" />
-                            Fixtures & FDR Planner
+                            {lang === 'sk' ? 'Zápasy & FDR Plánovač' : 'Fixtures & FDR Planner'}
                         </h2>
                     </div>
 
@@ -942,7 +943,7 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                             onClick={() => setActiveTab('schedule')}
                             className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 py-1 md:py-2 rounded-md text-[10px] md:text-sm font-bold transition-all ${activeTab === 'schedule' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                         >
-                            <Calendar size={12} className="md:w-3.5 md:h-3.5" /> Schedule
+                            <Calendar size={12} className="md:w-3.5 md:h-3.5" /> {lang === 'sk' ? 'Rozpis zápasov' : 'Schedule'}
                         </button>
                         <button
                             onClick={() => {
@@ -950,7 +951,7 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                             }}
                             className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 py-1 md:py-2 rounded-md text-[10px] md:text-sm font-bold transition-all ${activeTab === 'planner' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                         >
-                            <LayoutGrid size={12} className="md:w-3.5 md:h-3.5" /> FDR Matrix
+                            <LayoutGrid size={12} className="md:w-3.5 md:h-3.5" /> {lang === 'sk' ? 'FDR Matica' : 'FDR Matrix'}
                         </button>
                         <button
                             onClick={() => {
@@ -960,7 +961,7 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                         >
                             <TrendingUp size={12} className="md:w-3.5 md:h-3.5 text-amber-400" />
                             <span>FDR Reality Check</span>
-                            <span className="text-[8px] px-1 py-0.2 rounded-full bg-emerald-500 text-white font-black leading-none ml-0.5">NEW</span>
+                            <span className="text-[8px] px-1 py-0.2 rounded-full bg-emerald-500 text-white font-black leading-none ml-0.5">{lang === 'sk' ? 'NOVÉ' : 'NEW'}</span>
                         </button>
                     </div>
                 </div>
