@@ -230,6 +230,100 @@ async function run() {
       }
     }
 
+    // Extract Goalscorer, Assist, and Goal-Or-Assist markets from details
+    const scorers = [];
+    const assists = [];
+    const goalOrAssists = [];
+
+    const cleanPlayerName = (str) => {
+      return (str || '')
+        .replace(/\u00a0/g, ' ')
+        .replace(/\s*zaznamená asistenciu.*/i, '')
+        .replace(/\s*strelí gól alebo asistuje.*/i, '')
+        .replace(/\s*alebo jeho náhradník.*/i, '')
+        .replace(/\s*-\s*Hráč.*/i, '')
+        .replace(/\s*počet gólov v zápase.*/i, '')
+        .replace(/\s*dá gól.*/i, '')
+        .replace(/^(arsenal|chelsea|liverpool|tottenham|man\.united|man\.city|everton|newcastle|nottingham|brentford|aston villa|fulham|bournemouth|brighton|crystal palace|wolves|west ham|ipswich|leicester|southampton|coventry|coventry city|hull|hull city|sunderland|leeds|leeds united)\s+/i, '')
+        .trim();
+    };
+
+    for (const m of details) {
+      const mName = (m.name || '').replace(/\u00a0/g, ' ').trim();
+      const key = m.syntheticGroupKey || '';
+
+      // 1. Assist markets
+      if (key === 'player_assists' || mName.includes('zaznamená asistenciu')) {
+        const pName = cleanPlayerName(mName);
+        const o = m.outcomes?.find(x => x.name === '1+' || x.name === 'Áno' || x.name === 'Ano');
+        const oddsVal = Number(o?.odds);
+        if (pName && oddsVal && oddsVal > 1) {
+          if (!assists.some(a => a.name.toLowerCase() === pName.toLowerCase())) {
+            assists.push({
+              name: pName,
+              odds: oddsVal,
+              prob: Number((1 / oddsVal).toFixed(4)),
+            });
+          }
+        }
+      }
+
+      // 2. Goal or Assist markets
+      if (key === 'player_to_score_or_assist' || mName.includes('strelí gól alebo asistuje')) {
+        const pName = cleanPlayerName(mName);
+        const o = m.outcomes?.find(x => x.name === '1+' || x.name === 'Áno' || x.name === 'Ano');
+        const oddsVal = Number(o?.odds);
+        if (pName && oddsVal && oddsVal > 1) {
+          if (!goalOrAssists.some(a => a.name.toLowerCase() === pName.toLowerCase())) {
+            goalOrAssists.push({
+              name: pName,
+              odds: oddsVal,
+              prob: Number((1 / oddsVal).toFixed(4)),
+            });
+          }
+        }
+      }
+
+      // 3. Goalscorer markets
+      if (
+        key === 'anytime_goalscorer' ||
+        key === 'player_total_goals' ||
+        (mName.includes('počet gólov v zápase') && !mName.includes('polčas')) ||
+        key === 'player_or_his_substitute_to_score_a_goal_(90_min.)'
+      ) {
+        if (key === 'anytime_goalscorer' && m.outcomes) {
+          for (const o of m.outcomes) {
+            const oddsVal = Number(o.odds);
+            const pName = cleanPlayerName(o.name || o.longName || '');
+            if (pName && oddsVal && oddsVal > 1) {
+              if (!scorers.some(s => s.name.toLowerCase() === pName.toLowerCase())) {
+                scorers.push({
+                  name: pName,
+                  odds: oddsVal,
+                  prob: Number((1 / oddsVal).toFixed(4)),
+                });
+              }
+            }
+          }
+        } else {
+          const pName = cleanPlayerName(mName);
+          if (pName && !pName.toLowerCase().includes('remíza') && !pName.toLowerCase().includes('menej') && !pName.toLowerCase().includes('viac')) {
+            const o = m.outcomes?.find(x => x.name === '1+' || x.name === 'Áno' || x.name === 'Ano');
+            const oddsVal = Number(o?.odds);
+            if (oddsVal && oddsVal > 1) {
+              if (!scorers.some(s => s.name.toLowerCase() === pName.toLowerCase())) {
+                scorers.push({
+                  name: pName,
+                  odds: oddsVal,
+                  prob: Number((1 / oddsVal).toFixed(4)),
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
     processedMatches.push({
       id: f.id,
       name: f.name,
@@ -245,6 +339,9 @@ async function run() {
         home: homeCleanSheet,
         away: awayCleanSheet,
       },
+      scorers: scorers.length > 0 ? scorers : undefined,
+      assists: assists.length > 0 ? assists : undefined,
+      goalOrAssists: goalOrAssists.length > 0 ? goalOrAssists : undefined,
     });
   }
 

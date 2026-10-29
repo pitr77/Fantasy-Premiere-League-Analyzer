@@ -83,6 +83,12 @@ export const dict = {
   tp_th_form: { en: 'Form', sk: 'Forma' },
   tp_th_start: { en: 'Start', sk: 'Základ' },
   tp_th_goal_odds: { en: 'Goal Odds', sk: 'Šanca na gól' },
+  tp_th_assist_odds: { en: 'Assist Odds', sk: 'Šanca na asist.' },
+  tp_th_ga_odds: { en: 'G+A Odds', sk: 'Šanca na G+A' },
+  tp_odds_btn: { en: 'Odds', sk: 'Kurzy' },
+  tp_odds_mode_goal: { en: 'Goal', sk: 'Gól' },
+  tp_odds_mode_assist: { en: 'Assist', sk: 'Asistencia' },
+  tp_odds_mode_ga: { en: 'G+A', sk: 'Gól + Asist.' },
   tp_th_diff: { en: 'Diff', sk: 'Nároč.' },
   tp_top100_badge: { en: 'Top 100', sk: 'Top 100' },
   tp_top100_own: { en: 'own', sk: 'vlastní' },
@@ -101,6 +107,14 @@ export const dict = {
   tp_goal_prob_tooltip: { 
     en: 'Probability to score a goal in next gameweek', 
     sk: 'Pravdepodobnosť strelenia gólu v najbližšom kole' 
+  },
+  tp_assist_prob_tooltip: { 
+    en: 'Probability to provide an assist in next gameweek', 
+    sk: 'Pravdepodobnosť asistencie v najbližšom kole' 
+  },
+  tp_ga_prob_tooltip: { 
+    en: 'Probability to score or assist (Goal Involvement) in next gameweek', 
+    sk: 'Pravdepodobnosť strelenia gólu alebo asistencie (kanadský bod)' 
   },
   tp_card_next_fix: { en: 'Next Fixture', sk: 'Najbližší zápas' },
   tp_card_upcoming_fix: { en: 'Upcoming Fixtures', sk: 'Nasledujúce zápasy' },

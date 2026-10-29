@@ -8,11 +8,14 @@ export type FortunaCleanSheet = {
   prob: number;
 };
 
-export type FortunaScorer = {
+export type FortunaPlayerOdd = {
   name: string;
   odds: number;
   prob: number;
 };
+
+// Backwards compatibility alias
+export type FortunaScorer = FortunaPlayerOdd;
 
 export type FortunaMatch = {
   id: string;
@@ -43,7 +46,9 @@ export type FortunaMatch = {
     home: FortunaCleanSheet | null;
     away: FortunaCleanSheet | null;
   };
-  scorers?: FortunaScorer[];
+  scorers?: FortunaPlayerOdd[];
+  assists?: FortunaPlayerOdd[];
+  goalOrAssists?: FortunaPlayerOdd[];
 };
 
 export type OddsSnapshot = {

@@ -231,22 +231,96 @@ export async function fetchAndSaveFortunaOdds(): Promise<OddsSnapshot> {
       }
     }
 
-    // Extract Goalscorer markets from details if available (e.g. "Hráč dá gól v zápase" or "anytime_goalscorer")
+    // Extract Goalscorer, Assist, and Goal-Or-Assist markets from details
     const scorers: { name: string; odds: number; prob: number }[] = [];
-    const scorerMarket = details.find((m: any) =>
-      m.syntheticGroupKey === 'anytime_goalscorer' ||
-      m.name?.toLowerCase().includes('hráč dá gól') ||
-      m.name?.toLowerCase().includes('strelec gólu')
-    );
-    if (scorerMarket?.outcomes) {
-      for (const o of scorerMarket.outcomes) {
-        const oddsVal = Number(o.odds);
-        if (oddsVal && oddsVal > 1) {
-          scorers.push({
-            name: o.name || o.longName || '',
-            odds: oddsVal,
-            prob: Number((1 / oddsVal).toFixed(4)),
-          });
+    const assists: { name: string; odds: number; prob: number }[] = [];
+    const goalOrAssists: { name: string; odds: number; prob: number }[] = [];
+
+    const cleanPlayerName = (str: string): string => {
+      return (str || '')
+        .replace(/\u00a0/g, ' ')
+        .replace(/\s*zaznamená asistenciu.*/i, '')
+        .replace(/\s*strelí gól alebo asistuje.*/i, '')
+        .replace(/\s*alebo jeho náhradník.*/i, '')
+        .replace(/\s*-\s*Hráč.*/i, '')
+        .replace(/\s*počet gólov v zápase.*/i, '')
+        .replace(/\s*dá gól.*/i, '')
+        .replace(/^(arsenal|chelsea|liverpool|tottenham|man\.united|man\.city|everton|newcastle|nottingham|brentford|aston villa|fulham|bournemouth|brighton|crystal palace|wolves|west ham|ipswich|leicester|southampton|coventry|coventry city|hull|hull city|sunderland|leeds|leeds united)\s+/i, '')
+        .trim();
+    };
+
+    for (const m of details) {
+      const mName = (m.name || '').replace(/\u00a0/g, ' ').trim();
+      const key = m.syntheticGroupKey || '';
+
+      // 1. Assist markets
+      if (key === 'player_assists' || mName.includes('zaznamená asistenciu')) {
+        const pName = cleanPlayerName(mName);
+        const o = m.outcomes?.find((x: any) => x.name === '1+' || x.name === 'Áno' || x.name === 'Ano');
+        const oddsVal = Number(o?.odds);
+        if (pName && oddsVal && oddsVal > 1) {
+          if (!assists.some(a => a.name.toLowerCase() === pName.toLowerCase())) {
+            assists.push({
+              name: pName,
+              odds: oddsVal,
+              prob: Number((1 / oddsVal).toFixed(4)),
+            });
+          }
+        }
+      }
+
+      // 2. Goal or Assist markets (kanadský bod)
+      if (key === 'player_to_score_or_assist' || mName.includes('strelí gól alebo asistuje')) {
+        const pName = cleanPlayerName(mName);
+        const o = m.outcomes?.find((x: any) => x.name === '1+' || x.name === 'Áno' || x.name === 'Ano');
+        const oddsVal = Number(o?.odds);
+        if (pName && oddsVal && oddsVal > 1) {
+          if (!goalOrAssists.some(a => a.name.toLowerCase() === pName.toLowerCase())) {
+            goalOrAssists.push({
+              name: pName,
+              odds: oddsVal,
+              prob: Number((1 / oddsVal).toFixed(4)),
+            });
+          }
+        }
+      }
+
+      // 3. Goalscorer markets
+      if (
+        key === 'anytime_goalscorer' ||
+        key === 'player_total_goals' ||
+        (mName.includes('počet gólov v zápase') && !mName.includes('polčas')) ||
+        key === 'player_or_his_substitute_to_score_a_goal_(90_min.)'
+      ) {
+        if (key === 'anytime_goalscorer' && m.outcomes) {
+          for (const o of m.outcomes) {
+            const oddsVal = Number(o.odds);
+            const pName = cleanPlayerName(o.name || o.longName || '');
+            if (pName && oddsVal && oddsVal > 1) {
+              if (!scorers.some(s => s.name.toLowerCase() === pName.toLowerCase())) {
+                scorers.push({
+                  name: pName,
+                  odds: oddsVal,
+                  prob: Number((1 / oddsVal).toFixed(4)),
+                });
+              }
+            }
+          }
+        } else {
+          const pName = cleanPlayerName(mName);
+          if (pName && !pName.toLowerCase().includes('remíza') && !pName.toLowerCase().includes('menej') && !pName.toLowerCase().includes('viac')) {
+            const o = m.outcomes?.find((x: any) => x.name === '1+' || x.name === 'Áno' || x.name === 'Ano');
+            const oddsVal = Number(o?.odds);
+            if (oddsVal && oddsVal > 1) {
+              if (!scorers.some(s => s.name.toLowerCase() === pName.toLowerCase())) {
+                scorers.push({
+                  name: pName,
+                  odds: oddsVal,
+                  prob: Number((1 / oddsVal).toFixed(4)),
+                });
+              }
+            }
+          }
         }
       }
     }
@@ -267,6 +341,8 @@ export async function fetchAndSaveFortunaOdds(): Promise<OddsSnapshot> {
         away: awayCleanSheet,
       },
       scorers: scorers.length > 0 ? scorers : undefined,
+      assists: assists.length > 0 ? assists : undefined,
+      goalOrAssists: goalOrAssists.length > 0 ? goalOrAssists : undefined,
     });
   }
 

@@ -23,11 +23,14 @@ import {
   Zap,
   Sparkles,
   BarChart3,
+  Coins,
   History,
   Info,
   ArrowLeftRight
 } from 'lucide-react';
 import { useLanguage } from '../lib/language';
+import { FortunaMatch } from '../services/oddsSnapshotService';
+import { getGoalscorerOdds } from '../lib/goalscorerModel';
 
 interface PlayerDetailModalProps {
   player: FPLPlayer | null;
@@ -37,6 +40,7 @@ interface PlayerDetailModalProps {
   allPlayers?: FPLPlayer[];
   top100Snapshot?: Top100Snapshot | null;
   fixtures?: FPLFixture[];
+  oddsData?: FortunaMatch[] | null;
 }
 
 const POSITION_NAMES: Record<number, { short: string; full: string; color: string; bg: string; border: string }> = {
@@ -57,6 +61,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
   allPlayers = [],
   top100Snapshot,
   fixtures = [],
+  oddsData,
 }) => {
   const [activeTab, setActiveTab] = useState<'history' | 'rankings' | 'past'>('history');
   const [matchLogTab, setMatchLogTab] = useState<'overview' | 'attack' | 'defense' | 'transfers'>('overview');
@@ -478,6 +483,52 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* Fortuna Odds Breakdown for DEF, MID, FWD */}
+          {oddsData && player && (player.element_type === 2 || player.element_type === 3 || player.element_type === 4) && (() => {
+            const nextEventId = upcomingFixtures[0]?.event || 1;
+            const oddsRes = getGoalscorerOdds(player, teams, fixtures, nextEventId, oddsData);
+            if (!oddsRes) return null;
+
+            return (
+              <div className="mt-3 bg-amber-500/10 border border-amber-500/25 p-3 rounded-xl shadow-inner">
+                <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                    <Coins size={12} />
+                    {lang === 'sk'
+                      ? `Stávkové kurzy Fortuna · GW${nextEventId} vs ${oddsRes.opponentShort} (${oddsRes.isHome ? 'D' : 'V'})`
+                      : `Fortuna Odds · GW${nextEventId} vs ${oddsRes.opponentShort} (${oddsRes.isHome ? 'H' : 'A'})`}
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400">
+                    {lang === 'sk' ? `Očak. xG tímu: ${oddsRes.teamExpectedGoals}` : `Team Exp. xG: ${oddsRes.teamExpectedGoals}`}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Goal */}
+                  <div className="bg-slate-900/80 p-2.5 rounded-lg border border-amber-500/20 flex flex-col items-center text-center">
+                    <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Gól' : 'Goal'}</span>
+                    <span className="text-white font-mono font-bold text-sm mt-0.5">{oddsRes.goal.odds.toFixed(2)}</span>
+                    <span className="text-xs text-amber-300 font-bold">{Math.round(oddsRes.goal.prob * 100)}%</span>
+                    <span className="text-[8px] text-slate-500 mt-0.5">{oddsRes.goal.source === 'fortuna_live' ? 'Fortuna Live' : 'Model'}</span>
+                  </div>
+                  {/* Assist */}
+                  <div className="bg-slate-900/80 p-2.5 rounded-lg border border-blue-500/20 flex flex-col items-center text-center">
+                    <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Asistencia' : 'Assist'}</span>
+                    <span className="text-white font-mono font-bold text-sm mt-0.5">{oddsRes.assist.odds.toFixed(2)}</span>
+                    <span className="text-xs text-blue-300 font-bold">{Math.round(oddsRes.assist.prob * 100)}%</span>
+                    <span className="text-[8px] text-slate-500 mt-0.5">{oddsRes.assist.source === 'fortuna_live' ? 'Fortuna Live' : 'Model'}</span>
+                  </div>
+                  {/* G+A */}
+                  <div className="bg-slate-900/80 p-2.5 rounded-lg border border-emerald-500/20 flex flex-col items-center text-center">
+                    <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Gól + Asist.' : 'G+A'}</span>
+                    <span className="text-white font-mono font-bold text-sm mt-0.5">{oddsRes.goalOrAssist.odds.toFixed(2)}</span>
+                    <span className="text-xs text-emerald-300 font-bold">{Math.round(oddsRes.goalOrAssist.prob * 100)}%</span>
+                    <span className="text-[8px] text-slate-500 mt-0.5">{oddsRes.goalOrAssist.source === 'fortuna_live' ? 'Fortuna Live' : 'Model'}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Navigation Tabs */}
           <div className="flex items-center gap-2 mt-5 border-t border-slate-800 pt-3">
