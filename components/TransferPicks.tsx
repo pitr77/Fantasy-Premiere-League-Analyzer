@@ -198,9 +198,8 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
         }));
     };
 
-    // Get next GW headers
-    const lookaheadLength = horizon === 'next' ? 1 : 5;
-    const gwHeaders = Array.from({ length: lookaheadLength }, (_, i) => (nextEvent?.id || 1) + i).filter(id => id <= 38);
+    // Get next GW headers (always 5 slots so the table layout never shifts on toggle)
+    const upcomingGwHeaders = Array.from({ length: 5 }, (_, i) => (nextEvent?.id || 1) + i).filter(id => id <= 38);
 
     // Sorting Header Component
     const SortHeader: React.FC<{ label: string, sortKey: string, align?: "left" | "right" | "center", className?: string }> = ({ label, sortKey, align = "left", className = "" }) => {
@@ -740,14 +739,19 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                     />
                                 )}
 
-                                {gwHeaders.map(gw => (
-                                    <SortHeader key={gw} label={`GW${gw}`} sortKey={`GW${gw}`} align="center" className="w-14 min-w-[50px] px-0.5" />
-                                ))}
+                                {upcomingGwHeaders.map((gw, idx) => {
+                                    if (horizon === 'next' && idx > 0) {
+                                        return <th key={gw} className="w-14 min-w-[50px] px-0.5" aria-hidden="true" />;
+                                    }
+                                    return (
+                                        <SortHeader key={gw} label={`GW${gw}`} sortKey={`GW${gw}`} align="center" className="w-14 min-w-[50px] px-0.5" />
+                                    );
+                                })}
 
                                 {horizon === 'next5' ? (
                                     <SortHeader label="Diff" sortKey="fixtureDifficultySum" align="center" className="w-16" />
                                 ) : (
-                                    <th className="w-auto" aria-hidden="true" />
+                                    <th className="w-16" aria-hidden="true" />
                                 )}
                             </tr>
                         </thead>
@@ -867,7 +871,11 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                         )}
 
                                         {/* Fixture Cells */}
-                                        {gwHeaders.map(gw => {
+                                        {upcomingGwHeaders.map((gw, idx) => {
+                                            if (horizon === 'next' && idx > 0) {
+                                                return <td key={gw} className="py-2 px-0.5 w-14 min-w-[50px]" aria-hidden="true" />;
+                                            }
+
                                             const fix = p.nextFixtures.find(f => f.event === gw);
                                             if (!fix || fix.opponent === 0) {
                                                 return (
@@ -895,7 +903,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                 {p.fixtureDifficultySum}
                                             </td>
                                         ) : (
-                                            <td aria-hidden="true" />
+                                            <td className="py-3 px-2 w-16" aria-hidden="true" />
                                         )}
                                     </tr>
                                 )
