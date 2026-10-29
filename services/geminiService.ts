@@ -87,7 +87,7 @@ export async function createScoutChatSession(
   `;
 
   return ai.chats.create({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-3.5-flash',
     config: {
       systemInstruction: systemInstruction,
     }
@@ -141,7 +141,7 @@ export async function getScoutAdvice(
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3.5-flash',
       contents: prompt,
       config: {
         responseMimeType: "application/json",

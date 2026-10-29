@@ -108,7 +108,7 @@ export interface ScoutArticleResult {
     slug: string;
 }
 
-const DEFAULT_MODEL = 'gemini-3.1-pro-preview';
+const DEFAULT_MODEL = 'gemini-3.5-flash';
 
 async function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
