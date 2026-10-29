@@ -7,8 +7,23 @@ export default function robots(): MetadataRoute.Robots {
         rules: [
             {
                 userAgent: '*',
-                allow: '/',
-                disallow: ['/api/', '/login'],
+                allow: ['/', '/scout', '/scout/*'],
+                disallow: ['/api/', '/login', '/auth/'],
+            },
+            {
+                // Explicitly allow AI search crawlers to access public site, scout articles and LLM documentation
+                userAgent: [
+                    'GPTBot',
+                    'ChatGPT-User',
+                    'PerplexityBot',
+                    'ClaudeBot',
+                    'Claude-Web',
+                    'Google-Extended',
+                    'Applebot',
+                    'Bingbot'
+                ],
+                allow: ['/', '/scout', '/scout/*', '/llms.txt'],
+                disallow: ['/api/', '/login', '/auth/'],
             },
         ],
         sitemap: `${siteUrl}/sitemap.xml`,

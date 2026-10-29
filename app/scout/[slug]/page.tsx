@@ -174,17 +174,35 @@ export default async function ScoutArticlePage({
 
     const htmlContent = renderMarkdown(article.content);
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.fplstudio.com';
     const jsonLd = {
         '@context': 'https://schema.org',
-        '@type': 'Article',
+        '@type': 'NewsArticle',
         headline: article.title,
         description: article.summary,
         datePublished: article.generated_at,
+        dateModified: article.generated_at,
+        mainEntityOfPage: {
+            '@type': 'WebPage',
+            '@id': `${siteUrl}/scout/${article.slug}`,
+        },
+        image: [
+            `${siteUrl}/scout/${article.slug}/opengraph-image`,
+        ],
         author: {
             '@type': 'Organization',
+            name: 'FPL Studio AI Scout',
+            url: siteUrl,
+        },
+        publisher: {
+            '@type': 'Organization',
             name: 'FPL Studio',
-            url: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.fplstudio.com'
-        }
+            url: siteUrl,
+            logo: {
+                '@type': 'ImageObject',
+                url: `${siteUrl}/icons/icon-512.png`,
+            },
+        },
     };
 
     return (
