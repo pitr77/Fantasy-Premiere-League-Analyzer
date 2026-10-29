@@ -744,8 +744,10 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                     <SortHeader key={gw} label={`GW${gw}`} sortKey={`GW${gw}`} align="center" className="w-14 min-w-[50px] px-0.5" />
                                 ))}
 
-                                {horizon === 'next5' && (
+                                {horizon === 'next5' ? (
                                     <SortHeader label="Diff" sortKey="fixtureDifficultySum" align="center" className="w-16" />
+                                ) : (
+                                    <th className="w-auto" aria-hidden="true" />
                                 )}
                             </tr>
                         </thead>
@@ -888,10 +890,12 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                             );
                                         })}
 
-                                        {horizon === 'next5' && (
+                                        {horizon === 'next5' ? (
                                             <td className="py-3 px-2 text-center font-mono text-slate-400 text-sm">
                                                 {p.fixtureDifficultySum}
                                             </td>
+                                        ) : (
+                                            <td aria-hidden="true" />
                                         )}
                                     </tr>
                                 )
