@@ -207,9 +207,11 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
         const isActive = sortConfig.key === sortKey;
         const alignClass = align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
         const justifyClass = align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start";
+        const pxClass = className.split(' ').some(c => c.startsWith('px-')) ? '' : 'px-3';
+        const pyClass = className.split(' ').some(c => c.startsWith('py-')) ? '' : 'py-3';
         return (
             <th
-                className={`py-3 px-3 cursor-pointer hover:text-white transition-colors group select-none ${alignClass} ${className}`}
+                className={`${pyClass} ${pxClass} cursor-pointer hover:text-white transition-colors group select-none ${alignClass} ${className}`.trim()}
                 onClick={() => handleSort(sortKey)}
             >
                 <div className={`flex items-center gap-1 ${justifyClass}`}>
@@ -725,7 +727,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                 )}
 
                                 {gwHeaders.map(gw => (
-                                    <SortHeader key={gw} label={`GW${gw}`} sortKey={`GW${gw}`} align="center" className="w-12 min-w-[48px]" />
+                                    <SortHeader key={gw} label={`GW${gw}`} sortKey={`GW${gw}`} align="center" className="w-[38px] px-0.5" />
                                 ))}
 
                                 {horizon === 'next5' && (
@@ -853,8 +855,8 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                             const fix = p.nextFixtures.find(f => f.event === gw);
                                             if (!fix || fix.opponent === 0) {
                                                 return (
-                                                    <td key={gw} className="py-2 px-1 text-center w-12 min-w-[48px]">
-                                                        <div className="w-full h-7 bg-slate-800 rounded flex items-center justify-center text-[10px] text-slate-600">-</div>
+                                                    <td key={gw} className="py-2 px-0.5 text-center w-[38px]">
+                                                        <div className="w-[34px] h-[1.95rem] mx-auto bg-slate-800 rounded flex items-center justify-center text-[10px] text-slate-600">-</div>
                                                     </td>
                                                 );
                                             }
@@ -863,10 +865,10 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                             const colorClass = getDifficultyColor(fix.difficulty);
 
                                             return (
-                                                <td key={gw} className="py-2 px-1 text-center w-12 min-w-[48px]">
-                                                    <div className={`w-full h-7 rounded flex flex-col items-center justify-center shadow-sm ${colorClass}`}>
-                                                        <span className="text-[10px] font-bold leading-none">{oppShort}</span>
-                                                        <span className="text-[8px] opacity-80 leading-none">({fix.isHome ? 'H' : 'A'})</span>
+                                                <td key={gw} className="py-2 px-0.5 text-center w-[38px]">
+                                                    <div className={`w-[34px] h-[1.95rem] mx-auto rounded flex flex-col items-center justify-center shadow-sm ${colorClass}`}>
+                                                        <span className="text-[10px] font-bold leading-tight">{oppShort}</span>
+                                                        <span className="text-[8px] opacity-80 leading-tight">({fix.isHome ? 'H' : 'A'})</span>
                                                     </div>
                                                 </td>
                                             );
