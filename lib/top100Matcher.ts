@@ -1,5 +1,5 @@
 import { FPLPlayer, FPLTeam } from '../types';
-import { Top100Snapshot, Top100PlayerSignal } from '../services/top100Service';
+import { Top100Snapshot, Top100PlayerSignal, Top100TemplateTierPlayer } from '../services/top100Service';
 
 function cleanStr(str: string): string {
   return (str || '')
@@ -39,6 +39,27 @@ export function findTop100Signal(
     if (wn.length >= 4 && sName.includes(wn)) return s;
     if (sn.length >= 4 && sName.includes(sn)) return s;
     if (sName.length >= 5 && full.includes(sName)) return s;
+  }
+
+  return null;
+}
+
+export function findTop100TemplateTier(
+  player: FPLPlayer,
+  top100Data: Top100Snapshot | null
+): Top100TemplateTierPlayer | null {
+  if (!top100Data?.templateAnalysis?.templateTiers?.length) return null;
+
+  const wn = cleanStr(player.web_name);
+  const sn = cleanStr(player.second_name);
+  const full = cleanStr(`${player.first_name}${player.second_name}`);
+
+  for (const t of top100Data.templateAnalysis.templateTiers) {
+    const tName = cleanStr(t.player);
+    if (tName === full || tName === wn) return t;
+    if (wn.length >= 4 && tName.includes(wn)) return t;
+    if (sn.length >= 4 && tName.includes(sn)) return t;
+    if (tName.length >= 5 && full.includes(tName)) return t;
   }
 
   return null;

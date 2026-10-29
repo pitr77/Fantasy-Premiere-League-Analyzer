@@ -26,7 +26,6 @@ export default function ScoutHeader() {
     { href: '/?v=PERIOD_ANALYSIS', label: 'Period Analysis', icon: CalendarRange },
     { href: '/?v=FIXTURES', label: 'Fixtures', icon: Calendar },
     { href: '/?v=TRANSFER_PICKS', label: 'Transfer Picks', icon: ArrowLeftRight },
-    { href: '/?v=SQUAD_SIMULATOR', label: 'Squad Simulator', icon: Shirt },
     { href: '/?v=TOP_MANAGERS', label: 'Top Managers', icon: Users },
     { href: '/?v=STATS', label: 'Player Stats', icon: BarChart2 },
   ];

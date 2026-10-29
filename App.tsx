@@ -340,7 +340,6 @@ function App() {
             <HeaderNavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" />
             <HeaderNavItem v={View.FIXTURES} label="Fixtures" />
             <HeaderNavItem v={View.TRANSFER_PICKS} label="Transfer Picks" />
-            <HeaderNavItem v={View.SQUAD_SIMULATOR} label="Squad Simulator" />
             <HeaderNavItem v={View.TOP_MANAGERS} label="Top Managers" />
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.OPTIMAL_SQUAD} label="Optimal 11" />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.TEAM} label="My Team" />}
@@ -406,7 +405,6 @@ function App() {
             <NavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" icon={CalendarRange} />
             <NavItem v={View.FIXTURES} label="Fixtures" icon={Calendar} />
             <NavItem v={View.TRANSFER_PICKS} label="Transfer Picks" icon={ArrowLeftRight} />
-            <NavItem v={View.SQUAD_SIMULATOR} label="Squad Simulator" icon={Shirt} />
             <NavItem v={View.STATS} label="Player Stats" icon={BarChart2} />
             <NavItem v={View.DETAILED_STATS} label="Detailed Analyses" icon={Activity} />
             <NavItem v={View.TOP_MANAGERS} label="Top Managers (Top 100)" icon={Users} />

@@ -8,8 +8,8 @@ import { projectPlayer } from '../lib/playerProjection';
 import { track } from '@/lib/ga';
 import { FortunaMatch } from '../services/oddsSnapshotService';
 import { getGoalscorerOdds, GoalscorerOddsResult } from '../lib/goalscorerModel';
-import { Top100Snapshot, Top100PlayerSignal } from '../services/top100Service';
-import { findTop100Signal } from '../lib/top100Matcher';
+import { Top100Snapshot, Top100PlayerSignal, Top100TemplateTierPlayer } from '../services/top100Service';
+import { findTop100Signal, findTop100TemplateTier } from '../lib/top100Matcher';
 import { PlayerDetailModal } from './PlayerDetailModal';
 
 interface TransferPicksProps {
@@ -30,6 +30,7 @@ interface PlayerTransferStats extends FPLPlayer {
     confidence: number;
     goalscorer?: GoalscorerOddsResult | null;
     top100Signal?: Top100PlayerSignal | null;
+    top100Template?: Top100TemplateTierPlayer | null;
 }
 
 const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures, events }) => {
@@ -133,11 +134,13 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                 ? getGoalscorerOdds(player, teams, fixtures, nextEventId, oddsData)
                 : null;
             const top100Signal = findTop100Signal(player, top100Data);
+            const top100Template = findTop100TemplateTier(player, top100Data);
             return {
                 ...player,
                 ...projected,
                 goalscorer,
                 top100Signal,
+                top100Template,
             };
         });
     }, [players, fixtures, teams, events, horizon, nextEventId, oddsData, top100Data]);
@@ -202,17 +205,19 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
     // Sorting Header Component
     const SortHeader: React.FC<{ label: string, sortKey: string, align?: "left" | "right" | "center", className?: string }> = ({ label, sortKey, align = "left", className = "" }) => {
         const isActive = sortConfig.key === sortKey;
+        const alignClass = align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
+        const justifyClass = align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start";
         return (
             <th
-                className={`p-4 cursor-pointer hover:text-white transition-colors group select-none ${className} text-${align}`}
+                className={`py-3 px-3 cursor-pointer hover:text-white transition-colors group select-none ${alignClass} ${className}`}
                 onClick={() => handleSort(sortKey)}
             >
-                <div className={`flex items-center gap-1 ${align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start"}`}>
-                    {label}
+                <div className={`flex items-center gap-1 ${justifyClass}`}>
+                    <span>{label}</span>
                     {isActive ? (
-                        sortConfig.direction === 'asc' ? <ChevronUp size={14} className="text-blue-400" /> : <ChevronDown size={14} className="text-blue-400" />
+                        sortConfig.direction === 'asc' ? <ChevronUp size={13} className="text-blue-400 shrink-0" /> : <ChevronDown size={13} className="text-blue-400 shrink-0" />
                     ) : (
-                        <ArrowUpDown size={14} className="text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <ArrowUpDown size={13} className="text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     )}
                 </div>
             </th>
@@ -446,17 +451,32 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                             <span className="text-[11px] text-slate-500 font-mono font-bold">#{idx + 1}</span>
                                             <span className="font-bold text-white text-base truncate">{p.web_name}</span>
                                             <span className="text-[11px] px-2 py-0.5 bg-green-500/10 text-green-400 rounded-md font-bold border border-green-500/20 leading-none">{p.form}</span>
-                                            {p.top100Signal && (
-                                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold leading-none ${
-                                                    p.top100Signal.net > 0
-                                                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                                                        : p.top100Signal.net < 0
-                                                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                                                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                                                }`}>
-                                                    {p.top100Signal.net > 0 ? `🔥 Top 100: +${p.top100Signal.net}` : p.top100Signal.net < 0 ? `⚠️ Top 100: ${p.top100Signal.net}` : `⚡ Churn`} (GW{top100Data?.closedDeadlineGw || 5})
-                                                </span>
-                                            )}
+                                            {(p.top100Template || p.top100Signal) && (() => {
+                                                const top100Own = p.top100Template?.top100Own;
+                                                const net = p.top100Signal?.net;
+                                                let text = '';
+                                                if (top100Own != null && net != null && net !== 0) {
+                                                    text = `Top 100: ${top100Own}% own (${net > 0 ? `+${net}` : net})`;
+                                                } else if (top100Own != null) {
+                                                    text = `Top 100: ${top100Own}% own`;
+                                                } else if (net != null) {
+                                                    text = `Top 100: ${net > 0 ? `+${net}` : net} (GW${top100Data?.closedDeadlineGw || 8})`;
+                                                }
+                                                if (!text) return null;
+                                                const isPositive = (net != null && net > 0) || (top100Own != null && top100Own >= 40);
+                                                const isNegative = net != null && net < 0;
+                                                return (
+                                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold leading-none ${
+                                                        isPositive
+                                                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                                            : isNegative
+                                                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                                            : 'bg-slate-700/60 text-slate-300 border border-slate-600/50'
+                                                    }`}>
+                                                        {text}
+                                                    </span>
+                                                );
+                                            })()}
                                         </div>
                                         <div className="text-xs text-slate-400 flex items-center gap-1.5 leading-none">
                                             <span className="truncate">{getTeamShort(p.team)}</span>
@@ -521,14 +541,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                 />
                                             </div>
                                         </div>
-                                                                                {/* Projection */}
-                                        <div className="space-y-0.5">
-                                            <div className="flex justify-between text-[8px] uppercase font-bold text-slate-500">
-                                                <span>xPTS</span>
-                                                <span className="text-purple-300 font-mono font-black">{p.expectedPoints.toFixed(1)}</span>
-                                            </div>
-                                            <div className="text-[9px] text-slate-500">Start {Math.round(p.startProbability * 100)}% · Conf {Math.round(p.confidence * 100)}%</div>
-                                        </div>
+
                                                                                 {/* Ownership Bar */}
                                         <div className="space-y-0.5">
                                             <div className="flex justify-between text-[8px] uppercase font-bold text-slate-500">
@@ -612,21 +625,20 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                 </div>
                                             )}
 
-                                            {p.top100Signal && (
+                                            {(p.top100Signal || p.top100Template) && (
                                                 <div className="flex flex-col gap-1 bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/50 col-span-2">
                                                     <div className="flex justify-between items-center text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                                                        <span className="flex items-center gap-1">
-                                                            <Flame size={12} className={p.top100Signal.net > 0 ? "text-emerald-400" : "text-rose-400"} />
-                                                            Top 100 Manažéri (GW{top100Data?.closedDeadlineGw || 5} uzávierka)
-                                                        </span>
-                                                        <span className={p.top100Signal.net > 0 ? "text-emerald-400 font-mono font-bold" : "text-rose-400 font-mono font-bold"}>
-                                                            {p.top100Signal.net > 0 ? `Net +${p.top100Signal.net}` : `Net ${p.top100Signal.net}`}
-                                                        </span>
+                                                        <span>Top 100 Manažéri (GW{top100Data?.closedDeadlineGw || 8} uzávierka)</span>
+                                                        {p.top100Template?.top100Own != null && (
+                                                            <span className="text-white font-mono font-bold">{p.top100Template.top100Own}% tímov</span>
+                                                        )}
                                                     </div>
-                                                    <div className="flex items-center justify-between text-xs text-slate-300">
-                                                        <span>Kúpené: <b className="text-white font-mono">{p.top100Signal.in}x</b> · Predané: <b className="text-white font-mono">{p.top100Signal.out}x</b></span>
-                                                        <span className="text-[10px] text-slate-500 italic">Dáta z minulej uzávierky</span>
-                                                    </div>
+                                                    {p.top100Signal && (
+                                                        <div className="flex items-center justify-between text-xs text-slate-300">
+                                                            <span>Kúpené: <b className="text-white font-mono">{p.top100Signal.in}x</b> · Predané: <b className="text-white font-mono">{p.top100Signal.out}x</b></span>
+                                                            <span className="text-xs font-mono font-bold text-slate-400">Net {p.top100Signal.net > 0 ? `+${p.top100Signal.net}` : p.top100Signal.net}</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
 
@@ -641,11 +653,6 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                     Risk vs Output <HelpCircle size={8} />
                                                 </span>
                                                 <span className="text-xs font-mono text-blue-300">{p.eoPtsRatio.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex flex-col gap-1 bg-slate-800/30 p-2.5 rounded-lg border border-slate-700/20">
-                                                <span className="text-[9px] text-slate-500 uppercase tracking-widest">Projection</span>
-                                                <span className="text-xs font-mono text-purple-300">{p.expectedPoints.toFixed(1)} xPts</span>
-                                                <span className="text-[10px] text-slate-500">Start {Math.round(p.startProbability * 100)}% · Conf {Math.round(p.confidence * 100)}%</span>
                                             </div>
                                         </div>
 
@@ -694,19 +701,19 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700">
-                                <th className="p-4 w-12 text-center">#</th>
-                                <SortHeader label="Player" sortKey="web_name" className="w-64" />
+                            <tr className="bg-slate-900/60 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700">
+                                <th className="py-3 px-2 w-10 text-center text-xs">#</th>
+                                <SortHeader label="Player" sortKey="web_name" align="left" className="min-w-[170px]" />
                                 <SortHeader
-                                    label={horizon === 'next' ? 'GW SCORE' : 'TRANSFER INDEX'}
+                                    label={horizon === 'next' ? 'GW SCORE' : 'INDEX'}
                                     sortKey="transferIndex"
-                                    className="w-36"
+                                    align="left"
+                                    className="w-28 min-w-[110px]"
                                 />
-                                <SortHeader label="Price" sortKey="now_cost" align="right" />
-                                <SortHeader label="Ownership" sortKey="selected_by_percent" align="right" />
-                                                                <SortHeader label="Form" sortKey="form" align="right" />
-                                <SortHeader label="xPts" sortKey="expectedPoints" align="right" />
-                                <SortHeader label="Start" sortKey="startProbability" align="right" />
+                                <SortHeader label="Price" sortKey="now_cost" align="right" className="w-20" />
+                                <SortHeader label="Ownership" sortKey="selected_by_percent" align="right" className="w-24" />
+                                <SortHeader label="Form" sortKey="form" align="right" className="w-16" />
+                                <SortHeader label="Start" sortKey="startProbability" align="right" className="w-16" />
 
                                 {(activePos === 3 || activePos === 4) && showOdds && (
                                     <SortHeader
@@ -718,11 +725,11 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                 )}
 
                                 {gwHeaders.map(gw => (
-                                    <SortHeader key={gw} label={`GW${gw}`} sortKey={`GW${gw}`} align="center" className="w-16" />
+                                    <SortHeader key={gw} label={`GW${gw}`} sortKey={`GW${gw}`} align="center" className="w-12 min-w-[48px]" />
                                 ))}
 
                                 {horizon === 'next5' && (
-                                    <SortHeader label="Diff Score" sortKey="fixtureDifficultySum" align="center" />
+                                    <SortHeader label="Diff" sortKey="fixtureDifficultySum" align="center" className="w-14" />
                                 )}
                             </tr>
                         </thead>
@@ -735,8 +742,8 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                         className={`hover:bg-slate-700/30 transition-all group relative ${isTopPick ? 'bg-emerald-500/5 border-l-2 border-emerald-500/50' : ''
                                             }`}
                                     >
-                                        <td className="p-4 text-center text-slate-500 font-mono">{idx + 1}</td>
-                                        <td className="p-4">
+                                        <td className="py-3 px-2 text-center text-slate-500 font-mono text-xs">{idx + 1}</td>
+                                        <td className="py-3 px-3 text-left">
                                             <div className="flex items-center gap-1.5 flex-wrap">
                                                 <button
                                                     onClick={() => setSelectedPlayerForDetail(p)}
@@ -746,29 +753,35 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                     <span className="group-hover/p:underline underline-offset-2">{p.web_name}</span>
                                                     <Info size={13} className="text-slate-500 group-hover/p:text-blue-400 opacity-60 group-hover/p:opacity-100 transition-all shrink-0" />
                                                 </button>
-                                                {p.top100Signal && (
-                                                    <span
-                                                        className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded font-mono ${
-                                                            p.top100Signal.net > 0
-                                                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
-                                                                : p.top100Signal.net < 0
-                                                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-[0_0_8px_rgba(244,63,94,0.15)]'
-                                                                : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                                        }`}
-                                                        title={`Top 100 manažéri (GW${top100Data?.closedDeadlineGw || 5} uzávierka): ${p.top100Signal.net > 0 ? '+' : ''}${p.top100Signal.net} (Kúpené: ${p.top100Signal.in}x, Predané: ${p.top100Signal.out}x). Pozn: Dáta z poslednej uzavretej uzávierky.`}
-                                                    >
-                                                        {p.top100Signal.net > 0 ? (
-                                                            <>🔥 Top 100: +{p.top100Signal.net}</>
-                                                        ) : p.top100Signal.net < 0 ? (
-                                                            <>⚠️ Top 100: {p.top100Signal.net}</>
-                                                        ) : (
-                                                            <>⚡ Top 100 Churn</>
-                                                        )}
-                                                        <span className="text-[8px] opacity-75 font-normal">
-                                                            (GW{top100Data?.closedDeadlineGw || 5})
+                                                {(p.top100Template || p.top100Signal) && (() => {
+                                                    const top100Own = p.top100Template?.top100Own;
+                                                    const net = p.top100Signal?.net;
+                                                    let text = '';
+                                                    if (top100Own != null && net != null && net !== 0) {
+                                                        text = `Top 100: ${top100Own}% own (${net > 0 ? `+${net}` : net})`;
+                                                    } else if (top100Own != null) {
+                                                        text = `Top 100: ${top100Own}% own`;
+                                                    } else if (net != null) {
+                                                        text = `Top 100: ${net > 0 ? `+${net}` : net} (GW${top100Data?.closedDeadlineGw || 8})`;
+                                                    }
+                                                    if (!text) return null;
+                                                    const isPositive = (net != null && net > 0) || (top100Own != null && top100Own >= 40);
+                                                    const isNegative = net != null && net < 0;
+                                                    return (
+                                                        <span
+                                                            className={`inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded font-mono ${
+                                                                isPositive
+                                                                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                                                                    : isNegative
+                                                                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-[0_0_8px_rgba(244,63,94,0.15)]'
+                                                                    : 'bg-slate-700/60 text-slate-300 border border-slate-600/50'
+                                                            }`}
+                                                            title={`Top 100 manažéri: ${top100Own != null ? `Vlastnené ${top100Own}% tímov` : ''}${net != null ? ` (Zmena v uzávierke: ${net > 0 ? `+${net}` : net})` : ''}`}
+                                                        >
+                                                            {text}
                                                         </span>
-                                                    </span>
-                                                )}
+                                                    );
+                                                })()}
                                             </div>
                                             <div className="text-xs text-slate-500 flex items-center gap-1.5">
                                                 {getTeamShort(p.team)}
@@ -779,16 +792,16 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="p-4">
-                                            <div className="flex flex-col gap-1 ml-3">
+                                        <td className="py-3 px-3 text-left">
+                                            <div className="flex flex-col gap-1">
                                                 <span
-                                                    className={`font-bold font-mono text-base ${p.transferIndex > 0.7 ? 'text-green-400' : p.transferIndex > 0.5 ? 'text-blue-400' : 'text-slate-400'}`}
-                                                    title="Transfer Index is a combined score of recent form and fixture difficulty. Higher = better. 60 = above average."
+                                                    className={`font-bold font-mono text-sm leading-none ${p.transferIndex > 0.7 ? 'text-green-400' : p.transferIndex > 0.5 ? 'text-blue-400' : 'text-slate-400'}`}
+                                                    title="Transfer Index je kombinované skóre formy a náročnosti vyžrebovania. Vyššie = lepšie."
                                                 >
                                                     {Math.round(p.transferIndex * 100)}
                                                 </span>
                                                 {/* Progress Bar */}
-                                                <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                                                <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
                                                     <div
                                                         className={`h-full ${p.transferIndex > 0.7 ? 'bg-green-500' : 'bg-blue-500'}`}
                                                         style={{ width: `${p.transferIndex * 100}%` }}
@@ -796,41 +809,36 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="p-4 text-right font-mono text-blue-300">£{p.now_cost / 10}</td>
-                                        <td className="p-4 text-right font-mono text-slate-300">{p.selected_by_percent}%</td>
-                                                                                <td className="p-4 text-right font-bold text-white">{p.form}</td>
-                                        <td className="p-4 text-right font-mono text-purple-300" title="Projected points for the next gameweek">
-                                            {p.expectedPoints.toFixed(1)}
-                                        </td>
-                                        <td className="p-4 text-right font-mono text-slate-300" title={`Projection confidence: ${Math.round(p.confidence * 100)}%`}>
+                                        <td className="py-3 px-3 text-right font-mono text-blue-300 text-sm">£{p.now_cost / 10}</td>
+                                        <td className="py-3 px-3 text-right font-mono text-slate-300 text-sm">{p.selected_by_percent}%</td>
+                                        <td className="py-3 px-3 text-right font-bold text-white text-sm">{p.form}</td>
+                                        <td className="py-3 px-3 text-right font-mono text-slate-300 text-sm" title={`Istota štartu hráča: ${Math.round(p.startProbability * 100)}%`}>
                                             {Math.round(p.startProbability * 100)}%
                                         </td>
 
                                         {/* Goalscorer Odds for MID and FWD */}
                                         {(activePos === 3 || activePos === 4) && showOdds && (
-                                            <td className="p-2 md:p-3 text-center">
+                                            <td className="py-2 px-2 text-center">
                                                 {p.goalscorer ? (
                                                     <div className="flex flex-col items-center justify-center gap-0.5">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="font-mono font-bold text-white text-xs md:text-sm">
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="font-mono font-bold text-white text-xs">
                                                                 {p.goalscorer.odds.toFixed(2)}
                                                             </span>
                                                             <span
-                                                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono ${
+                                                                className={`text-[9px] font-bold px-1 py-0.2 rounded font-mono ${
                                                                     p.goalscorer.prob >= 0.45
                                                                         ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
                                                                         : p.goalscorer.prob >= 0.30
                                                                         ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.15)]'
-                                                                        : p.goalscorer.prob >= 0.18
-                                                                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                                                                        : 'bg-slate-700/60 text-slate-400'
+                                                                        : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                                                                 }`}
-                                                                title={`Šanca na gól: ${Math.round(p.goalscorer.prob * 100)}% (${p.goalscorer.source === 'fortuna_live' ? 'Fortuna live kurz' : 'Model xG tímu: ' + p.goalscorer.teamExpectedGoals})`}
+                                                                title={`Šanca na gól: ${Math.round(p.goalscorer.prob * 100)}%`}
                                                             >
                                                                 {Math.round(p.goalscorer.prob * 100)}%
                                                             </span>
                                                         </div>
-                                                        <span className="text-[10px] text-slate-400">
+                                                        <span className="text-[9px] text-slate-400">
                                                             vs {p.goalscorer.opponentShort} ({p.goalscorer.isHome ? 'H' : 'A'})
                                                         </span>
                                                     </div>
@@ -843,24 +851,30 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                         {/* Fixture Cells */}
                                         {gwHeaders.map(gw => {
                                             const fix = p.nextFixtures.find(f => f.event === gw);
-                                            if (!fix || fix.opponent === 0) return <td key={gw} className="p-1"><div className="w-full h-8 bg-slate-800 rounded flex items-center justify-center text-[10px] text-slate-600">-</div></td>;
+                                            if (!fix || fix.opponent === 0) {
+                                                return (
+                                                    <td key={gw} className="py-2 px-1 text-center w-12 min-w-[48px]">
+                                                        <div className="w-full h-7 bg-slate-800 rounded flex items-center justify-center text-[10px] text-slate-600">-</div>
+                                                    </td>
+                                                );
+                                            }
 
                                             const oppShort = getTeamShort(fix.opponent);
                                             const colorClass = getDifficultyColor(fix.difficulty);
 
                                             return (
-                                                <td key={gw} className="p-1">
-                                                    <div className={`w-full h-8 md:h-9 rounded border-b-2 flex flex-col items-center justify-center shadow-sm ${colorClass}`}>
+                                                <td key={gw} className="py-2 px-1 text-center w-12 min-w-[48px]">
+                                                    <div className={`w-full h-7 rounded flex flex-col items-center justify-center shadow-sm ${colorClass}`}>
                                                         <span className="text-[10px] font-bold leading-none">{oppShort}</span>
-                                                        <span className="text-[9px] opacity-80 leading-none">({fix.isHome ? 'H' : 'A'})</span>
+                                                        <span className="text-[8px] opacity-80 leading-none">({fix.isHome ? 'H' : 'A'})</span>
                                                     </div>
                                                 </td>
-                                            )
+                                            );
                                         })}
 
                                         {horizon === 'next5' && (
-                                            <td className="p-4 text-center">
-                                                <span className="font-mono text-slate-400">{p.fixtureDifficultySum}</span>
+                                            <td className="py-3 px-2 text-center font-mono text-slate-400 text-sm">
+                                                {p.fixtureDifficultySum}
                                             </td>
                                         )}
                                     </tr>
