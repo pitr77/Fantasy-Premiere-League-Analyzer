@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { createServerSupabase } from '@/lib/supabaseServer';
 import ScoutAdminPanel from './ScoutAdminPanel';
+import ScoutHeader from '@/components/ScoutHeader';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,30 +55,7 @@ export default async function ScoutPage() {
     return (
         <div className="min-h-screen bg-slate-950">
             {/* Header */}
-            <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-white/5">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-                    <Link
-                        href="/"
-                        className="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400 tracking-tighter hover:opacity-80 transition-opacity"
-                    >
-                        FPL STUDIO
-                    </Link>
-                    <nav className="flex items-center gap-4">
-                        <Link
-                            href="/scout"
-                            className="text-sm font-medium text-white bg-purple-600/20 px-3 py-1.5 rounded-lg shadow-[0_0_0_1px_rgba(168,85,247,0.4)]"
-                        >
-                            Scout
-                        </Link>
-                        <Link
-                            href="/"
-                            className="text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/40 px-3 py-1.5 rounded-lg transition-all"
-                        >
-                            Dashboard
-                        </Link>
-                    </nav>
-                </div>
-            </header>
+            <ScoutHeader />
 
             {/* Hero */}
             <section className="relative overflow-hidden border-b border-white/5">

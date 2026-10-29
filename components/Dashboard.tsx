@@ -104,223 +104,55 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-12">
 
-            {/* Hero Banner */}
-            <div className="bg-gradient-to-r from-purple-900 to-slate-900 p-8 rounded-2xl shadow-2xl border border-purple-500/20 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">Welcome to FPL STUDIO</h2>
-                    <p className="text-purple-200 text-lg max-w-2xl">
-                        The ultimate portal for Fantasy Premier League statistics, team planning, and advanced analytics.
-                    </p>
+            {/* Hero Banner (Compact) */}
+            <div className="bg-gradient-to-r from-purple-950 via-slate-900 to-slate-900 px-6 py-5 rounded-2xl shadow-xl border border-purple-500/20 relative overflow-hidden">
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 className="text-xl md:text-2xl font-bold text-white mb-1">Welcome to FPL STUDIO</h2>
+                        <p className="text-purple-200/80 text-xs md:text-sm max-w-xl">
+                            The ultimate portal for Fantasy Premier League statistics, team planning, and advanced analytics.
+                        </p>
+                    </div>
 
                     {nextEvent && (
-                        <div className="mt-6 inline-flex items-center bg-slate-800/80 backdrop-blur px-4 py-2 rounded-lg border border-purple-500/50">
-                            <span className="text-green-400 font-bold mr-2">NEXT DEADLINE:</span>
-                            <span className="text-white">{nextEvent.name} - {new Date(nextEvent.deadline_time).toLocaleString()}</span>
+                        <div className="inline-flex items-center bg-slate-800/80 backdrop-blur px-3.5 py-1.5 rounded-lg border border-purple-500/40 shrink-0 self-start md:self-center">
+                            <span className="text-emerald-400 font-black text-xs mr-2">NEXT DEADLINE:</span>
+                            <span className="text-white text-xs font-mono font-semibold">{nextEvent.name} - {new Date(nextEvent.deadline_time).toLocaleString()}</span>
                         </div>
                     )}
                 </div>
-                <div className="absolute -right-10 -top-10 w-64 h-64 bg-purple-600/20 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-0 right-20 w-32 h-32 bg-green-500/10 rounded-full blur-2xl"></div>
+                <div className="absolute -right-10 -top-10 w-48 h-48 bg-purple-600/10 rounded-full blur-2xl pointer-events-none"></div>
             </div>
 
-            {/* New Features Quick Promotion */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <a
-                    href="/scout"
-                    className="group relative overflow-hidden bg-slate-900 border border-purple-500/30 rounded-2xl p-6 hover:bg-slate-800 transition-all shadow-xl hover:shadow-purple-500/10"
-                >
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <BrainCircuit size={80} className="text-purple-400" />
+            {/* AI GW Preview Banner */}
+            <a
+                href="/scout"
+                className="group relative overflow-hidden bg-slate-900 border border-purple-500/30 rounded-2xl p-5 hover:bg-slate-800/90 transition-all shadow-xl hover:shadow-purple-500/10 flex items-center justify-between gap-4"
+            >
+                <div className="relative z-10 flex items-center gap-4">
+                    <div className="p-3 bg-purple-500/20 rounded-xl text-purple-400 shrink-0">
+                        <Sparkles size={24} />
                     </div>
-                    <div className="relative z-10 flex items-start gap-4">
-                        <div className="p-3 bg-purple-500/20 rounded-xl text-purple-400">
-                            <Sparkles size={24} />
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-white font-black text-lg tracking-tight">AI GW Preview</span>
+                            <span className="px-2 py-0.5 bg-purple-600 text-white text-[10px] font-black rounded-full animate-pulse">NEW</span>
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="text-white font-black text-xl tracking-tight">AI GW Preview</span>
-                                <span className="px-2 py-0.5 bg-purple-600 text-white text-[10px] font-black rounded-full animate-pulse">NEW</span>
-                            </div>
-                            <p className="text-slate-400 text-sm leading-relaxed">
-                                Get AI-generated gameweek reports, differential picks, and captaincy advice.
-                            </p>
-                        </div>
+                        <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
+                            Get AI-generated gameweek reports, differential picks, and captaincy advice.
+                        </p>
                     </div>
-                </a>
-
-                <button
-                    onClick={() => onNavigate(View.CHALLENGE, 'Mini Challenge')}
-                    className="group relative overflow-hidden bg-slate-900 border border-emerald-500/30 rounded-2xl p-6 hover:bg-slate-800 transition-all shadow-xl hover:shadow-emerald-500/10 text-left"
-                >
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Trophy size={80} className="text-emerald-400" />
-                    </div>
-                    <div className="relative z-10 flex items-start gap-4">
-                        <div className="p-3 bg-emerald-500/20 rounded-xl text-emerald-400">
-                            <Zap size={24} />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="text-white font-black text-xl tracking-tight">5-a-side Challenge</span>
-                                <span className="px-2 py-0.5 bg-emerald-600 text-white text-[10px] font-black rounded-full">LIVE</span>
-                            </div>
-                            <p className="text-slate-400 text-sm leading-relaxed">
-                                Pick your best 4 players + Captain for the upcoming Gameweek.
-                            </p>
-                        </div>
-                    </div>
-                </button>
-            </div>
+                </div>
+                <div className="hidden sm:flex items-center gap-1 text-purple-400 font-bold text-xs group-hover:translate-x-1 transition-transform shrink-0">
+                    <span>Open Scout</span>
+                    <ChevronRight size={16} />
+                </div>
+            </a>
 
             <div className="grid grid-cols-12 gap-6">
-                {/* Row 1: Fixture Swing (8) + Hidden Gems (4) */}
+                {/* Row 1: Target Fixtures (8) + In Form Leaders (4) */}
                 <div className="col-span-12 lg:col-span-8">
-                    {fixtureSwing && (
-                        <div className="bg-slate-800 p-4 md:p-6 rounded-xl border border-slate-700 h-full">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                    <CalendarRange className="w-5 h-5 text-blue-400" /> <span className="hidden sm:inline">Fixture Swing (Next 5 GWs)</span><span className="sm:hidden">Fixture Swing</span>
-                                </h3>
-
-                                {/* Mobile/Tablet Toggle */}
-                                <div className="lg:hidden flex bg-slate-900 p-1 rounded-lg border border-slate-700 w-full sm:w-auto">
-                                    <button
-                                        onClick={() => setSwingTab('improving')}
-                                        className={`flex-1 sm:px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 ${swingTab === 'improving' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
-                                    >
-                                        <TrendingUp size={12} /> Improving
-                                    </button>
-                                    <button
-                                        onClick={() => setSwingTab('worsening')}
-                                        className={`flex-1 sm:px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 ${swingTab === 'worsening' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
-                                    >
-                                        <TrendingDown size={12} /> Worsening
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                {/* Improving List */}
-                                <div className={`${swingTab === 'improving' ? 'block' : 'hidden'} lg:block`}>
-                                    <h4 className="hidden lg:flex text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-4 items-center gap-2">
-                                        <TrendingUp size={14} /> Improving Schedule
-                                    </h4>
-                                    <div className="space-y-3">
-                                        {fixtureSwing.improving.map(item => (
-                                            <div key={item.team.id} className="bg-slate-900/50 p-2.5 lg:p-4 rounded border border-slate-700/50 hover:bg-slate-900/80 transition-colors">
-                                                {/* Top Line: Icon, Name, Swing */}
-                                                <div className="flex justify-between items-center mb-2 lg:mb-0">
-                                                    <div className="flex items-center gap-2.5 lg:gap-3">
-                                                        <div className="lg:hidden"><TeamIcon code={item.team.short_name} alt={item.team.name} size={20} /></div>
-                                                        <div className="hidden lg:block"><TeamIcon code={item.team.short_name} alt={item.team.name} size={24} /></div>
-                                                        <div className="font-bold text-white text-sm lg:min-w-[40px] lowercase first-letter:uppercase lg:normal-case">{item.team.short_name}</div>
-                                                    </div>
-                                                    <div className={`text-sm font-black lg:hidden text-emerald-400`}>
-                                                        {item.swing >= 0 ? '+' : ''}{item.swing.toFixed(1)}
-                                                    </div>
-                                                </div>
-
-                                                {/* Bottom/Desktop Line: Boxes and Averages */}
-                                                <div className="flex items-center justify-between lg:justify-end gap-3 lg:gap-4">
-                                                    <div className="flex flex-1 lg:flex-none gap-1">
-                                                        {item.next5.map((d, i) => (
-                                                            <div key={i} className={`w-7 lg:w-3.5 h-3 lg:h-3.5 rounded-[4px] ${d.bg} border ${d.border}`} title={d.label}></div>
-                                                        ))}
-                                                    </div>
-                                                    <div className="flex items-baseline lg:items-end flex-col lg:min-w-[70px] text-right">
-                                                        <div className="text-white font-bold text-[10px] lg:text-xs">
-                                                            {item.avgNext5.toFixed(1)} <span className="text-[10px] text-slate-500 font-normal">avg</span>
-                                                        </div>
-                                                        <div className={`hidden lg:block text-[10px] text-emerald-400 font-black`}>
-                                                            {item.swing >= 0 ? '+' : ''}{item.swing.toFixed(1)}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Worsening List */}
-                                <div className={`${swingTab === 'worsening' ? 'block' : 'hidden'} lg:block`}>
-                                    <h4 className="hidden lg:flex text-[10px] font-bold text-red-400 uppercase tracking-widest mb-4 items-center gap-2">
-                                        <TrendingDown size={14} /> Worsening Schedule
-                                    </h4>
-                                    <div className="space-y-3">
-                                        {fixtureSwing.worsening.map(item => (
-                                            <div key={item.team.id} className="bg-slate-900/50 p-2.5 lg:p-4 rounded border border-slate-700/50 hover:bg-slate-900/80 transition-colors">
-                                                {/* Top Line: Icon, Name, Swing */}
-                                                <div className="flex justify-between items-center mb-2 lg:mb-0">
-                                                    <div className="flex items-center gap-2.5 lg:gap-3">
-                                                        <div className="lg:hidden"><TeamIcon code={item.team.short_name} alt={item.team.name} size={20} /></div>
-                                                        <div className="hidden lg:block"><TeamIcon code={item.team.short_name} alt={item.team.name} size={24} /></div>
-                                                        <div className="font-bold text-white text-sm lg:min-w-[40px] lowercase first-letter:uppercase lg:normal-case">{item.team.short_name}</div>
-                                                    </div>
-                                                    <div className={`text-sm font-black lg:hidden text-red-400`}>
-                                                        {item.swing >= 0 ? '+' : ''}{item.swing.toFixed(1)}
-                                                    </div>
-                                                </div>
-
-                                                {/* Bottom/Desktop Line: Boxes and Averages */}
-                                                <div className="flex items-center justify-between lg:justify-end gap-3 lg:gap-4">
-                                                    <div className="flex flex-1 lg:flex-none gap-1">
-                                                        {item.next5.map((d, i) => (
-                                                            <div key={i} className={`w-7 lg:w-3.5 h-3 lg:h-3.5 rounded-[4px] ${d.bg} border ${d.border}`} title={d.label}></div>
-                                                        ))}
-                                                    </div>
-                                                    <div className="flex items-baseline lg:items-end flex-col lg:min-w-[70px] text-right">
-                                                        <div className="text-white font-bold text-[10px] lg:text-xs">
-                                                            {item.avgNext5.toFixed(1)} <span className="text-[10px] text-slate-500 font-normal">avg</span>
-                                                        </div>
-                                                        <div className={`hidden lg:block text-[10px] text-red-400 font-black`}>
-                                                            {item.swing >= 0 ? '+' : ''}{item.swing.toFixed(1)}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                <div className="col-span-12 lg:col-span-4">
-                    {/* Card 3: Hidden Gems */}
-                    <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 flex flex-col h-full">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-2 bg-yellow-500/20 rounded-lg text-yellow-400"><Lightbulb size={20} /></div>
-                            <h3 className="text-slate-200 font-bold text-sm uppercase">Hidden Gems</h3>
-                        </div>
-                        <div className="flex-1 space-y-3">
-                            {hiddenGems.length > 0 ? hiddenGems.map((p) => (
-                                <div key={p.id} className="flex justify-between items-center bg-slate-900/50 p-3 rounded border border-slate-700/50 hover:bg-slate-900/80 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <div className="font-bold text-white text-sm">{p.web_name}</div>
-                                        <div className="text-[10px] text-slate-500 lowercase first-letter:uppercase">{data.teams.find(t => t.id === p.team)?.short_name}</div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-yellow-400 font-bold text-sm tracking-tight">{p.form}</div>
-                                        <div className="text-[9px] text-slate-500 uppercase">Form</div>
-                                    </div>
-                                </div>
-                            )) : (
-                                <div className="text-slate-500 text-sm italic py-4 text-center">No gems found (Form {'>'} 4.0).</div>
-                            )}
-                        </div>
-                        <button
-                            onClick={() => onNavigate(View.STATS, 'Player Stats')}
-                            className="mt-6 w-full py-2 bg-slate-900 rounded-lg border border-slate-700 text-[11px] text-slate-400 hover:text-white hover:border-slate-500 transition-all uppercase tracking-widest font-bold"
-                        >
-                            View All Differentials
-                        </button>
-                    </div>
-                </div>
-
-                {/* Row 2: Target Fixtures (8) + In Form Leaders (4) */}
-                <div className="col-span-12 lg:col-span-8">
-                    {/* Card 1: Easy Fixtures */}
+                    {/* Easy Fixtures */}
                     <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 flex flex-col h-full">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400"><Zap size={20} /></div>
@@ -359,7 +191,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
                 </div>
 
                 <div className="col-span-12 lg:col-span-4">
-                    {/* Card 2: In Form Trio */}
+                    {/* In Form Trio */}
                     <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 flex flex-col h-full">
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-3">
@@ -383,93 +215,142 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
                                 </div>
                             ))}
                         </div>
-                        <button
-                            onClick={() => onNavigate(View.STATS, 'Player Stats')}
-                            className="mt-6 w-full py-2 bg-slate-900 rounded-lg border border-slate-700 text-[11px] text-slate-400 hover:text-white hover:border-slate-500 transition-all uppercase tracking-widest font-bold"
-                        >
-                            Analyze Hot Assets
-                        </button>
                     </div>
                 </div>
-            </div>
 
-            {/* Quick Actions Row */}
-            <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 mt-6">
-                <h3 className="text-lg font-bold mb-4 text-white">Quick Analysis Links</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <button
-                        onClick={() => onNavigate(View.FIXTURES, 'Fixtures')}
-                        className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700 hover:bg-purple-600/10 hover:border-purple-500/50 transition-all text-left group"
-                    >
-                        <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400 group-hover:scale-110 transition-transform"><CalendarRange size={24} /></div>
-                        <div>
-                            <div className="text-white font-bold text-sm">FDR Planner</div>
-                            <div className="text-[11px] text-slate-500">Check upcoming fixture difficulty</div>
-                        </div>
-                    </button>
-                    <button
-                        onClick={() => onNavigate(View.TRANSFER_PICKS, 'Transfer Picks')}
-                        className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700 hover:bg-blue-600/10 hover:border-blue-500/50 transition-all text-left group"
-                    >
-                        <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400 group-hover:scale-110 transition-transform"><Zap size={24} /></div>
-                        <div>
-                            <div className="text-white font-bold text-sm">Transfer Picks</div>
-                            <div className="text-[11px] text-slate-500">ML-driven transfer logic</div>
-                        </div>
-                    </button>
-                    <button
-                        onClick={() => onNavigate(View.STATS, 'Player Stats')}
-                        className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700 hover:bg-emerald-600/10 hover:border-emerald-500/50 transition-all text-left group"
-                    >
-                        <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400 group-hover:scale-110 transition-transform"><TrendingUp size={24} /></div>
-                        <div>
-                            <div className="text-white font-bold text-sm">Form Leaders</div>
-                            <div className="text-[11px] text-slate-500">Advanced player performance stats</div>
-                        </div>
-                    </button>
-                    <a
-                        href="/scout"
-                        className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700 hover:bg-purple-600/10 hover:border-purple-500/50 transition-all text-left group"
-                    >
-                        <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400 group-hover:scale-110 transition-transform"><BrainCircuit size={24} /></div>
-                        <div>
-                            <div className="text-white font-bold text-sm">AI Scout Reports</div>
-                            <div className="text-[11px] text-slate-500">Deep AI analysis and previews</div>
-                        </div>
-                    </a>
-                    <button
-                        onClick={() => onNavigate(View.TOP_MANAGERS, 'Top Managers')}
-                        className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700 hover:bg-amber-600/10 hover:border-amber-500/50 transition-all text-left group"
-                    >
-                        <div className="p-2 bg-amber-500/20 rounded-lg text-amber-400 group-hover:scale-110 transition-transform"><Users size={24} /></div>
-                        <div>
-                            <div className="text-white font-bold text-sm">Top 100 Managers</div>
-                            <div className="text-[11px] text-slate-500">Track elite transfer activity & trends</div>
-                        </div>
-                    </button>
-                    <button
-                        onClick={() => onNavigate(View.SQUAD_SIMULATOR, 'Squad Simulator')}
-                        className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-lg border border-purple-500/30 hover:bg-purple-600/10 hover:border-purple-500/60 transition-all text-left group"
-                    >
-                        <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400 group-hover:scale-110 transition-transform"><ArrowLeftRight size={24} /></div>
-                        <div>
-                            <div className="text-white font-bold text-sm flex items-center gap-2">
-                                <span>Squad & Transfers</span>
-                                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500 text-slate-950 font-black">NEW</span>
+                {/* Row 2: Fixture Swing (8) + Hidden Gems (4) */}
+                <div className="col-span-12 lg:col-span-8">
+                    {fixtureSwing && (
+                        <div className="bg-slate-800 p-4 md:p-6 rounded-xl border border-slate-700 h-full">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <CalendarRange className="w-5 h-5 text-blue-400" /> <span className="hidden sm:inline">Fixture Swing (Next 5 GWs)</span><span className="sm:hidden">Fixture Swing</span>
+                                </h3>
+
+                                {/* Mobile/Tablet Toggle */}
+                                <div className="lg:hidden flex bg-slate-900 p-1 rounded-lg border border-slate-700 w-full sm:w-auto">
+                                    <button
+                                        onClick={() => setSwingTab('improving')}
+                                        className={`flex-1 sm:px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 ${swingTab === 'improving' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                        <TrendingUp size={12} /> Improving
+                                    </button>
+                                    <button
+                                        onClick={() => setSwingTab('worsening')}
+                                        className={`flex-1 sm:px-4 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 ${swingTab === 'worsening' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                        <TrendingDown size={12} /> Worsening
+                                    </button>
+                                </div>
                             </div>
-                            <div className="text-[11px] text-slate-400">Import your team & simulate transfers</div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* Improving List */}
+                                <div className={`${swingTab === 'improving' ? 'block' : 'hidden'} lg:block`}>
+                                    <h4 className="hidden lg:flex text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-4 items-center gap-2">
+                                        <TrendingUp size={14} /> Improving Schedule
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {fixtureSwing.improving.map(item => (
+                                            <div key={item.team.id} className="bg-slate-900/50 p-2.5 lg:p-4 rounded border border-slate-700/50 hover:bg-slate-900/80 transition-colors">
+                                                <div className="flex justify-between items-center mb-2 lg:mb-0">
+                                                    <div className="flex items-center gap-2.5 lg:gap-3">
+                                                        <div className="lg:hidden"><TeamIcon code={item.team.short_name} alt={item.team.name} size={20} /></div>
+                                                        <div className="hidden lg:block"><TeamIcon code={item.team.short_name} alt={item.team.name} size={24} /></div>
+                                                        <div className="font-bold text-white text-sm lg:min-w-[40px] lowercase first-letter:uppercase lg:normal-case">{item.team.short_name}</div>
+                                                    </div>
+                                                    <div className={`text-sm font-black lg:hidden text-emerald-400`}>
+                                                        {item.swing >= 0 ? '+' : ''}{item.swing.toFixed(1)}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between lg:justify-end gap-3 lg:gap-4">
+                                                    <div className="flex flex-1 lg:flex-none gap-1">
+                                                        {item.next5.map((d, i) => (
+                                                            <div key={i} className={`w-7 lg:w-3.5 h-3 lg:h-3.5 rounded-[4px] ${d.bg} border ${d.border}`} title={d.label}></div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="flex items-baseline lg:items-end flex-col lg:min-w-[70px] text-right">
+                                                        <div className="text-white font-bold text-[10px] lg:text-xs">
+                                                            {item.avgNext5.toFixed(1)} <span className="text-[10px] text-slate-500 font-normal">avg</span>
+                                                        </div>
+                                                        <div className={`hidden lg:block text-[10px] text-emerald-400 font-black`}>
+                                                            {item.swing >= 0 ? '+' : ''}{item.swing.toFixed(1)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Worsening List */}
+                                <div className={`${swingTab === 'worsening' ? 'block' : 'hidden'} lg:block`}>
+                                    <h4 className="hidden lg:flex text-[10px] font-bold text-red-400 uppercase tracking-widest mb-4 items-center gap-2">
+                                        <TrendingDown size={14} /> Worsening Schedule
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {fixtureSwing.worsening.map(item => (
+                                            <div key={item.team.id} className="bg-slate-900/50 p-2.5 lg:p-4 rounded border border-slate-700/50 hover:bg-slate-900/80 transition-colors">
+                                                <div className="flex justify-between items-center mb-2 lg:mb-0">
+                                                    <div className="flex items-center gap-2.5 lg:gap-3">
+                                                        <div className="lg:hidden"><TeamIcon code={item.team.short_name} alt={item.team.name} size={20} /></div>
+                                                        <div className="hidden lg:block"><TeamIcon code={item.team.short_name} alt={item.team.name} size={24} /></div>
+                                                        <div className="font-bold text-white text-sm lg:min-w-[40px] lowercase first-letter:uppercase lg:normal-case">{item.team.short_name}</div>
+                                                    </div>
+                                                    <div className={`text-sm font-black lg:hidden text-red-400`}>
+                                                        {item.swing >= 0 ? '+' : ''}{item.swing.toFixed(1)}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between lg:justify-end gap-3 lg:gap-4">
+                                                    <div className="flex flex-1 lg:flex-none gap-1">
+                                                        {item.next5.map((d, i) => (
+                                                            <div key={i} className={`w-7 lg:w-3.5 h-3 lg:h-3.5 rounded-[4px] ${d.bg} border ${d.border}`} title={d.label}></div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="flex items-baseline lg:items-end flex-col lg:min-w-[70px] text-right">
+                                                        <div className="text-white font-bold text-[10px] lg:text-xs">
+                                                            {item.avgNext5.toFixed(1)} <span className="text-[10px] text-slate-500 font-normal">avg</span>
+                                                        </div>
+                                                        <div className={`hidden lg:block text-[10px] text-red-400 font-black`}>
+                                                            {item.swing >= 0 ? '+' : ''}{item.swing.toFixed(1)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </button>
-                    <button
-                        onClick={() => onNavigate(View.CHALLENGE, 'Mini Challenge')}
-                        className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700 hover:bg-emerald-600/10 hover:border-emerald-500/50 transition-all text-left group"
-                    >
-                        <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400 group-hover:scale-110 transition-transform"><Trophy size={24} /></div>
-                        <div>
-                            <div className="text-white font-bold text-sm">Mini Weekly League</div>
-                            <div className="text-[11px] text-slate-500">Your 5-a-side weekly picks</div>
+                    )}
+                </div>
+
+                <div className="col-span-12 lg:col-span-4">
+                    {/* Hidden Gems */}
+                    <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 flex flex-col h-full">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-2 bg-yellow-500/20 rounded-lg text-yellow-400"><Lightbulb size={20} /></div>
+                            <h3 className="text-slate-200 font-bold text-sm uppercase">Hidden Gems</h3>
                         </div>
-                    </button>
+                        <div className="flex-1 space-y-3">
+                            {hiddenGems.length > 0 ? hiddenGems.map((p) => (
+                                <div key={p.id} className="flex justify-between items-center bg-slate-900/50 p-3 rounded border border-slate-700/50 hover:bg-slate-900/80 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="font-bold text-white text-sm">{p.web_name}</div>
+                                        <div className="text-[10px] text-slate-500 lowercase first-letter:uppercase">{data.teams.find(t => t.id === p.team)?.short_name}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-yellow-400 font-bold text-sm tracking-tight">{p.form}</div>
+                                        <div className="text-[9px] text-slate-500 uppercase">Form</div>
+                                    </div>
+                                </div>
+                            )) : (
+                                <div className="text-slate-500 text-sm italic py-4 text-center">No gems found (Form {'>'} 4.0).</div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
 

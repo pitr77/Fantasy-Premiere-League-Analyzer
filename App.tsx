@@ -99,6 +99,13 @@ function App() {
 
   useEffect(() => {
     fetchData();
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const v = params.get('v');
+      if (v && (View as any)[v] !== undefined && typeof (View as any)[v] === 'number') {
+        setView((View as any)[v]);
+      }
+    }
   }, []);
 
   const loadProfileTier = async () => {
@@ -258,15 +265,11 @@ function App() {
     <a
       href="/scout"
       className={mobile
-        ? "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all"
-        : "px-3 py-1.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/40 transition-all flex items-center gap-2"
+        ? "w-full flex items-center px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all text-sm font-medium"
+        : "px-3 py-1.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/40 transition-all"
       }
     >
-      <BrainCircuit size={mobile ? 20 : 16} className="text-purple-400" />
       <span>FPL Scout</span>
-      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500 text-white font-black leading-none animate-pulse">
-        NEW
-      </span>
     </a>
   );
 
@@ -302,7 +305,7 @@ function App() {
         </button>
       </div>
 
-      {userEmail ? (
+      {userEmail && (
         <div className="flex items-center gap-3 bg-slate-900/60 border border-slate-800 rounded-lg px-2.5 py-1.5">
           <span className="hidden lg:inline text-[11px] text-slate-400">
             Signed in as <span className="text-slate-200 font-semibold">{userEmail}</span>
@@ -313,21 +316,6 @@ function App() {
           >
             Sign out
           </button>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2">
-          <a
-            href="/login"
-            className="text-xs font-bold bg-purple-600 hover:bg-purple-500 rounded px-4 py-2 transition-colors shadow-lg shadow-purple-600/20"
-          >
-            Log in
-          </a>
-          <a
-            href="/login?mode=signup"
-            className="hidden sm:inline-block text-xs font-bold bg-slate-900/60 hover:bg-slate-800 border border-slate-800 rounded px-4 py-2 transition-colors"
-          >
-            Create account
-          </a>
         </div>
       )}
     </div>
@@ -347,8 +335,6 @@ function App() {
           </button>
 
           <nav className="flex items-center gap-1">
-            <ScoutLink />
-            <HeaderNavItem v={View.DASHBOARD} label="Dashboard" />
             <HeaderNavItem v={View.LEAGUE_TABLE} label="League Table" />
             <HeaderNavItem v={View.TEAM_ANALYSIS} label="Team Analysis" />
             <HeaderNavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" />
@@ -358,23 +344,14 @@ function App() {
             <HeaderNavItem v={View.TOP_MANAGERS} label="Top Managers" />
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.OPTIMAL_SQUAD} label="Optimal 11" />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.TEAM} label="My Team" />}
-            <button
-              onClick={() => handleNavigate(View.CHALLENGE, 'Mini Challenge', true)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 relative ${view === View.CHALLENGE
-                ? 'text-white bg-purple-600/20 shadow-[0_0_0_1px_rgba(168,85,247,0.4)]'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
-                }`}
-            >
-              <Zap size={16} className={view === View.CHALLENGE ? "text-purple-400" : "text-slate-500"} />
-              <span>Mini Challenge</span>
-              <span className="text-[8px] px-1 rounded-full bg-emerald-500 text-white font-bold">
-                NEW
-              </span>
-            </button>
             <HeaderNavItem v={View.STATS} label="Player Stats" />
           </nav>
         </div>
-        <AccountBar />
+
+        <div className="flex items-center gap-3">
+          <ScoutLink />
+          <AccountBar />
+        </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden">
@@ -385,8 +362,19 @@ function App() {
           >
             {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
-          <span className="text-lg font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400">FPL STUDIO</span>
-          <AccountBar />
+          <button
+            onClick={() => {
+              handleNavigate(View.DASHBOARD, 'Dashboard');
+              setIsSidebarOpen(false);
+            }}
+            className="text-lg font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400"
+          >
+            FPL STUDIO
+          </button>
+          <div className="flex items-center gap-2">
+            <ScoutLink />
+            <AccountBar />
+          </div>
         </div>
 
         <div
@@ -398,28 +386,34 @@ function App() {
 
         <aside className={`fixed top-0 left-0 z-50 w-72 h-full bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:hidden flex flex-col`}>
           <div className="p-6 border-b border-slate-800 shrink-0 flex items-center justify-between">
-            <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400 tracking-tighter">FPL STUDIO</span>
+            <button
+              onClick={() => {
+                handleNavigate(View.DASHBOARD, 'Dashboard');
+                setIsSidebarOpen(false);
+              }}
+              className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400 tracking-tighter text-left"
+            >
+              FPL STUDIO
+            </button>
             <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-white">
               <X size={24} />
             </button>
           </div>
 
           <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto custom-scrollbar">
-            <ScoutLink mobile={true} />
-            <NavItem v={View.DASHBOARD} label="Dashboard" icon={LayoutDashboard} />
             <NavItem v={View.LEAGUE_TABLE} label="League Table" icon={Trophy} />
             <NavItem v={View.TEAM_ANALYSIS} label="Team Analysis" icon={Search} />
             <NavItem v={View.PERIOD_ANALYSIS} label="Period Analysis" icon={CalendarRange} />
             <NavItem v={View.FIXTURES} label="Fixtures" icon={Calendar} />
             <NavItem v={View.TRANSFER_PICKS} label="Transfer Picks" icon={ArrowLeftRight} />
             <NavItem v={View.SQUAD_SIMULATOR} label="Squad Simulator" icon={Shirt} />
-            <NavItem v={View.CHALLENGE} label="Mini Challenge" icon={Zap} requiresAuth={true} />
             <NavItem v={View.STATS} label="Player Stats" icon={BarChart2} />
             <NavItem v={View.DETAILED_STATS} label="Detailed Analyses" icon={Activity} />
             <NavItem v={View.TOP_MANAGERS} label="Top Managers (Top 100)" icon={Users} />
             {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.OPTIMAL_SQUAD} label="Optimal 11" icon={Zap} />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.TEAM} label="My Team" icon={Shirt} />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.COMPARE_MODE} label="Compare Mode" icon={Split} />}
+            <ScoutLink mobile={true} />
           </nav>
 
           <div className="p-6 border-t border-slate-800 shrink-0 bg-slate-900">

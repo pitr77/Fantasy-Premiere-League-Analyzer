@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabaseServer';
 import ShareButtons from './ShareButtons';
 import DeleteArticleButton from './DeleteArticleButton';
+import ScoutHeader from '@/components/ScoutHeader';
 
 export const dynamic = 'force-dynamic';
 
@@ -213,30 +214,22 @@ export default async function ScoutArticlePage({
             />
 
             {/* Header */}
-            <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-white/5">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-                    <Link
-                        href="/scout"
-                        className="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400 tracking-tighter hover:opacity-80 transition-opacity"
-                    >
-                        FPL STUDIO
-                    </Link>
-                    <nav className="flex items-center gap-4">
-                        <Link
-                            href="/scout"
-                            className="text-sm font-medium text-slate-400 hover:text-white transition-colors flex items-center gap-1"
-                        >
-                            <svg width="16" height="16" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                            </svg>
-                            All Previews
-                        </Link>
-                    </nav>
-                </div>
-            </header>
+            <ScoutHeader />
 
             {/* Article */}
             <article className="max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+                <div className="mb-6">
+                    <Link
+                        href="/scout"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+                    >
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        All Scout Previews
+                    </Link>
+                </div>
+
                 {/* Meta */}
                 <div className="flex flex-wrap items-center gap-3 mb-6">
                     <span className="inline-flex items-center text-xs font-black uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg">
