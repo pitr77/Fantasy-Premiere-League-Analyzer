@@ -334,12 +334,12 @@ const FDRRealityAnalysis: React.FC<FDRRealityAnalysisProps> = ({
               <span>Dátový Verdikt &bull; Skutočná úspešnosť FDR</span>
             </div>
 
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight">
               Má zmysel sledovať zápasy a FDR?{' '}
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
                 JEDNOZNAČNE ÁNO.
               </span>
-            </h1>
+            </h2>
 
             <p className="text-sm md:text-base text-slate-300 leading-relaxed">
               Analýza všetkých <strong>{globalStats.totalFinishedFixtures} odohraných zápasov</strong> tejto sezóny

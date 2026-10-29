@@ -306,7 +306,7 @@ export default function MiniChallenge({ players, teams, events, fixtures }: Mini
                                 <Trophy size={24} />
                             </div>
                             <div>
-                                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">5-a-side Challenge</h1>
+                                <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">5-a-side Challenge</h2>
                                 <p className="text-slate-400 text-sm mt-1">Pick 4 players + 1 Captain to compete.</p>
                             </div>
                         </div>

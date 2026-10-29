@@ -148,9 +148,9 @@ function App() {
         <div className="w-20 h-20 bg-slate-900 border border-white/10 rounded-2xl flex items-center justify-center shadow-2xl mb-8">
           <RefreshCw className="w-10 h-10 text-purple-400 animate-spin" />
         </div>
-        <h1 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400 tracking-tighter mb-2">
+        <div className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400 tracking-tighter mb-2">
           FPL STUDIO
-        </h1>
+        </div>
         <p className="text-sm font-bold text-slate-400 uppercase tracking-widest animate-pulse">
           Connecting to FPL...
         </p>
@@ -398,7 +398,7 @@ function App() {
 
         <aside className={`fixed top-0 left-0 z-50 w-72 h-full bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:hidden flex flex-col`}>
           <div className="p-6 border-b border-slate-800 shrink-0 flex items-center justify-between">
-            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400 tracking-tighter">FPL STUDIO</h1>
+            <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400 tracking-tighter">FPL STUDIO</span>
             <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-white">
               <X size={24} />
             </button>

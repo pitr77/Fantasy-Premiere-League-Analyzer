@@ -107,7 +107,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, myTeam, fixtures, onNavigat
             {/* Hero Banner */}
             <div className="bg-gradient-to-r from-purple-900 to-slate-900 p-8 rounded-2xl shadow-2xl border border-purple-500/20 relative overflow-hidden">
                 <div className="relative z-10">
-                    <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Welcome to FPL STUDIO</h1>
+                    <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">Welcome to FPL STUDIO</h2>
                     <p className="text-purple-200 text-lg max-w-2xl">
                         The ultimate portal for Fantasy Premier League statistics, team planning, and advanced analytics.
                     </p>

@@ -1021,9 +1021,9 @@ export const SquadSimulator: React.FC<SquadSimulatorProps> = ({
                 <ArrowLeftRight size={22} />
               </div>
               <div>
-                <h1 className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-300 to-green-400 tracking-tight">
+                <h2 className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-300 to-green-400 tracking-tight">
                   Transfer Simulator & Squad Planner
-                </h1>
+                </h2>
                 <p className="text-xs text-slate-400">
                   Simulate transfers, calculate budget hits, and test line-ups with live portal analytics
                 </p>

@@ -583,9 +583,9 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtures }) =
                   {lang === 'sk' ? 'PREMIER LEAGUE DATABÁZA' : 'PREMIER LEAGUE DATABASE'}
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                 {lang === 'sk' ? 'Štatistiky Hráčov' : 'Player Statistics'}
-              </h1>
+              </h2>
               <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl">
                 {lang === 'sk' 
                   ? 'Kompletné oficiálne štatistiky FPL rozdelené do prehľadných tematických kategórií. Kliknutím na meno hráča otvoríte jeho profil.'
