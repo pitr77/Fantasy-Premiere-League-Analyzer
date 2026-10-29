@@ -46,6 +46,9 @@ export const metadata: Metadata = {
     },
   },
   applicationName: 'FPL Studio',
+  verification: {
+    google: '0RIP_wCZtvClwTFXGrqwjp1jIOB2EcnfPHzOXEt8M4M',
+  },
   keywords: [
     'FPL', 'Fantasy Premier League', 'FPL analytics', 'FPL tools', 'FPL planner',
     'FPL transfer planner', 'FPL captain picks', 'FPL FDR matrix', 'fixture difficulty rating',
@@ -101,6 +104,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <meta name="google-site-verification" content="0RIP_wCZtvClwTFXGrqwjp1jIOB2EcnfPHzOXEt8M4M" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdData) }}
