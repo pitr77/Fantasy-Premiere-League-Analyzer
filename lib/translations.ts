@@ -9,6 +9,7 @@ export const dict = {
   nav_transfer_picks: { en: 'Transfer Picks', sk: 'Tipy na prestupy' },
   nav_top_managers: { en: 'Top Managers', sk: 'Top manažéri' },
   nav_player_stats: { en: 'Player Stats', sk: 'Štatistiky hráčov' },
+  nav_league_ownership: { en: 'League Ownership', sk: 'Vlastníctvo v lige' },
   nav_optimal_squad: { en: 'Optimal 11', sk: 'Optimálna 11' },
   nav_my_team: { en: 'My Team', sk: 'Môj tím' },
   nav_scout: { en: 'FPL Scout', sk: 'FPL Skaut' },
@@ -82,10 +83,12 @@ export const dict = {
   tp_th_ownership: { en: 'Ownership', sk: 'Vlastníctvo' },
   tp_th_form: { en: 'Form', sk: 'Forma' },
   tp_th_start: { en: 'Start', sk: 'Základ' },
+  tp_th_cs_odds: { en: 'CS Odds', sk: 'Čisté konto' },
   tp_th_goal_odds: { en: 'Goal Odds', sk: 'Šanca na gól' },
   tp_th_assist_odds: { en: 'Assist Odds', sk: 'Šanca na asist.' },
   tp_th_ga_odds: { en: 'G+A Odds', sk: 'Šanca na G+A' },
   tp_odds_btn: { en: 'Odds', sk: 'Kurzy' },
+  tp_odds_mode_cs: { en: 'Clean Sheet', sk: 'Čisté konto' },
   tp_odds_mode_goal: { en: 'Goal', sk: 'Gól' },
   tp_odds_mode_assist: { en: 'Assist', sk: 'Asistencia' },
   tp_odds_mode_ga: { en: 'G+A', sk: 'Gól + Asist.' },
@@ -103,6 +106,10 @@ export const dict = {
   tp_start_tooltip: { 
     en: 'Expected starting probability for next gameweek', 
     sk: 'Odhadovaná pravdepodobnosť štartu v základe' 
+  },
+  tp_cs_prob_tooltip: {
+    en: 'Live Fortuna odds and probability for the team to keep a clean sheet in the next gameweek',
+    sk: 'Reálny kurz a pravdepodobnosť z Fortuny, že tím udrží čisté konto v najbližšom kole'
   },
   tp_goal_prob_tooltip: { 
     en: 'Probability to score a goal in next gameweek', 

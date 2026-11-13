@@ -209,7 +209,14 @@ export async function fetchAndSaveFortunaOdds(): Promise<OddsSnapshot> {
 
     for (const m of details) {
       const mName = m.name?.toLowerCase() || '';
-      if (!mName.includes('čisté konto') || mName.includes('1.polčas') || mName.includes('2.polčas')) continue;
+      if (
+        !mName.includes('čisté konto') ||
+        mName.includes('polčas') ||
+        mName.includes('polcas') ||
+        mName.includes('vyhrá') ||
+        mName.includes('remíza') ||
+        mName.includes('jeden z tímov')
+      ) continue;
 
       const isHome = mName.includes(homeTeam.toLowerCase()) || mName.includes('domáci');
       const isAway = mName.includes(awayTeam.toLowerCase()) || mName.includes('hostia');

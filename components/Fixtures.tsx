@@ -9,6 +9,7 @@ import { FortunaMatch } from '../services/oddsSnapshotService';
 
 import { calculateLeaguePositions, getDynamicDifficulty } from '../lib/fdrModel';
 import { computeTransferIndexForPlayers, TransferIndexResult } from '../lib/transferIndex';
+import { getGoalscorerOdds } from '../lib/goalscorerModel';
 import FDRRealityAnalysis from './FDRRealityAnalysis';
 import { useLanguage } from '../lib/language';
 
@@ -89,6 +90,68 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
         });
         return map;
     }, [oddsData]);
+
+    const topScorersByFixture = useMemo(() => {
+        const map = new Map<number, { name: string; prob: number; odds: number; source: 'fortuna_live' | 'fortuna_model'; teamShort: string }>();
+        if (!fixtures || !players || !teams) return map;
+
+        for (const fix of fixtures) {
+            const fixtureOdds = oddsMap.get(`${fix.team_h}-${fix.team_a}`);
+
+            // 1. Check if Fortuna live scorers list exists for this match
+            if (fixtureOdds?.scorers && fixtureOdds.scorers.length > 0) {
+                const sorted = [...fixtureOdds.scorers].sort((a, b) => a.odds - b.odds);
+                const top = sorted[0];
+                if (top && top.odds && top.odds > 1) {
+                    const matchedPlayer = players.find(p =>
+                        (p.team === fix.team_h || p.team === fix.team_a) &&
+                        (p.web_name.toLowerCase().includes(top.name.toLowerCase()) || top.name.toLowerCase().includes(p.web_name.toLowerCase()))
+                    );
+                    const teamShort = matchedPlayer ? (teams.find(t => t.id === matchedPlayer.team)?.short_name || '') : '';
+                    map.set(fix.id, {
+                        name: top.name,
+                        prob: Math.round(top.prob * 100),
+                        odds: top.odds,
+                        source: 'fortuna_live',
+                        teamShort
+                    });
+                    continue;
+                }
+            }
+
+            // 2. Otherwise calculate goal expectation using goalscorerModel for attacking players in this fixture
+            const matchPlayers = players.filter(p => (p.team === fix.team_h || p.team === fix.team_a) && (p.element_type === 3 || p.element_type === 4));
+            let best: { name: string; prob: number; rawProb: number; odds: number; source: 'fortuna_live' | 'fortuna_model'; teamShort: string } | null = null;
+
+            for (const p of matchPlayers) {
+                const res = getGoalscorerOdds(p, teams, fixtures, fix.event, oddsData);
+                if (res && res.goal) {
+                    if (!best || res.goal.prob > best.rawProb) {
+                        const pTeam = teams.find(t => t.id === p.team);
+                        best = {
+                            name: p.web_name,
+                            prob: Math.round(res.goal.prob * 100),
+                            rawProb: res.goal.prob,
+                            odds: Number(res.goal.odds.toFixed(2)),
+                            source: res.goal.source,
+                            teamShort: pTeam?.short_name || ''
+                        };
+                    }
+                }
+            }
+
+            if (best) {
+                map.set(fix.id, {
+                    name: best.name,
+                    prob: best.prob,
+                    odds: best.odds,
+                    source: best.source,
+                    teamShort: best.teamShort
+                });
+            }
+        }
+        return map;
+    }, [fixtures, players, teams, oddsMap, oddsData]);
 
     // --- Helper Functions ---
 
@@ -502,8 +565,18 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                         // Visual Card Accent Strip for Elite picks
                         const homeWinProb = fixtureOdds?.probabilities?.home ?? 0;
                         const awayWinProb = fixtureOdds?.probabilities?.away ?? 0;
+                        const drawWinProb = fixtureOdds?.probabilities?.draw ?? 0;
                         const homeCsProb = fixtureOdds?.cleanSheet?.home?.prob ?? 0;
                         const awayCsProb = fixtureOdds?.cleanSheet?.away?.prob ?? 0;
+                        const over25Prob = fixtureOdds?.overUnder25?.overProb ?? null;
+
+                        const homeWinOdds = fixtureOdds?.odds?.home;
+                        const drawWinOdds = fixtureOdds?.odds?.draw;
+                        const awayWinOdds = fixtureOdds?.odds?.away;
+                        const homeCsOdds = fixtureOdds?.cleanSheet?.home?.yes;
+                        const awayCsOdds = fixtureOdds?.cleanSheet?.away?.yes;
+                        const over25Odds = fixtureOdds?.overUnder25?.over;
+                        const topScorer = topScorersByFixture.get(fixture.id);
 
                         let cardBorderAccent = "border-slate-700 hover:border-slate-500";
                         if (showOdds && (homeWinProb >= 0.60 || homeCsProb >= 0.38)) {
@@ -570,150 +643,179 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                                     </div>
                                 </div>
 
-                                {/* Fortuna Odds Section - Dual Visual Bars & Clean Sheet Comparison */}
+                                {/* Fortuna Odds Section - Sleek Win Probability Bar & FPL Metric Cards */}
                                 {showOdds && fixtureOdds && (
-                                    <div className="border-t border-slate-700/60 bg-slate-900/80 px-3 md:px-6 py-3 space-y-2.5">
-                                        {/* 1. Visual 3-Way Win Probability Bar */}
-                                        {fixtureOdds.probabilities && (
+                                    <div className="border-t border-slate-700/60 bg-slate-900/90 px-3 md:px-5 py-3 space-y-2.5">
+                                        {/* 1. Visual 1-X-2 Win Probability Bar (Hrubý, čitateľný pruh) */}
+                                        {fixtureOdds.probabilities && (() => {
+                                            const isHomeFav = homeWinProb >= awayWinProb;
+                                            const homeWinBg = isHomeFav
+                                                ? "bg-gradient-to-r from-emerald-600 to-teal-500"
+                                                : "bg-gradient-to-r from-sky-600 to-blue-600";
+                                            const awayWinBg = !isHomeFav
+                                                ? "bg-gradient-to-r from-emerald-600 to-teal-500"
+                                                : "bg-gradient-to-r from-sky-600 to-blue-600";
+                                            const homeTextAccent = isHomeFav ? "text-emerald-100" : "text-sky-100";
+                                            const awayTextAccent = !isHomeFav ? "text-emerald-100" : "text-sky-100";
+
+                                            return (
+                                                <div className="space-y-1">
+                                                    <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-400 px-0.5 tracking-wider">
+                                                        <span>Šanca na výhru</span>
+                                                    </div>
+                                                    <div className="h-7 sm:h-8 w-full bg-slate-950 rounded-lg overflow-hidden flex shadow-inner border border-slate-800 p-0.5 gap-0.5">
+                                                        {/* Home Win Segment */}
+                                                        <div
+                                                            style={{ width: `${Math.round(homeWinProb * 100)}%` }}
+                                                            className={`${homeWinBg} rounded-l-md h-full flex items-center justify-start px-2 min-w-0 transition-all hover:brightness-110 cursor-default`}
+                                                            title={`${getTeamName(fixture.team_h)}: ${Math.round(homeWinProb * 100)}% šanca na výhru`}
+                                                        >
+                                                            <div className="flex items-center gap-1.5 text-white font-sans text-xs font-black truncate">
+                                                                <span className="truncate">{getTeamShort(fixture.team_h)}</span>
+                                                                <span>{Math.round(homeWinProb * 100)}%</span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Draw Segment */}
+                                                        <div
+                                                            style={{ width: `${Math.round(drawWinProb * 100)}%` }}
+                                                            className="bg-slate-700/90 h-full flex items-center justify-center px-1 min-w-0 transition-all hover:brightness-110 cursor-default"
+                                                            title={`Remíza: ${Math.round(drawWinProb * 100)}%`}
+                                                        >
+                                                            <div className="flex items-center justify-center text-slate-200 font-sans text-xs font-bold truncate">
+                                                                <span>{Math.round(drawWinProb * 100)}%</span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Away Win Segment */}
+                                                        <div
+                                                            style={{ width: `${Math.round(awayWinProb * 100)}%` }}
+                                                            className={`${awayWinBg} rounded-r-md h-full flex items-center justify-end px-2 min-w-0 transition-all hover:brightness-110 cursor-default`}
+                                                            title={`${getTeamName(fixture.team_a)}: ${Math.round(awayWinProb * 100)}% šanca na výhru`}
+                                                        >
+                                                            <div className="flex items-center gap-1.5 text-white font-sans text-xs font-black truncate">
+                                                                <span>{Math.round(awayWinProb * 100)}%</span>
+                                                                <span className="truncate">{getTeamShort(fixture.team_a)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+
+                                        {/* 2. Visual Clean Sheet Bar (Pruh na čisté konto - rovnaká plná šírka) */}
+                                        {(homeCsProb > 0 || awayCsProb > 0) && (
                                             <div className="space-y-1">
-                                                <div className="flex justify-between items-center text-[10px] font-extrabold px-0.5">
-                                                    <span className="text-emerald-400 flex items-center gap-1">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                                                        {getTeamShort(fixture.team_h)} {Math.round(fixtureOdds.probabilities.home * 100)}% výhra
-                                                    </span>
-                                                    <span className="text-slate-400 font-bold text-[9px] uppercase tracking-wider">
-                                                        Remíza {Math.round(fixtureOdds.probabilities.draw * 100)}%
-                                                    </span>
-                                                    <span className="text-indigo-400 flex items-center gap-1">
-                                                        {Math.round(fixtureOdds.probabilities.away * 100)}% výhra {getTeamShort(fixture.team_a)}
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-                                                    </span>
+                                                <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-400 px-0.5 tracking-wider">
+                                                    <span>Šanca na čisté konto (GKP / DEF)</span>
                                                 </div>
-                                                <div className="h-1.5 md:h-2 w-full bg-slate-800 rounded-full overflow-hidden flex shadow-inner">
-                                                    <div
-                                                        style={{ width: `${fixtureOdds.probabilities.home * 100}%` }}
-                                                        className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all duration-500"
-                                                        title={`${getTeamName(fixture.team_h)} výhra: ${Math.round(fixtureOdds.probabilities.home * 100)}%`}
-                                                    />
-                                                    <div
-                                                        style={{ width: `${fixtureOdds.probabilities.draw * 100}%` }}
-                                                        className="bg-slate-600 h-full transition-all duration-500"
-                                                        title={`Remíza: ${Math.round(fixtureOdds.probabilities.draw * 100)}%`}
-                                                    />
-                                                    <div
-                                                        style={{ width: `${fixtureOdds.probabilities.away * 100}%` }}
-                                                        className="bg-gradient-to-r from-indigo-500 to-purple-400 h-full transition-all duration-500"
-                                                        title={`${getTeamName(fixture.team_a)} výhra: ${Math.round(fixtureOdds.probabilities.away * 100)}%`}
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* 2. Dedicated Clean Sheet Dual Opposing Bar (Pás na čisté konto) */}
-                                        {(fixtureOdds.cleanSheet?.home || fixtureOdds.cleanSheet?.away) && (
-                                            <div className="bg-slate-950/70 rounded-lg p-2 border border-slate-800/90 space-y-1.5">
-                                                <div className="flex justify-between items-center text-[10px]">
-                                                    {/* Home CS */}
-                                                    <div className="flex items-center gap-1.5">
-                                                        <Shield size={12} className={homeCsProb >= 0.35 ? "text-emerald-400" : "text-slate-400"} />
-                                                        <span className="text-slate-300 font-bold">{getTeamShort(fixture.team_h)} CS:</span>
-                                                        <span className={`font-mono font-black ${
-                                                            homeCsProb >= 0.38 ? 'text-emerald-300 text-xs' : homeCsProb >= 0.28 ? 'text-teal-300' : 'text-slate-400'
-                                                        }`}>
-                                                            {Math.round(homeCsProb * 100)}%
-                                                        </span>
-                                                        {homeCsProb >= 0.38 && (
-                                                            <span className="text-[8px] bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 px-1 py-0.2 rounded font-black uppercase tracking-wider">
-                                                                TOP DEF
-                                                            </span>
-                                                        )}
-                                                    </div>
-
-                                                    <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-500 hidden sm:inline">
-                                                        Šanca na čisté konto
-                                                    </span>
-
-                                                    {/* Away CS */}
-                                                    <div className="flex items-center gap-1.5 flex-row-reverse">
-                                                        <Shield size={12} className={awayCsProb >= 0.35 ? "text-indigo-400" : "text-slate-400"} />
-                                                        <span className="text-slate-300 font-bold">{getTeamShort(fixture.team_a)} CS:</span>
-                                                        <span className={`font-mono font-black ${
-                                                            awayCsProb >= 0.38 ? 'text-indigo-300 text-xs' : awayCsProb >= 0.28 ? 'text-teal-300' : 'text-slate-400'
-                                                        }`}>
-                                                            {Math.round(awayCsProb * 100)}%
-                                                        </span>
-                                                        {awayCsProb >= 0.38 && (
-                                                            <span className="text-[8px] bg-indigo-500/25 text-indigo-300 border border-indigo-500/50 px-1 py-0.2 rounded font-black uppercase tracking-wider">
-                                                                TOP DEF
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                {/* Opposing Duel Progress Bars */}
-                                                <div className="grid grid-cols-2 gap-2 h-2 items-center">
-                                                    {/* Home CS Bar (fills towards center) */}
-                                                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden flex justify-end">
+                                                <div className="h-7 sm:h-8 w-full bg-slate-950 rounded-lg overflow-hidden grid grid-cols-2 shadow-inner border border-slate-800 p-0.5 gap-0.5 relative">
+                                                    {/* Home Team Clean Sheet (Ľavá polovica) */}
+                                                    <div className="relative bg-slate-900/60 rounded-l-md h-full overflow-hidden flex items-center px-2 sm:px-2.5 min-w-0 border-r border-slate-700/80">
+                                                        {/* Visual Fill 0-100% */}
                                                         <div
-                                                            style={{ width: `${Math.min(100, Math.round((homeCsProb / 0.45) * 100))}%` }}
-                                                            className={`h-full rounded-full transition-all duration-500 ${
+                                                            style={{ width: `${Math.round(homeCsProb * 100)}%` }}
+                                                            className={`absolute left-0 top-0 bottom-0 transition-all duration-500 rounded-l-md ${
                                                                 homeCsProb >= 0.38
-                                                                    ? 'bg-gradient-to-l from-emerald-400 to-teal-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]'
+                                                                    ? 'bg-gradient-to-r from-emerald-600/90 to-teal-500/80 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
                                                                     : homeCsProb >= 0.28
-                                                                    ? 'bg-teal-400'
-                                                                    : homeCsProb >= 0.20
-                                                                    ? 'bg-slate-500'
-                                                                    : 'bg-slate-700'
+                                                                    ? 'bg-teal-600/60'
+                                                                    : 'bg-slate-700/50'
                                                             }`}
-                                                            title={`${getTeamName(fixture.team_h)} čisté konto: ${Math.round(homeCsProb * 100)}%`}
                                                         />
+                                                        {/* Text Layer Above */}
+                                                        <div className="relative z-10 flex items-center justify-between w-full text-white font-sans text-xs font-bold gap-1">
+                                                            <div className="flex items-center gap-1.5 truncate">
+                                                                <span className="truncate">{getTeamShort(fixture.team_h)}</span>
+                                                                <span className="font-black text-white">{Math.round(homeCsProb * 100)}%</span>
+                                                                {homeCsProb >= 0.38 && (
+                                                                    <span className="text-[8px] bg-emerald-500/40 text-emerald-200 border border-emerald-400/50 px-1 py-0.2 rounded font-black hidden sm:inline uppercase">
+                                                                        TOP CS
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            {homeCsOdds && (
+                                                                <span className="text-[10px] text-white font-sans font-bold bg-black/40 border border-white/10 px-1.5 py-0.5 rounded shrink-0">
+                                                                    kurz {homeCsOdds.toFixed(2)}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                    {/* Away CS Bar (fills away from center) */}
-                                                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden flex justify-start">
+
+                                                    {/* Away Team Clean Sheet (Pravá polovica) */}
+                                                    <div className="relative bg-slate-900/60 rounded-r-md h-full overflow-hidden flex items-center px-2 sm:px-2.5 min-w-0">
+                                                        {/* Visual Fill 0-100% - uses Emerald for strong defense, Slate for low */}
                                                         <div
-                                                            style={{ width: `${Math.min(100, Math.round((awayCsProb / 0.45) * 100))}%` }}
-                                                            className={`h-full rounded-full transition-all duration-500 ${
+                                                            style={{ width: `${Math.round(awayCsProb * 100)}%` }}
+                                                            className={`absolute right-0 top-0 bottom-0 transition-all duration-500 rounded-r-md ${
                                                                 awayCsProb >= 0.38
-                                                                    ? 'bg-gradient-to-r from-indigo-400 to-purple-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]'
+                                                                    ? 'bg-gradient-to-l from-emerald-600/90 to-teal-500/80 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
                                                                     : awayCsProb >= 0.28
-                                                                    ? 'bg-teal-400'
-                                                                    : awayCsProb >= 0.20
-                                                                    ? 'bg-slate-500'
-                                                                    : 'bg-slate-700'
+                                                                    ? 'bg-teal-600/60'
+                                                                    : 'bg-slate-700/50'
                                                             }`}
-                                                            title={`${getTeamName(fixture.team_a)} čisté konto: ${Math.round(awayCsProb * 100)}%`}
                                                         />
+                                                        {/* Text Layer Above */}
+                                                        <div className="relative z-10 flex items-center justify-between w-full text-white font-sans text-xs font-bold gap-1">
+                                                            {awayCsOdds && (
+                                                                <span className="text-[10px] text-white font-sans font-bold bg-black/40 border border-white/10 px-1.5 py-0.5 rounded shrink-0">
+                                                                    kurz {awayCsOdds.toFixed(2)}
+                                                                </span>
+                                                            )}
+                                                            <div className="flex items-center gap-1.5 truncate justify-end">
+                                                                {awayCsProb >= 0.38 && (
+                                                                    <span className="text-[8px] bg-emerald-500/40 text-emerald-200 border border-emerald-400/50 px-1 py-0.2 rounded font-black hidden sm:inline uppercase">
+                                                                        TOP CS
+                                                                    </span>
+                                                                )}
+                                                                <span className="font-black text-white">{Math.round(awayCsProb * 100)}%</span>
+                                                                <span className="truncate">{getTeamShort(fixture.team_a)}</span>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         )}
 
-                                        {/* 3. Detailed Odds & Goals Row */}
-                                        <div className="grid grid-cols-[minmax(0,1.2fr)_auto_minmax(0,1.2fr)] items-center gap-2 pt-0.5">
-                                            {/* Home Team Odds */}
-                                            <div className="flex items-center gap-1.5 justify-start min-w-0">
-                                                {renderWinOddsBadge('1', fixtureOdds.odds?.home, fixtureOdds.probabilities?.home, getTeamName(fixture.team_h), true)}
-                                            </div>
-
-                                            {/* Center: Draw Odds & Over 2.5 Goals */}
-                                            <div className="flex items-center gap-1.5 justify-center shrink-0">
-                                                {fixtureOdds.odds && (
+                                        {/* 3. Visual Top Goalscorer Threat Bar (Najlepší kurz na gól z oboch tímov) */}
+                                        {topScorer && (
+                                            <div className="space-y-1">
+                                                <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-400 px-0.5 tracking-wider">
+                                                    <span>Najväčší favorit na gól v zápase (MID / FWD)</span>
+                                                </div>
+                                                <div className="h-7 sm:h-8 w-full bg-slate-950 rounded-lg overflow-hidden relative shadow-inner border border-slate-800 p-0.5">
+                                                    {/* Visual Fill 0-100% - Tmavomodrá, s rešpektovaním p-0.5 vnútorného okraja ako prvé dva bary */}
                                                     <div
-                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-slate-700 bg-slate-800/90 text-slate-300 text-[11px] font-mono font-medium"
-                                                        title="Kurz na remízu"
-                                                    >
-                                                        <span className="text-[9px] font-sans font-black text-slate-400">X</span>
-                                                        <span className="font-bold text-white">{fixtureOdds.odds.draw.toFixed(2)}</span>
+                                                        style={{ width: `${Math.min(100, topScorer.prob)}%` }}
+                                                        className="absolute left-0.5 top-0.5 bottom-0.5 bg-gradient-to-r from-blue-900/90 to-indigo-900/80 rounded-l-md transition-all duration-500 shadow-[0_0_10px_rgba(30,58,138,0.25)]"
+                                                    />
+                                                    {/* Text Layer Above - nie boldom, percento v rovnakej veľkosti ako prvé dva bary */}
+                                                    <div className="relative z-10 flex items-center justify-between w-full h-full text-white font-sans text-xs gap-1 px-2 sm:px-2.5">
+                                                        <div className="flex items-center gap-1.5 truncate">
+                                                            <span className="text-white font-medium text-xs truncate">
+                                                                {topScorer.name}
+                                                            </span>
+                                                            {topScorer.teamShort && (
+                                                                <span className="text-[9px] bg-slate-800 text-white border border-slate-700 px-1.5 py-0.2 rounded font-medium uppercase shrink-0">
+                                                                    {topScorer.teamShort}
+                                                                </span>
+                                                            )}
+                                                            <span className="font-medium text-amber-300 text-xs">
+                                                                {topScorer.prob}%
+                                                            </span>
+                                                        </div>
+                                                        {topScorer.odds && (
+                                                            <span
+                                                                className="text-[10px] text-white font-sans font-bold bg-black/40 border border-white/10 px-1.5 py-0.5 rounded shrink-0 shadow-sm"
+                                                                title={topScorer.source === 'fortuna_live' ? 'Fortuna Live kurz na gól' : 'Odhadnutý kurz na gól podľa xG a formy'}
+                                                            >
+                                                                kurz {topScorer.odds.toFixed(2)}
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                )}
-                                                {renderOverUnderBadge(fixtureOdds.overUnder25)}
+                                                </div>
                                             </div>
-
-                                            {/* Away Team Odds */}
-                                            <div className="flex items-center gap-1.5 justify-end min-w-0">
-                                                {renderWinOddsBadge('2', fixtureOdds.odds?.away, fixtureOdds.probabilities?.away, getTeamName(fixture.team_a), false)}
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

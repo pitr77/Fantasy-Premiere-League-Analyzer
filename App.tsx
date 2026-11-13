@@ -18,6 +18,7 @@ import PeriodAnalysis from './components/PeriodAnalysis';
 import CompareMode from './components/CompareMode';
 import MiniChallenge from './components/MiniChallenge';
 import SquadSimulator from './components/SquadSimulator';
+import LeagueOwnership from './components/LeagueOwnership';
 import AnalyticsTracker from './components/AnalyticsTracker';
 import { initGA } from './lib/analytics';
 import { useLanguage } from './lib/language';
@@ -58,7 +59,8 @@ export enum View {
   LOCKED,
   SCOUT,
   CHALLENGE,
-  SQUAD_SIMULATOR
+  SQUAD_SIMULATOR,
+  LEAGUE_OWNERSHIP
 }
 
 function App() {
@@ -342,6 +344,7 @@ function App() {
             <HeaderNavItem v={View.FIXTURES} label={t('nav_fixtures', lang)} />
             <HeaderNavItem v={View.TRANSFER_PICKS} label={t('nav_transfer_picks', lang)} />
             <HeaderNavItem v={View.TOP_MANAGERS} label={t('nav_top_managers', lang)} />
+            <HeaderNavItem v={View.LEAGUE_OWNERSHIP} label={t('nav_league_ownership', lang)} />
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.OPTIMAL_SQUAD} label={t('nav_optimal_squad', lang)} />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.TEAM} label={t('nav_my_team', lang)} />}
             <HeaderNavItem v={View.STATS} label={t('nav_player_stats', lang)} />
@@ -409,6 +412,7 @@ function App() {
             <NavItem v={View.STATS} label={t('nav_player_stats', lang)} icon={BarChart2} />
             <NavItem v={View.DETAILED_STATS} label={lang === 'sk' ? 'Detailné analýzy' : 'Detailed Analyses'} icon={Activity} />
             <NavItem v={View.TOP_MANAGERS} label={t('nav_top_managers', lang)} icon={Users} />
+            <NavItem v={View.LEAGUE_OWNERSHIP} label={t('nav_league_ownership', lang)} icon={Trophy} />
             {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.OPTIMAL_SQUAD} label={t('nav_optimal_squad', lang)} icon={Zap} />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.TEAM} label={t('nav_my_team', lang)} icon={Shirt} />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.COMPARE_MODE} label={lang === 'sk' ? 'Porovnanie' : 'Compare Mode'} icon={Split} />}
@@ -471,6 +475,15 @@ function App() {
             {view === View.STATS && <PlayerStats players={data.elements} teams={data.teams} fixtures={fixtures} />}
             {view === View.DETAILED_STATS && <DetailedStats players={data.elements} teams={data.teams} />}
             {view === View.TOP_MANAGERS && <TopManagers players={data.elements} teams={data.teams} fixtures={fixtures} />}
+            {view === View.LEAGUE_OWNERSHIP && (
+              <LeagueOwnership
+                players={data.elements}
+                teams={data.teams}
+                events={data.events}
+                fixtures={fixtures}
+                initialLeagueId={1286619}
+              />
+            )}
             {view === View.COMPARE_MODE && <CompareMode data={data} fixtures={fixtures} />}
             {view === View.CHALLENGE && <MiniChallenge players={data.elements} teams={data.teams} fixtures={fixtures} events={data.events} />}
           </div>

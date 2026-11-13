@@ -46,14 +46,16 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
     });
     const [expandedPlayerId, setExpandedPlayerId] = useState<number | null>(null);
     const [selectedPlayerForDetail, setSelectedPlayerForDetail] = useState<FPLPlayer | null>(null);
+    const [mobileTab, setMobileTab] = useState<'overview' | 'fixtures' | 'intel'>('overview');
 
     // Fortuna odds states
     const [oddsData, setOddsData] = useState<FortunaMatch[] | null>(null);
     const [oddsLastUpdated, setOddsLastUpdated] = useState<string | null>(null);
     const [isRefreshingOdds, setIsRefreshingOdds] = useState(false);
     const [showOdds, setShowOdds] = useState(true);
-    const [oddsMetric, setOddsMetric] = useState<'goal' | 'assist' | 'ga'>('ga');
-    const isOddsEligible = activePos === 2 || activePos === 3 || activePos === 4;
+    const [oddsMetric, setOddsMetric] = useState<'cs' | 'goal' | 'assist' | 'ga'>('cs');
+    const isOddsEligible = true;
+    const effectiveOddsMetric = activePos === 1 ? 'cs' : (activePos >= 3 && oddsMetric === 'cs' ? 'ga' : oddsMetric);
 
     // Top 100 Manager signals state
     const [top100Data, setTop100Data] = useState<Top100Snapshot | null>(null);
@@ -135,9 +137,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
             horizon: horizon
         }).map(player => {
             const projected = projectPlayer(player, teams.find(team => team.id === player.team));
-            const goalscorer = (player.element_type === 2 || player.element_type === 3 || player.element_type === 4)
-                ? getGoalscorerOdds(player, teams, fixtures, nextEventId, oddsData)
-                : null;
+            const goalscorer = getGoalscorerOdds(player, teams, fixtures, nextEventId, oddsData);
             const top100Signal = findTop100Signal(player, top100Data);
             const top100Template = findTop100TemplateTier(player, top100Data);
             return {
@@ -150,6 +150,19 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
         });
     }, [players, fixtures, teams, events, horizon, nextEventId, oddsData, top100Data]);
 
+    const getLiveOddsMetric = (p: PlayerTransferStats) => {
+        if (!p.goalscorer) return null;
+        const m =
+            effectiveOddsMetric === 'cs'
+                ? p.goalscorer.cleanSheet
+                : effectiveOddsMetric === 'assist'
+                ? p.goalscorer.assist
+                : effectiveOddsMetric === 'ga'
+                ? p.goalscorer.goalOrAssist
+                : p.goalscorer.goal;
+        if (!m || m.source !== 'fortuna_live') return null;
+        return m;
+    };
 
     // 3. Sorting & Filtering
     const displayPlayers = useMemo(() => {
@@ -169,24 +182,20 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                 valB = b.now_cost;
             }
             if (sortConfig.key === 'goalProb') {
-                const getP = (p: typeof a) => {
-                    if (!p.goalscorer) return -1;
-                    if (oddsMetric === 'assist') return p.goalscorer.assist?.prob ?? -1;
-                    if (oddsMetric === 'ga') return p.goalscorer.goalOrAssist?.prob ?? -1;
-                    return p.goalscorer.goal?.prob ?? p.goalscorer.prob ?? -1;
-                };
-                valA = getP(a);
-                valB = getP(b);
+                valA = getLiveOddsMetric(a)?.prob ?? -1;
+                valB = getLiveOddsMetric(b)?.prob ?? -1;
             }
             if (sortConfig.key === 'goalOdds') {
-                const getO = (p: typeof a) => {
-                    if (!p.goalscorer) return 999;
-                    if (oddsMetric === 'assist') return p.goalscorer.assist?.odds ?? 999;
-                    if (oddsMetric === 'ga') return p.goalscorer.goalOrAssist?.odds ?? 999;
-                    return p.goalscorer.goal?.odds ?? p.goalscorer.odds ?? 999;
-                };
-                valA = getO(a);
-                valB = getO(b);
+                valA = getLiveOddsMetric(a)?.odds ?? 999;
+                valB = getLiveOddsMetric(b)?.odds ?? 999;
+            }
+            if (sortConfig.key === 'top100Own') {
+                valA = a.top100Template?.top100Own ?? -1;
+                valB = b.top100Template?.top100Own ?? -1;
+            }
+            if (sortConfig.key === 'top100Net') {
+                valA = a.top100Signal?.net ?? -999;
+                valB = b.top100Signal?.net ?? -999;
             }
             // Sort by specific Gameweek Difficulty
             if (sortConfig.key.startsWith('GW')) {
@@ -199,14 +208,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
             if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
             return 0;
         }).slice(0, 25);
-    }, [processedPlayers, activePos, sortConfig]);
-
-    const mobilePlayers = useMemo(() => {
-        return processedPlayers
-            .filter(p => p.element_type === activePos)
-            .sort((a, b) => b.transferIndex - a.transferIndex)
-            .slice(0, 10);
-    }, [processedPlayers, activePos]);
+    }, [processedPlayers, activePos, sortConfig, oddsMetric]);
 
     const handleSort = (key: string) => {
         setSortConfig(current => ({
@@ -401,6 +403,11 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                             onClick={() => {
                                 setActivePos(pos);
                                 setExpandedPlayerId(null);
+                                if (pos === 1 || pos === 2) {
+                                    setOddsMetric('cs');
+                                } else if (oddsMetric === 'cs') {
+                                    setOddsMetric('ga');
+                                }
                                 const posLabels: Record<number, string> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
                                 track("transfer_picks_interaction", { action: "select_position", position: posLabels[pos] });
                             }}
@@ -450,39 +457,56 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
 
                             {showOdds && (
                                 <div className="bg-slate-800 p-0.5 rounded-xl border border-slate-700 flex items-center">
-                                    <button
-                                        onClick={() => setOddsMetric('goal')}
-                                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                                            oddsMetric === 'goal'
-                                                ? 'bg-amber-500/25 text-amber-300 border border-amber-500/40 shadow-sm'
-                                                : 'text-slate-400 hover:text-slate-200'
-                                        }`}
-                                        title={t('tp_goal_prob_tooltip', lang)}
-                                    >
-                                        {t('tp_odds_mode_goal', lang)}
-                                    </button>
-                                    <button
-                                        onClick={() => setOddsMetric('assist')}
-                                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                                            oddsMetric === 'assist'
-                                                ? 'bg-blue-500/25 text-blue-300 border border-blue-500/40 shadow-sm'
-                                                : 'text-slate-400 hover:text-slate-200'
-                                        }`}
-                                        title={t('tp_assist_prob_tooltip', lang)}
-                                    >
-                                        {t('tp_odds_mode_assist', lang)}
-                                    </button>
-                                    <button
-                                        onClick={() => setOddsMetric('ga')}
-                                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                                            oddsMetric === 'ga'
-                                                ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                                                : 'text-slate-400 hover:text-slate-200'
-                                        }`}
-                                        title={t('tp_ga_prob_tooltip', lang)}
-                                    >
-                                        {t('tp_odds_mode_ga', lang)}
-                                    </button>
+                                    {(activePos === 1 || activePos === 2) && (
+                                        <button
+                                            onClick={() => setOddsMetric('cs')}
+                                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                                effectiveOddsMetric === 'cs'
+                                                    ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                                                    : 'text-slate-400 hover:text-slate-200'
+                                            }`}
+                                            title={t('tp_cs_prob_tooltip', lang)}
+                                        >
+                                            {t('tp_odds_mode_cs', lang)}
+                                        </button>
+                                    )}
+                                    {activePos !== 1 && (
+                                        <>
+                                            <button
+                                                onClick={() => setOddsMetric('goal')}
+                                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                                    effectiveOddsMetric === 'goal'
+                                                        ? 'bg-amber-500/25 text-amber-300 border border-amber-500/40 shadow-sm'
+                                                        : 'text-slate-400 hover:text-slate-200'
+                                                }`}
+                                                title={t('tp_goal_prob_tooltip', lang)}
+                                            >
+                                                {t('tp_odds_mode_goal', lang)}
+                                            </button>
+                                            <button
+                                                onClick={() => setOddsMetric('assist')}
+                                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                                    effectiveOddsMetric === 'assist'
+                                                        ? 'bg-blue-500/25 text-blue-300 border border-blue-500/40 shadow-sm'
+                                                        : 'text-slate-400 hover:text-slate-200'
+                                                }`}
+                                                title={t('tp_assist_prob_tooltip', lang)}
+                                            >
+                                                {t('tp_odds_mode_assist', lang)}
+                                            </button>
+                                            <button
+                                                onClick={() => setOddsMetric('ga')}
+                                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                                    effectiveOddsMetric === 'ga'
+                                                        ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                                                        : 'text-slate-400 hover:text-slate-200'
+                                                }`}
+                                                title={t('tp_ga_prob_tooltip', lang)}
+                                            >
+                                                {t('tp_odds_mode_ga', lang)}
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             )}
 
@@ -499,293 +523,372 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                 </div>
             </div>
 
-            {/* Mobile View (Standard Cards) */}
-            <div className="md:hidden space-y-3">
-                {mobilePlayers.map((p, idx) => {
-                    const isExpanded = expandedPlayerId === p.id;
-                    const diffScore = p.fixtureDifficultySum;
-                    const ease = 1 - ((diffScore - 5) / 25);
-                    const diffWidth = Math.max(0, Math.min(1, ease)) * 100;
+            {/* Mobile View (Tabbed Table with Sticky Player Column) */}
+            <div className="md:hidden space-y-2.5">
+                {/* Mobile Column Category Tabs */}
+                <div className="grid grid-cols-3 gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-700/80">
+                    <button
+                        type="button"
+                        onClick={() => setMobileTab('overview')}
+                        className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all ${
+                            mobileTab === 'overview'
+                                ? 'bg-blue-600 text-white shadow-sm'
+                                : 'text-slate-400 hover:text-white'
+                        }`}
+                    >
+                        <Activity size={13} className="shrink-0" />
+                        <span className="truncate">{lang === 'sk' ? 'Prehľad' : 'Overview'}</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setMobileTab('fixtures')}
+                        className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all ${
+                            mobileTab === 'fixtures'
+                                ? 'bg-blue-600 text-white shadow-sm'
+                                : 'text-slate-400 hover:text-white'
+                        }`}
+                    >
+                        <Calendar size={13} className="shrink-0" />
+                        <span className="truncate">{lang === 'sk' ? 'Zápasy / FDR' : 'Fixtures'}</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setMobileTab('intel')}
+                        className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all ${
+                            mobileTab === 'intel'
+                                ? 'bg-blue-600 text-white shadow-sm'
+                                : 'text-slate-400 hover:text-white'
+                        }`}
+                    >
+                        <Coins size={13} className="shrink-0" />
+                        <span className="truncate">{lang === 'sk' ? 'Kurzy & Top 100' : 'Odds & Top 100'}</span>
+                    </button>
+                </div>
 
-                    return (
-                        <div
-                            key={p.id}
-                            className={`bg-slate-800 border ${isExpanded ? 'border-blue-500/50' : 'border-slate-700'} rounded-xl overflow-hidden transition-all`}
-                        >
-                            {/* Card Header (Clickable) */}
-                            <div
-                                onClick={() => setExpandedPlayerId(isExpanded ? null : p.id)}
-                                className="px-3 py-2 cursor-pointer active:bg-slate-700/50 transition-colors relative"
-                            >
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                                            <span className="text-[11px] text-slate-500 font-mono font-bold">#{idx + 1}</span>
-                                            <span className="font-bold text-white text-base truncate">{p.web_name}</span>
-                                            <span className="text-[11px] px-2 py-0.5 bg-green-500/10 text-green-400 rounded-md font-bold border border-green-500/20 leading-none">{p.form}</span>
-                                            {(p.top100Template || p.top100Signal) && (() => {
-                                                const top100Own = p.top100Template?.top100Own;
-                                                const net = p.top100Signal?.net;
-                                                let text = '';
-                                                if (top100Own != null && net != null && net !== 0) {
-                                                    text = `Top 100: ${top100Own}% own (${net > 0 ? `+${net}` : net})`;
-                                                } else if (top100Own != null) {
-                                                    text = `Top 100: ${top100Own}% own`;
-                                                } else if (net != null) {
-                                                    text = `Top 100: ${net > 0 ? `+${net}` : net} (GW${top100Data?.closedDeadlineGw || 8})`;
-                                                }
-                                                if (!text) return null;
-                                                const isPositive = (net != null && net > 0) || (top100Own != null && top100Own >= 40);
-                                                const isNegative = net != null && net < 0;
-                                                return (
-                                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold leading-none ${
-                                                        isPositive
-                                                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                                                            : isNegative
-                                                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                                                            : 'bg-slate-700/60 text-slate-300 border border-slate-600/50'
-                                                    }`}>
-                                                        {text}
-                                                    </span>
-                                                );
-                                            })()}
+                {/* Mobile Table Container */}
+                <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-lg overflow-hidden">
+                    <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-900/90 text-slate-400 text-[10px] uppercase tracking-wider border-b border-slate-700">
+                                    {/* Sticky Player Header */}
+                                    <th
+                                        onClick={() => handleSort('web_name')}
+                                        className="sticky left-0 z-20 bg-slate-900 py-2.5 px-2.5 min-w-[142px] max-w-[155px] border-r border-slate-700/80 shadow-[4px_0_8px_rgba(0,0,0,0.25)] cursor-pointer select-none"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-slate-500 font-mono mr-1">#</span>
+                                            <span>{t('tp_th_player', lang)}</span>
+                                            {sortConfig.key === 'web_name' && (
+                                                sortConfig.direction === 'asc'
+                                                    ? <ChevronUp size={12} className="text-blue-400 shrink-0" />
+                                                    : <ChevronDown size={12} className="text-blue-400 shrink-0" />
+                                            )}
                                         </div>
-                                        <div className="text-xs text-slate-400 flex items-center gap-1.5 leading-none">
-                                            <span className="truncate">{getTeamShort(p.team)}</span>
-                                            <span className="text-slate-600">|</span>
-                                            <span>£{p.now_cost / 10}</span>
-                                        </div>
-                                    </div>
-                                    <div className="text-right pl-2 shrink-0">
-                                        <div className="text-blue-400 font-black text-2xl leading-none">
-                                            {Math.round(p.transferIndex * 100)}
-                                        </div>
-                                        <div className="text-[10px] text-slate-500 uppercase tracking-tighter">{horizon === 'next' ? 'GW SCORE' : 'INDEX'}</div>
-                                    </div>
-                                    {horizon === 'next' && (p.chance_of_playing_next_round !== null && p.chance_of_playing_next_round < 75) && (
-                                        <div className="absolute top-2 right-12 bg-red-500/10 text-red-500 text-[7px] font-bold px-1.5 py-0.5 rounded border border-red-500/20 uppercase tracking-tighter">
-                                            Risk
-                                        </div>
-                                    )}
-                                </div>
+                                    </th>
 
-                                {/* Metrics & Fixtures Grid */}
-                                <div className="space-y-3 px-3 pb-3">
-                                    <div className="grid grid-cols-2 gap-x-3 gap-y-3">
-                                        {/* Transfer Index Bar */}
-                                        <div className="space-y-0.5">
-                                            <div className="flex justify-between text-[9px] uppercase font-bold text-slate-500">
-                                                <span className="truncate mr-1">{horizon === 'next' ? 'GW SCORE' : 'TRANSFER INDEX'}</span>
-                                                <span className="text-blue-400 font-mono font-black">{Math.round(p.transferIndex * 100)}</span>
-                                            </div>
-                                            <div className="h-2.5 w-full bg-slate-900 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full ${p.transferIndex > 0.7 ? 'bg-green-500' : 'bg-blue-500'}`}
-                                                    style={{ width: `${p.transferIndex * 100}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                        {/* Form Bar */}
-                                        <div className="space-y-0.5">
-                                            <div className="flex justify-between text-[9px] uppercase font-bold text-slate-500">
-                                                <span>FORM</span>
-                                                <span className="text-green-400 font-mono font-black">{p.form}</span>
-                                            </div>
-                                            <div className="h-2.5 w-full bg-slate-900 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-green-500"
-                                                    style={{ width: `${Math.min(1, parseFloat(p.form) / 10) * 100}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                        {/* Dynamic Metric Bar (Diff for 5GW, Minutes for Next GW) */}
-                                        <div className="space-y-0.5">
-                                            <div className="flex justify-between text-[9px] uppercase font-bold text-slate-500">
-                                                <span>{horizon === 'next' ? 'AVAILABILITY' : 'DIFF'}</span>
-                                                <span className={`${horizon === 'next' ? 'text-purple-400' : 'text-purple-500'} font-mono font-black`}>
-                                                    {horizon === 'next' ? `${p.chance_of_playing_next_round ?? 100}%` : diffScore}
-                                                </span>
-                                            </div>
-                                            <div className="h-2.5 w-full bg-slate-900 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full ${horizon === 'next' ? 'bg-purple-400' : 'bg-purple-500'}`}
-                                                    style={{ width: `${horizon === 'next' ? (p.chance_of_playing_next_round ?? 100) : diffWidth}%` }}
-                                                />
-                                            </div>
-                                        </div>
+                                    {/* Always show Index column first so user has main ranking metric across tabs */}
+                                    <SortHeader
+                                        label={horizon === 'next' ? 'GW' : 'IDX'}
+                                        sortKey="transferIndex"
+                                        align="center"
+                                        className="py-2.5 px-2 min-w-[54px]"
+                                    />
 
-                                                                                {/* Ownership Bar */}
-                                        <div className="space-y-0.5">
-                                            <div className="flex justify-between text-[8px] uppercase font-bold text-slate-500">
-                                                <span>OWNERSHIP</span>
-                                                <span className="text-slate-300 font-mono font-black">{p.selected_by_percent}%</span>
-                                            </div>
-                                            <div className="h-2.5 w-full bg-slate-900 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-slate-500"
-                                                    style={{ width: `${Math.min(parseFloat(p.selected_by_percent), 100)}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Goalscorer Odds Pill for MID and FWD */}
-                                    {p.goalscorer && (activePos === 3 || activePos === 4) && showOdds && (
-                                        <div className="flex items-center justify-between bg-slate-900/80 border border-amber-500/30 rounded-lg px-2.5 py-1.5 shadow-sm">
-                                            <span className="text-[10px] font-bold text-amber-400 flex items-center gap-1">
-                                                <Target size={12} className="text-amber-400" /> Strelec:
-                                            </span>
-                                            <div className="flex items-center gap-1.5 font-mono">
-                                                <span className="text-white font-bold text-xs">{p.goalscorer.odds.toFixed(2)}</span>
-                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                                                    p.goalscorer.prob >= 0.45
-                                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                                                        : p.goalscorer.prob >= 0.30
-                                                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                                                        : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                                                }`}>
-                                                    {Math.round(p.goalscorer.prob * 100)}% šanca
-                                                </span>
-                                                <span className="text-[10px] text-slate-400">
-                                                    vs {p.goalscorer.opponentShort} ({p.goalscorer.isHome ? 'H' : 'A'})
-                                                </span>
-                                            </div>
-                                        </div>
+                                    {mobileTab === 'overview' && (
+                                        <>
+                                            <SortHeader label={t('tp_th_price', lang)} sortKey="now_cost" align="center" className="py-2.5 px-2 min-w-[56px]" />
+                                            <SortHeader label={t('tp_th_form', lang)} sortKey="form" align="center" className="py-2.5 px-2 min-w-[54px]" />
+                                            <SortHeader label={lang === 'sk' ? 'Vlast.' : 'Own'} sortKey="selected_by_percent" align="center" className="py-2.5 px-2 min-w-[60px]" />
+                                            <SortHeader label={t('tp_th_start', lang)} sortKey="startProbability" align="center" className="py-2.5 px-2 min-w-[56px]" />
+                                        </>
                                     )}
 
-                                    {/* Fixtures Timeline */}
-                                    <div className="space-y-1.5 pt-2">
-                                        <div className="flex justify-between text-[9px] uppercase font-bold text-slate-500">
-                                            <span>{horizon === 'next' ? 'Next Fixture' : 'Upcoming Fixtures'}</span>
-                                        </div>
-                                        <div className={`flex gap-0.5 h-2.5 ${horizon === 'next' ? 'w-1/2' : 'w-full'} bg-slate-900 rounded-full overflow-hidden`}>
-                                            {p.nextFixtures.slice(0, horizon === 'next' ? 1 : 5).map((f, i) => (
-                                                <div
-                                                    key={i}
-                                                    className={`flex-1 ${getDifficultyColor(f.difficulty)}`}
-                                                    title={f.opponent === 0 ? "BLANK" : `GW${f.event} vs ${getTeamShort(f.opponent)}`}
+                                    {mobileTab === 'fixtures' && (
+                                        <>
+                                            {(horizon === 'next' ? upcomingGwHeaders.slice(0, 1) : upcomingGwHeaders).map((gw) => (
+                                                <SortHeader
+                                                    key={gw}
+                                                    label={`GW${gw}`}
+                                                    sortKey={`GW${gw}`}
+                                                    align="center"
+                                                    className="py-2.5 px-1 min-w-[52px]"
                                                 />
                                             ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Expanded Details */}
-                            {
-                                isExpanded && (
-                                    <div className="px-4 pb-4 pt-4 border-t border-slate-700/50 bg-slate-900/30 animate-in slide-in-from-top-2 duration-200">
-                                        <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm mb-4">
-                                            <div className="flex justify-between items-center text-slate-400 col-span-2 bg-slate-800/50 px-3 py-2 rounded-lg border border-slate-700/30">
-                                                <span className="flex items-center gap-1.5"><Clock size={14} className="text-blue-400" /> Season Minutes</span>
-                                                <span className="text-white font-bold">{p.minutes}</span>
-                                            </div>
-
-                                            {p.goalscorer && isOddsEligible && (
-                                                <div className="flex flex-col gap-2 bg-amber-500/10 p-3 rounded-lg border border-amber-500/20 col-span-2">
-                                                    <div className="flex items-center justify-between flex-wrap gap-1">
-                                                        <span className="text-[10px] text-amber-400 uppercase tracking-widest flex items-center gap-1.5 font-bold">
-                                                            <Coins size={12} /> {lang === 'sk' ? `Fortuna Kurzy (GW${nextEventId} vs ${p.goalscorer.opponentShort})` : `Fortuna Odds (GW${nextEventId} vs ${p.goalscorer.opponentShort})`}
-                                                        </span>
-                                                        <span className="text-[10px] text-slate-400">
-                                                            {lang === 'sk' ? `Očak. xG tímu: ${p.goalscorer.teamExpectedGoals}` : `Team Exp. xG: ${p.goalscorer.teamExpectedGoals}`}
-                                                        </span>
-                                                    </div>
-                                                    <div className="grid grid-cols-3 gap-2 pt-1">
-                                                        {/* Goal */}
-                                                        <div className="bg-slate-900/60 p-2 rounded-lg border border-amber-500/20 flex flex-col items-center text-center">
-                                                            <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Gól' : 'Goal'}</span>
-                                                            <span className="text-white font-mono font-bold text-xs mt-0.5">{p.goalscorer.goal.odds.toFixed(2)}</span>
-                                                            <span className="text-[10px] text-amber-300 font-bold">{Math.round(p.goalscorer.goal.prob * 100)}%</span>
-                                                            <span className="text-[8px] text-slate-500 mt-0.5">{p.goalscorer.goal.source === 'fortuna_live' ? 'Fortuna Live' : 'Model'}</span>
-                                                        </div>
-                                                        {/* Assist */}
-                                                        <div className="bg-slate-900/60 p-2 rounded-lg border border-blue-500/20 flex flex-col items-center text-center">
-                                                            <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Asistencia' : 'Assist'}</span>
-                                                            <span className="text-white font-mono font-bold text-xs mt-0.5">{p.goalscorer.assist.odds.toFixed(2)}</span>
-                                                            <span className="text-[10px] text-blue-300 font-bold">{Math.round(p.goalscorer.assist.prob * 100)}%</span>
-                                                            <span className="text-[8px] text-slate-500 mt-0.5">{p.goalscorer.assist.source === 'fortuna_live' ? 'Fortuna Live' : 'Model'}</span>
-                                                        </div>
-                                                        {/* G+A */}
-                                                        <div className="bg-slate-900/60 p-2 rounded-lg border border-emerald-500/20 flex flex-col items-center text-center">
-                                                            <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Gól + Asist.' : 'G+A'}</span>
-                                                            <span className="text-white font-mono font-bold text-xs mt-0.5">{p.goalscorer.goalOrAssist.odds.toFixed(2)}</span>
-                                                            <span className="text-[10px] text-emerald-300 font-bold">{Math.round(p.goalscorer.goalOrAssist.prob * 100)}%</span>
-                                                            <span className="text-[8px] text-slate-500 mt-0.5">{p.goalscorer.goalOrAssist.source === 'fortuna_live' ? 'Fortuna Live' : 'Model'}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                            {horizon === 'next5' ? (
+                                                <SortHeader
+                                                    label={t('tp_th_diff', lang)}
+                                                    sortKey="fixtureDifficultySum"
+                                                    align="center"
+                                                    className="py-2.5 px-2 min-w-[52px]"
+                                                />
+                                            ) : (
+                                                <>
+                                                    <SortHeader label={t('tp_th_start', lang)} sortKey="startProbability" align="center" className="py-2.5 px-2 min-w-[58px]" />
+                                                    <SortHeader label={t('tp_th_form', lang)} sortKey="form" align="center" className="py-2.5 px-2 min-w-[54px]" />
+                                                </>
                                             )}
+                                        </>
+                                    )}
 
-                                            {(p.top100Signal || p.top100Template) && (
-                                                <div className="flex flex-col gap-1 bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/50 col-span-2">
-                                                    <div className="flex justify-between items-center text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                                                        <span>Top 100 Manažéri (GW{top100Data?.closedDeadlineGw || 8} uzávierka)</span>
-                                                        {p.top100Template?.top100Own != null && (
-                                                            <span className="text-white font-mono font-bold">{p.top100Template.top100Own}% tímov</span>
-                                                        )}
-                                                    </div>
-                                                    {p.top100Signal && (
-                                                        <div className="flex items-center justify-between text-xs text-slate-300">
-                                                            <span>Kúpené: <b className="text-white font-mono">{p.top100Signal.in}x</b> · Predané: <b className="text-white font-mono">{p.top100Signal.out}x</b></span>
-                                                            <span className="text-xs font-mono font-bold text-slate-400">Net {p.top100Signal.net > 0 ? `+${p.top100Signal.net}` : p.top100Signal.net}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                    {mobileTab === 'intel' && (
+                                        <>
+                                            {isOddsEligible && showOdds && (
+                                                <SortHeader
+                                                    label={
+                                                        effectiveOddsMetric === 'cs'
+                                                            ? (lang === 'sk' ? 'Č. konto' : 'CS Odds')
+                                                            : effectiveOddsMetric === 'assist'
+                                                            ? (lang === 'sk' ? 'Asist %' : 'Ast Odds')
+                                                            : effectiveOddsMetric === 'ga'
+                                                            ? (lang === 'sk' ? 'G+A %' : 'G+A Odds')
+                                                            : (lang === 'sk' ? 'Gól %' : 'Goal Odds')
+                                                    }
+                                                    sortKey="goalProb"
+                                                    align="center"
+                                                    className="py-2.5 px-2 min-w-[82px] text-amber-400"
+                                                />
                                             )}
+                                            <SortHeader
+                                                label="Top 100 %"
+                                                sortKey="top100Own"
+                                                align="center"
+                                                className="py-2.5 px-2 min-w-[74px]"
+                                            />
+                                            <SortHeader
+                                                label="Top 100 Net"
+                                                sortKey="top100Net"
+                                                align="center"
+                                                className="py-2.5 px-2 min-w-[78px]"
+                                            />
+                                        </>
+                                    )}
+                                </tr>
+                            </thead>
 
-                                            <div className="flex flex-col gap-1 bg-slate-800/30 p-2.5 rounded-lg border border-slate-700/20">
-                                                <span className="text-[9px] text-slate-500 uppercase tracking-widest flex items-center gap-1">
-                                                    Risk vs Form <HelpCircle size={8} />
-                                                </span>
-                                                <span className="text-xs font-mono text-blue-300">{p.eoFormRatio.toFixed(1)}</span>
-                                            </div>
-                                            <div className="flex flex-col gap-1 bg-slate-800/30 p-2.5 rounded-lg border border-slate-700/20">
-                                                <span className="text-[9px] text-slate-500 uppercase tracking-widest flex items-center gap-1">
-                                                    Risk vs Output <HelpCircle size={8} />
-                                                </span>
-                                                <span className="text-xs font-mono text-blue-300">{p.eoPtsRatio.toFixed(2)}</span>
-                                            </div>
-                                        </div>
+                            <tbody className="divide-y divide-slate-700/50 text-xs">
+                                {displayPlayers.map((p, idx) => {
+                                    const isTopPick = idx < 3;
+                                    const stickyBgClass = isTopPick ? 'bg-slate-800' : 'bg-slate-800';
 
-                                        {/* Detailed Fixtures List */}
-                                        <div className="mt-4 bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                                                <Calendar size={12} className="text-purple-400" /> Upcoming Fixtures
-                                            </p>
-                                            <div className="space-y-0.5">
-                                                {p.nextFixtures.slice(0, 5).map((f, i) => (
-                                                    <div key={i} className="flex justify-between items-center text-xs py-0 border-b border-slate-800/50 last:border-0">
-                                                        <span className={`font-medium ${f.difficulty <= 2 ? 'text-green-400' : f.difficulty >= 4 ? 'text-orange-400' : 'text-slate-300'}`}>
-                                                            GW{f.event} vs {f.opponent === 0 ? 'BLANK' : getTeamShort(f.opponent)} ({f.opponent === 0 ? '-' : (f.isHome ? 'H' : 'A')})
-                                                        </span>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-[10px] text-slate-500 font-mono uppercase">Diff</span>
-                                                            <span className={`w-5 h-5 flex items-center justify-center rounded text-[10px] font-bold ${getDifficultyColor(f.difficulty)}`}>
-                                                                {f.difficulty}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedPlayerForDetail(p);
-                                            }}
-                                            className="w-full mt-3 py-2 px-3 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 hover:text-white border border-blue-500/40 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                                    return (
+                                        <tr
+                                            key={p.id}
+                                            className={`active:bg-slate-700/40 transition-colors ${
+                                                isTopPick ? 'bg-emerald-500/5' : ''
+                                            }`}
                                         >
-                                            <Activity size={14} />
-                                            <span>Zobraziť GW históriu a ligové rebríčky</span>
-                                        </button>
-                                    </div>
-                                )
-                            }
-                        </div>
-                    );
-                })}
+                                            {/* Sticky Left Column: Rank + Player Name + Team */}
+                                            <td
+                                                onClick={() => setSelectedPlayerForDetail(p)}
+                                                className={`sticky left-0 z-10 ${stickyBgClass} py-2.5 px-2.5 min-w-[142px] max-w-[155px] border-r border-slate-700/80 shadow-[4px_0_8px_rgba(0,0,0,0.25)] cursor-pointer ${
+                                                    isTopPick ? 'border-l-2 border-l-emerald-500' : ''
+                                                }`}
+                                            >
+                                                <div className="flex items-start gap-1.5">
+                                                    <span className="text-[10px] font-mono text-slate-500 font-bold w-4 shrink-0 pt-0.5">
+                                                        {idx + 1}
+                                                    </span>
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="font-bold text-white text-xs truncate">
+                                                                {p.web_name}
+                                                            </span>
+                                                            {p.chance_of_playing_next_round !== null && p.chance_of_playing_next_round < 75 && (
+                                                                <AlertTriangle size={10} className="text-red-500 shrink-0" />
+                                                            )}
+                                                        </div>
+                                                        <div className="text-[10px] text-slate-400 flex items-center gap-1 leading-tight mt-0.5">
+                                                            <span className="font-mono">{getTeamShort(p.team)}</span>
+                                                            {mobileTab !== 'overview' && (
+                                                                <>
+                                                                    <span className="text-slate-600">•</span>
+                                                                    <span className="font-mono text-blue-300">£{p.now_cost / 10}</span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            {/* Index Cell (Always visible across tabs) */}
+                                            <td className="py-2.5 px-2 text-center">
+                                                <div className="inline-flex flex-col items-center gap-0.5 min-w-[36px]">
+                                                    <span
+                                                        className={`font-black font-mono text-xs leading-none ${
+                                                            p.transferIndex > 0.7
+                                                                ? 'text-green-400'
+                                                                : p.transferIndex > 0.5
+                                                                ? 'text-blue-400'
+                                                                : 'text-slate-300'
+                                                        }`}
+                                                    >
+                                                        {Math.round(p.transferIndex * 100)}
+                                                    </span>
+                                                    <div className="w-8 h-1 bg-slate-700 rounded-full overflow-hidden">
+                                                        <div
+                                                            className={`h-full ${p.transferIndex > 0.7 ? 'bg-green-500' : 'bg-blue-500'}`}
+                                                            style={{ width: `${p.transferIndex * 100}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            {/* TAB 1: OVERVIEW */}
+                                            {mobileTab === 'overview' && (
+                                                <>
+                                                    <td className="py-2.5 px-2 text-center font-mono text-blue-300 text-xs font-semibold">
+                                                        £{p.now_cost / 10}
+                                                    </td>
+                                                    <td className="py-2.5 px-2 text-center font-mono font-bold text-white text-xs">
+                                                        <span className="px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">
+                                                            {p.form}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-2.5 px-2 text-center font-mono text-slate-300 text-xs">
+                                                        {p.selected_by_percent}%
+                                                    </td>
+                                                    <td className="py-2.5 px-2 text-center font-mono text-slate-300 text-xs">
+                                                        {Math.round(p.startProbability * 100)}%
+                                                    </td>
+                                                </>
+                                            )}
+
+                                            {/* TAB 2: FIXTURES / FDR */}
+                                            {mobileTab === 'fixtures' && (
+                                                <>
+                                                    {(horizon === 'next' ? upcomingGwHeaders.slice(0, 1) : upcomingGwHeaders).map((gw) => {
+                                                        const fix = p.nextFixtures.find(f => f.event === gw);
+                                                        if (!fix || fix.opponent === 0) {
+                                                            return (
+                                                                <td key={gw} className="py-1.5 px-1 text-center min-w-[52px]">
+                                                                    <div className="w-full h-7 bg-slate-900 rounded flex items-center justify-center text-[10px] text-slate-600">
+                                                                        -
+                                                                    </div>
+                                                                </td>
+                                                            );
+                                                        }
+                                                        const oppShort = getTeamShort(fix.opponent);
+                                                        const colorClass = getDifficultyColor(fix.difficulty);
+                                                        return (
+                                                            <td key={gw} className="py-1.5 px-1 text-center min-w-[52px]">
+                                                                <div className={`w-full h-7 rounded flex flex-col items-center justify-center shadow-sm ${colorClass}`}>
+                                                                    <span className="text-[10px] font-bold leading-none">{oppShort}</span>
+                                                                    <span className="text-[8px] opacity-85 leading-none mt-0.5">
+                                                                        ({fix.isHome ? (lang === 'sk' ? 'D' : 'H') : (lang === 'sk' ? 'V' : 'A')})
+                                                                    </span>
+                                                                </div>
+                                                            </td>
+                                                        );
+                                                    })}
+                                                    {horizon === 'next5' ? (
+                                                        <td className="py-2.5 px-2 text-center font-mono font-bold text-slate-300 text-xs">
+                                                            {p.fixtureDifficultySum}
+                                                        </td>
+                                                    ) : (
+                                                        <>
+                                                            <td className="py-2.5 px-2 text-center font-mono text-slate-300 text-xs">
+                                                                {Math.round(p.startProbability * 100)}%
+                                                            </td>
+                                                            <td className="py-2.5 px-2 text-center font-mono font-bold text-green-400 text-xs">
+                                                                {p.form}
+                                                            </td>
+                                                        </>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {/* TAB 3: ODDS & TOP 100 */}
+                                            {mobileTab === 'intel' && (
+                                                <>
+                                                    {isOddsEligible && showOdds && (
+                                                        <td className="py-2 px-2 text-center">
+                                                            {(() => {
+                                                                const metric = getLiveOddsMetric(p);
+                                                                if (!metric || !p.goalscorer) {
+                                                                    return <span className="text-slate-600 font-mono text-xs">-</span>;
+                                                                }
+                                                                const metricOdds = metric.odds;
+                                                                const metricProb = metric.prob;
+                                                                return (
+                                                                    <div className="flex flex-col items-center justify-center leading-tight">
+                                                                        <div className="flex items-center gap-1">
+                                                                            <span className="font-mono font-bold text-white text-[11px]">
+                                                                                {metricOdds.toFixed(2)}
+                                                                            </span>
+                                                                            <span
+                                                                                className={`text-[9px] font-bold px-1 py-0.2 rounded font-mono ${
+                                                                                    metricProb >= 0.40
+                                                                                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                                                                        : metricProb >= 0.25
+                                                                                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                                                                        : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                                                                }`}
+                                                                            >
+                                                                                {Math.round(metricProb * 100)}%
+                                                                            </span>
+                                                                        </div>
+                                                                        <span className="text-[9px] text-slate-400 mt-0.5">
+                                                                            vs {metric.opponentShort || p.goalscorer.opponentShort} ({(metric.isHome ?? p.goalscorer.isHome) ? (lang === 'sk' ? 'D' : 'H') : (lang === 'sk' ? 'V' : 'A')})
+                                                                        </span>
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </td>
+                                                    )}
+
+                                                    {/* Top 100 Ownership */}
+                                                    <td className="py-2.5 px-2 text-center font-mono text-xs">
+                                                        {p.top100Template?.top100Own != null ? (
+                                                            <span
+                                                                className={`px-1.5 py-0.5 rounded font-bold ${
+                                                                    p.top100Template.top100Own >= 40
+                                                                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                                                        : 'bg-slate-700/60 text-slate-200 border border-slate-600/50'
+                                                                }`}
+                                                            >
+                                                                {p.top100Template.top100Own}%
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-600">-</span>
+                                                        )}
+                                                    </td>
+
+                                                    {/* Top 100 Net Transfers */}
+                                                    <td className="py-2.5 px-2 text-center font-mono text-xs">
+                                                        {p.top100Signal?.net != null && p.top100Signal.net !== 0 ? (
+                                                            <div className="flex flex-col items-center leading-tight">
+                                                                <span
+                                                                    className={`font-bold ${
+                                                                        p.top100Signal.net > 0 ? 'text-emerald-400' : 'text-rose-400'
+                                                                    }`}
+                                                                >
+                                                                    {p.top100Signal.net > 0 ? `+${p.top100Signal.net}` : p.top100Signal.net}
+                                                                </span>
+                                                                <span className="text-[9px] text-slate-500">
+                                                                    +{p.top100Signal.in}/-{p.top100Signal.out}
+                                                                </span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-slate-600">-</span>
+                                                        )}
+                                                    </td>
+                                                </>
+                                            )}
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="px-3 py-2 bg-slate-900/60 border-t border-slate-700/60 text-[10px] text-slate-400 flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                            <Info size={11} className="text-blue-400 shrink-0" />
+                            {lang === 'sk' ? 'Ťukni na meno hráča pre detail a históriu' : 'Tap player name for full details'}
+                        </span>
+                        <span className="font-mono text-slate-500">Top {displayPlayers.length}</span>
+                    </div>
+                </div>
             </div>
 
             {/* Main Table (Desktop Only) */}
@@ -810,9 +913,11 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                 {isOddsEligible && showOdds && (
                                     <SortHeader
                                         label={
-                                            oddsMetric === 'assist'
+                                            effectiveOddsMetric === 'cs'
+                                                ? t('tp_th_cs_odds', lang)
+                                                : effectiveOddsMetric === 'assist'
                                                 ? t('tp_th_assist_odds', lang)
-                                                : oddsMetric === 'ga'
+                                                : effectiveOddsMetric === 'ga'
                                                 ? t('tp_th_ga_odds', lang)
                                                 : t('tp_th_goal_odds', lang)
                                         }
@@ -925,18 +1030,16 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                             {Math.round(p.startProbability * 100)}%
                                         </td>
 
-                                        {/* Odds for DEF, MID and FWD */}
+                                        {/* Odds for GKP, DEF, MID and FWD */}
                                         {isOddsEligible && showOdds && (
                                             <td className="py-2 px-2 text-center">
-                                                {p.goalscorer ? (() => {
-                                                    const metric = oddsMetric === 'assist'
-                                                        ? p.goalscorer.assist
-                                                        : oddsMetric === 'ga'
-                                                        ? p.goalscorer.goalOrAssist
-                                                        : p.goalscorer.goal;
-                                                    const metricOdds = metric?.odds ?? 0;
-                                                    const metricProb = metric?.prob ?? 0;
-                                                    const isLive = metric?.source === 'fortuna_live';
+                                                {(() => {
+                                                    const metric = getLiveOddsMetric(p);
+                                                    if (!metric || !p.goalscorer) {
+                                                        return <span className="text-slate-600 font-mono text-xs">-</span>;
+                                                    }
+                                                    const metricOdds = metric.odds;
+                                                    const metricProb = metric.prob;
 
                                                     return (
                                                         <div className="flex flex-col items-center justify-center gap-0.5">
@@ -954,21 +1057,19 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                                     }`}
                                                                     title={
                                                                         lang === 'sk'
-                                                                            ? `${oddsMetric === 'assist' ? 'Šanca na asistenciu' : oddsMetric === 'ga' ? 'Šanca na gól alebo asistenciu' : 'Šanca na gól'}: ${Math.round(metricProb * 100)}% (${isLive ? 'Fortuna Live kurz' : 'Model'})`
-                                                                            : `${oddsMetric === 'assist' ? 'Assist probability' : oddsMetric === 'ga' ? 'Goal or Assist probability' : 'Goal probability'}: ${Math.round(metricProb * 100)}% (${isLive ? 'Fortuna Live' : 'Model'})`
+                                                                            ? `${effectiveOddsMetric === 'cs' ? 'Šanca na čisté konto' : effectiveOddsMetric === 'assist' ? 'Šanca na asistenciu' : effectiveOddsMetric === 'ga' ? 'Šanca na gól alebo asistenciu' : 'Šanca na gól'}: ${Math.round(metricProb * 100)}% (Fortuna Live kurz)`
+                                                                            : `${effectiveOddsMetric === 'cs' ? 'Clean sheet probability' : effectiveOddsMetric === 'assist' ? 'Assist probability' : effectiveOddsMetric === 'ga' ? 'Goal or Assist probability' : 'Goal probability'}: ${Math.round(metricProb * 100)}% (Fortuna Live)`
                                                                     }
                                                                 >
                                                                     {Math.round(metricProb * 100)}%
                                                                 </span>
                                                             </div>
                                                             <span className="text-[9px] text-slate-400">
-                                                                vs {p.goalscorer.opponentShort} ({p.goalscorer.isHome ? (lang === 'sk' ? 'D' : 'H') : (lang === 'sk' ? 'V' : 'A')})
+                                                                vs {metric.opponentShort || p.goalscorer.opponentShort} ({(metric.isHome ?? p.goalscorer.isHome) ? (lang === 'sk' ? 'D' : 'H') : (lang === 'sk' ? 'V' : 'A')})
                                                             </span>
                                                         </div>
                                                     );
-                                                })() : (
-                                                    <span className="text-slate-600 font-mono text-xs">-</span>
-                                                )}
+                                                })()}
                                             </td>
                                         )}
 
