@@ -7,7 +7,6 @@ import {
   X,
   Trophy,
   Search,
-  CalendarRange,
   Calendar,
   ArrowLeftRight,
   Shirt,
@@ -23,7 +22,6 @@ export default function ScoutHeader() {
   const navLinks = [
     { href: '/?v=LEAGUE_TABLE', label: 'League Table', icon: Trophy },
     { href: '/?v=TEAM_ANALYSIS', label: 'Team Analysis', icon: Search },
-    { href: '/?v=PERIOD_ANALYSIS', label: 'Period Analysis', icon: CalendarRange },
     { href: '/?v=FIXTURES', label: 'Fixtures', icon: Calendar },
     { href: '/?v=TRANSFER_PICKS', label: 'Transfer Picks', icon: ArrowLeftRight },
     { href: '/?v=TOP_MANAGERS', label: 'Top Managers', icon: Users },

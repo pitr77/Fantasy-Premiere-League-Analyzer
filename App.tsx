@@ -38,7 +38,6 @@ import {
   Activity,
   Zap,
   Search,
-  CalendarRange,
   Split,
   TriangleAlert
 } from 'lucide-react';
@@ -343,7 +342,6 @@ function App() {
             <HeaderNavItem v={View.STATS} label={t('nav_player_stats', lang)} />
             <HeaderNavItem v={View.LEAGUE_TABLE} label={t('nav_league_table', lang)} />
             <HeaderNavItem v={View.TEAM_ANALYSIS} label={t('nav_team_analysis', lang)} />
-            <HeaderNavItem v={View.PERIOD_ANALYSIS} label={t('nav_period_analysis', lang)} />
             <HeaderNavItem v={View.TOP_MANAGERS} label={t('nav_top_managers', lang)} />
             <HeaderNavItem v={View.LEAGUE_OWNERSHIP} label={t('nav_league_ownership', lang)} />
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.OPTIMAL_SQUAD} label={t('nav_optimal_squad', lang)} />}
@@ -409,7 +407,6 @@ function App() {
             <NavItem v={View.STATS} label={t('nav_player_stats', lang)} icon={BarChart2} />
             <NavItem v={View.LEAGUE_TABLE} label={t('nav_league_table', lang)} icon={Trophy} />
             <NavItem v={View.TEAM_ANALYSIS} label={t('nav_team_analysis', lang)} icon={Search} />
-            <NavItem v={View.PERIOD_ANALYSIS} label={t('nav_period_analysis', lang)} icon={CalendarRange} />
             <NavItem v={View.DETAILED_STATS} label={lang === 'sk' ? 'Detailné analýzy' : 'Detailed Analyses'} icon={Activity} />
             <NavItem v={View.TOP_MANAGERS} label={t('nav_top_managers', lang)} icon={Users} />
             <NavItem v={View.LEAGUE_OWNERSHIP} label={t('nav_league_ownership', lang)} icon={Trophy} />
