@@ -548,7 +548,7 @@ const PeriodAnalysis: React.FC<PeriodAnalysisProps> = ({ players, teams, events 
                                         <span className="text-[7px] sm:text-[9px] font-bold text-slate-500 uppercase tracking-tighter">GW{h.round}</span>
                                       </div>
                                     )}
-                                    <div className={`w-5 h-5 sm:w-6 sm:h-6 flex-none flex items-center justify-center text-[9px] sm:text-[10px] font-bold rounded-md border ${h.points >= 10 ? 'bg-purple-600 text-white' : h.points >= 6 ? 'bg-green-600 text-white' : h.points > 2 ? 'bg-slate-600 text-white' : 'bg-slate-800 text-slate-500'}`}>
+                                    <div className={`w-5 h-5 sm:w-6 sm:h-6 flex-none flex items-center justify-center text-[9px] sm:text-[10px] font-bold rounded-md border ${h.points >= 10 ? 'bg-amber-500 border-amber-400 text-slate-950 font-black shadow-[0_0_8px_rgba(245,158,11,0.3)]' : h.points >= 6 ? 'bg-green-600 border-green-500 text-white' : h.points > 2 ? 'bg-slate-600 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-500'}`}>
                                       {h.points}
                                     </div>
                                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/badge:block w-max px-2 py-1 bg-slate-900 border border-slate-700 rounded text-[9px] text-white z-50 pointer-events-none">
