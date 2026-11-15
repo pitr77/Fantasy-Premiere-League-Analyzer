@@ -653,22 +653,15 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
 
                             <tbody className="divide-y divide-slate-700/50 text-xs">
                                 {displayPlayers.map((p, idx) => {
-                                    const isTopPick = idx < 3;
-                                    const stickyBgClass = isTopPick ? 'bg-slate-800' : 'bg-slate-800';
-
                                     return (
                                         <tr
                                             key={p.id}
-                                            className={`active:bg-slate-700/40 transition-colors ${
-                                                isTopPick ? 'bg-emerald-500/5' : ''
-                                            }`}
+                                            className="active:bg-slate-700/40 transition-colors"
                                         >
                                             {/* Sticky Left Column: Rank + Player Name + Team */}
                                             <td
                                                 onClick={() => setSelectedPlayerForDetail(p)}
-                                                className={`sticky left-0 z-10 ${stickyBgClass} py-2.5 px-2.5 min-w-[142px] max-w-[155px] border-r border-slate-700/80 shadow-[4px_0_8px_rgba(0,0,0,0.25)] cursor-pointer ${
-                                                    isTopPick ? 'border-l-2 border-l-emerald-500' : ''
-                                                }`}
+                                                className="sticky left-0 z-10 bg-slate-800 py-2.5 px-2.5 min-w-[142px] max-w-[155px] border-r border-slate-700/80 shadow-[4px_0_8px_rgba(0,0,0,0.25)] cursor-pointer"
                                             >
                                                 <div className="flex items-start gap-1.5">
                                                     <span className="text-[10px] font-mono text-slate-500 font-bold w-4 shrink-0 pt-0.5">
@@ -935,12 +928,10 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                         </thead>
                         <tbody className="divide-y divide-slate-700/50 text-sm">
                             {displayPlayers.map((p, idx) => {
-                                const isTopPick = idx < 3;
                                 return (
                                     <tr
                                         key={p.id}
-                                        className={`hover:bg-slate-700/30 transition-all group relative ${isTopPick ? 'bg-emerald-500/5 border-l-2 border-emerald-500/50' : ''
-                                            }`}
+                                        className="hover:bg-slate-700/30 transition-all group relative"
                                     >
                                         <td className="py-3 px-2 text-center text-slate-500 font-mono text-xs">{idx + 1}</td>
                                         <td className="py-3 px-3 text-left">
