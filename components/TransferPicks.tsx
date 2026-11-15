@@ -35,6 +35,13 @@ interface PlayerTransferStats extends FPLPlayer {
     top100Template?: Top100TemplateTierPlayer | null;
 }
 
+const POS_BADGE_CONFIG: Record<number, { short: string; color: string }> = {
+    1: { short: "GKP", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
+    2: { short: "DEF", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+    3: { short: "MID", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+    4: { short: "FWD", color: "bg-rose-500/20 text-rose-400 border-rose-500/30" },
+};
+
 const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures, events }) => {
     const [lang] = useLanguage();
     const [activePos, setActivePos] = useState<number | 'all'>('all'); // Default All
@@ -678,9 +685,9 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                         </div>
                                                         <div className="text-[10px] text-slate-400 flex items-center gap-1 leading-tight mt-0.5">
                                                             <span className="font-mono">{getTeamShort(p.team)}</span>
-                                                            {activePos === 'all' && (
-                                                                <span className="font-mono text-[9px] text-slate-400 font-bold px-1 rounded bg-slate-700/60 border border-slate-600/40">
-                                                                    {({ 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' } as Record<number, string>)[p.element_type]}
+                                                            {activePos === 'all' && POS_BADGE_CONFIG[p.element_type] && (
+                                                                <span className={`font-mono text-[9px] font-bold px-1 rounded border ${POS_BADGE_CONFIG[p.element_type].color}`}>
+                                                                    {POS_BADGE_CONFIG[p.element_type].short}
                                                                 </span>
                                                             )}
                                                             {mobileTab !== 'overview' && (
@@ -980,9 +987,9 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                             </div>
                                             <div className="text-xs text-slate-500 flex items-center gap-1.5">
                                                 {getTeamShort(p.team)}
-                                                {activePos === 'all' && (
-                                                    <span className="font-mono text-[10px] text-slate-400 font-bold px-1.5 py-0.5 rounded bg-slate-700/60 border border-slate-600/40">
-                                                        {({ 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' } as Record<number, string>)[p.element_type]}
+                                                {activePos === 'all' && POS_BADGE_CONFIG[p.element_type] && (
+                                                    <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border ${POS_BADGE_CONFIG[p.element_type].color}`}>
+                                                        {POS_BADGE_CONFIG[p.element_type].short}
                                                     </span>
                                                 )}
                                                 {horizon === 'next' && (p.chance_of_playing_next_round !== null && p.chance_of_playing_next_round < 75) && (
