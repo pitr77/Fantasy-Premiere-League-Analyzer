@@ -184,6 +184,8 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
 
   // Floating hover state for individual form pill
   const [hoveredForm, setHoveredForm] = useState<{
+    teamId: number;
+    opponentId: number;
     teamName: string;
     opponentName: string;
     score: string;
@@ -584,6 +586,9 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                 const nextMatch = nextFixtureMap[row.id];
                 const last5 = row.form.slice(-5).reverse();
 
+                const isSourceTeam = hoveredForm?.teamId === row.id;
+                const isOpponentTeam = hoveredForm?.opponentId === row.id;
+
                 // Flashscore Qualification Zone left borders (applied in overall mode)
                 let zoneBorder = 'border-l-[3px] border-l-transparent';
                 if (locationFilter === 'all') {
@@ -598,56 +603,80 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                   }
                 }
 
+                // Sticky cell backgrounds matching highlight state
+                const stickyBg = isOpponentTeam
+                  ? 'bg-blue-950/95 text-blue-200'
+                  : isSourceTeam
+                  ? 'bg-slate-700/95'
+                  : 'bg-slate-800 group-hover:bg-slate-700';
+
+                const rowHighlightClass = isOpponentTeam
+                  ? 'bg-blue-950/60 ring-1 ring-inset ring-blue-500/60 transition-colors shadow-inner'
+                  : isSourceTeam
+                  ? 'bg-slate-700/40 transition-colors'
+                  : 'hover:bg-slate-700/30 transition-colors group';
+
+                const cellBgClass = isOpponentTeam ? 'bg-blue-950/30' : '';
+
                 return (
                   <tr
                     key={row.id}
-                    className="hover:bg-slate-700/30 transition-colors group"
+                    className={rowHighlightClass}
                   >
                     {/* Rank (#) - Sticky Left with Flashscore Zone Accent */}
                     <td
-                      className={`py-2.5 px-1 sm:px-2 text-center sticky left-0 z-20 bg-slate-800 transition-colors group-hover:bg-slate-700 border-b border-slate-700/50 border-r border-slate-700 ${zoneBorder}`}
+                      className={`py-2.5 px-1 sm:px-2 text-center sticky left-0 z-20 transition-colors border-b border-slate-700/50 border-r border-slate-700 ${stickyBg} ${
+                        isOpponentTeam ? 'border-l-[3px] !border-l-blue-400 font-bold' : zoneBorder
+                      }`}
                     >
-                      <span className="font-mono font-bold text-slate-300 text-xs md:text-sm">
+                      <span className="font-mono font-bold text-xs md:text-sm">
                         {pos}
                       </span>
                     </td>
 
                     {/* Team Name & Crest - Sticky Left */}
                     <td
-                      className="py-2.5 px-2.5 sm:px-3 font-bold text-white sticky left-10 sm:left-12 z-20 bg-slate-800 transition-colors group-hover:bg-slate-700 border-b border-slate-700/50 border-r border-slate-700 shadow-[2px_0_6px_rgba(0,0,0,0.25)] truncate"
+                      className={`py-2.5 px-2.5 sm:px-3 font-bold text-white sticky left-10 sm:left-12 z-20 transition-colors border-b border-slate-700/50 border-r border-slate-700 shadow-[2px_0_6px_rgba(0,0,0,0.25)] truncate ${stickyBg}`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <TeamIcon code={row.short_name} alt={row.name} size={20} />
                         <span className="hidden sm:inline truncate">{row.name}</span>
                         <span className="sm:hidden truncate">{row.short_name}</span>
+
+                        {/* Opponent highlight indicator pill */}
+                        {isOpponentTeam && (
+                          <span className="ml-1 px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-blue-500/30 text-blue-200 border border-blue-400/50 animate-pulse shrink-0">
+                            {lang === 'sk' ? 'SÚPER' : 'OPPONENT'}
+                          </span>
+                        )}
                       </div>
                     </td>
 
                     {/* Matches Played */}
-                    <td className="py-2.5 px-2 text-center text-slate-300 border-b border-slate-700/50 font-mono">
+                    <td className={`py-2.5 px-2 text-center text-slate-300 border-b border-slate-700/50 font-mono ${cellBgClass}`}>
                       {row.played}
                     </td>
 
                     {/* Full View Columns */}
                     {viewMode === 'full' && (
                       <>
-                        <td className="py-2.5 px-2 text-center text-emerald-400 border-b border-slate-700/50 font-mono font-semibold">
+                        <td className={`py-2.5 px-2 text-center text-emerald-400 border-b border-slate-700/50 font-mono font-semibold ${cellBgClass}`}>
                           {row.win}
                         </td>
-                        <td className="py-2.5 px-2 text-center text-slate-400 border-b border-slate-700/50 font-mono">
+                        <td className={`py-2.5 px-2 text-center text-slate-400 border-b border-slate-700/50 font-mono ${cellBgClass}`}>
                           {row.draw}
                         </td>
-                        <td className="py-2.5 px-2 text-center text-rose-400 border-b border-slate-700/50 font-mono">
+                        <td className={`py-2.5 px-2 text-center text-rose-400 border-b border-slate-700/50 font-mono ${cellBgClass}`}>
                           {row.loss}
                         </td>
-                        <td className="py-2.5 px-2 text-center text-slate-300 border-b border-slate-700/50 font-mono hidden sm:table-cell">
+                        <td className={`py-2.5 px-2 text-center text-slate-300 border-b border-slate-700/50 font-mono hidden sm:table-cell ${cellBgClass}`}>
                           {row.gf}:{row.ga}
                         </td>
                       </>
                     )}
 
                     {/* Goal Difference */}
-                    <td className="py-2.5 px-2 text-center border-b border-slate-700/50 font-mono">
+                    <td className={`py-2.5 px-2 text-center border-b border-slate-700/50 font-mono ${cellBgClass}`}>
                       <span
                         className={`font-semibold ${
                           row.gf - row.ga > 0
@@ -663,12 +692,14 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                     </td>
 
                     {/* Points */}
-                    <td className="py-2.5 px-2 text-center border-b border-slate-700/50 font-mono font-black text-white text-xs md:text-base bg-slate-900/30">
+                    <td className={`py-2.5 px-2 text-center border-b border-slate-700/50 font-mono font-black text-white text-xs md:text-base ${
+                      isOpponentTeam ? 'bg-blue-900/40 text-blue-100' : 'bg-slate-900/30'
+                    }`}>
                       {row.pts}
                     </td>
 
                     {/* Form Pills (Flashscore Style) */}
-                    <td className="py-2.5 px-2 md:px-3 text-center border-b border-slate-700/50">
+                    <td className={`py-2.5 px-2 md:px-3 text-center border-b border-slate-700/50 ${cellBgClass}`}>
                       <div className="flex items-center justify-center gap-1">
                         {last5.length === 0 ? (
                           <span className="text-slate-500 text-xs font-mono">—</span>
@@ -695,6 +726,8 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                                 onMouseEnter={(e) => {
                                   const rect = e.currentTarget.getBoundingClientRect();
                                   setHoveredForm({
+                                    teamId: row.id,
+                                    opponentId: match.opponent,
                                     teamName: row.name,
                                     opponentName: oppName,
                                     score: match.score,
@@ -717,7 +750,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                     </td>
 
                     {/* Next Match Fixture Badge */}
-                    <td className="py-2.5 px-2 text-center border-b border-slate-700/50">
+                    <td className={`py-2.5 px-2 text-center border-b border-slate-700/50 ${cellBgClass}`}>
                       {nextMatch ? (
                         <div
                           title={`GW${nextMatch.event || ''} vs ${nextMatch.opponentName} (${nextMatch.isHome ? 'H' : 'A'})`}
