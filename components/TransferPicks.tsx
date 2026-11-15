@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { FPLPlayer, FPLTeam, FPLEvent, FPLFixture } from '../types';
-import { ArrowLeftRight, TrendingUp, Calendar, DollarSign, Filter, Info, ChevronDown, ChevronUp, Calculator, Activity, HelpCircle, ArrowUpDown, Clock, Users, ChevronRight, AlertTriangle, Coins, RefreshCw, Target, Flame } from 'lucide-react';
+import { ArrowLeftRight, TrendingUp, Calendar, DollarSign, Filter, Info, ChevronDown, ChevronUp, Calculator, Activity, HelpCircle, ArrowUpDown, Clock, Users, ChevronRight, AlertTriangle, Coins, RefreshCw, Target, Flame, Sparkles } from 'lucide-react';
 import ResultChip from './ResultChip';
 import { calculateLeaguePositions, getDynamicDifficulty } from '../lib/fdrModel';
 import { computeTransferIndexForPlayers, TransferIndexResult } from '../lib/transferIndex';
@@ -11,7 +11,7 @@ import { getGoalscorerOdds, GoalscorerOddsResult } from '../lib/goalscorerModel'
 import { Top100Snapshot, Top100PlayerSignal, Top100TemplateTierPlayer } from '../services/top100Service';
 import { findTop100Signal, findTop100TemplateTier } from '../lib/top100Matcher';
 import { PlayerDetailModal } from './PlayerDetailModal';
-import { useLanguage } from '../lib/language';
+import { useLanguage, Language } from '../lib/language';
 import { t } from '../lib/translations';
 
 interface TransferPicksProps {
@@ -42,11 +42,147 @@ const POS_BADGE_CONFIG: Record<number, { short: string; color: string }> = {
     4: { short: "FWD", color: "bg-rose-500/20 text-rose-400 border-rose-500/30" },
 };
 
+// Tooltip metric descriptions and tactical interpretation tips for Transfer Picks table
+const transferMetricDescriptions: Record<string, {
+    label: (lang: Language) => string;
+    abbr: string;
+    description: (lang: Language) => string;
+    tip?: (lang: Language) => string;
+}> = {
+    rank: {
+        label: (lang) => lang === 'sk' ? 'Algoritmické poradie' : 'Rank',
+        abbr: '#',
+        description: (lang) => lang === 'sk'
+            ? 'Poradie hráča v odporúčacom algoritme na prestup pre zvolený horizont.'
+            : 'Algorithmic rank based on transfer recommendation index for the selected horizon.',
+        tip: (lang) => lang === 'sk'
+            ? 'Hráči na čele rebríčka predstavujú najefektívnejšiu kombináciu formy, priaznivého kalendára a trhových kurzov.'
+            : 'Top-ranked players represent the optimal blend of form, favorable fixtures, and market odds.'
+    },
+    web_name: {
+        label: (lang) => lang === 'sk' ? 'Hráč & Klub' : 'Player & Club',
+        abbr: 'PLAYER',
+        description: (lang) => lang === 'sk'
+            ? 'Meno hráča, klub a pozícia (GKP, DEF, MID, FWD). Odznak Top 100 zobrazuje percento vlastníctva medzi elitou sveta a čisté zmeny v kádroch (+/-) za aktuálne kolo.'
+            : 'Player name, club, and position. Top 100 badge displays ownership % among the world elite managers and net transfers (+/-).',
+        tip: (lang) => lang === 'sk'
+            ? 'Kliknutím na meno hráča kdekoľvek v tabuľke otvoríte podrobný profil s kompletnou históriou, grafom vývoja bodov a stávkovými kurzami.'
+            : 'Click any player name to open the detailed modal with points evolution, full match log, and betting odds.'
+    },
+    transferIndex: {
+        label: (lang) => lang === 'sk' ? 'Index prestupu (Algoritmus)' : 'Transfer Index',
+        abbr: 'INDEX',
+        description: (lang) => lang === 'sk'
+            ? 'Kompozitné skóre odporúčania (0–100). Zohľadňuje formu hráča, očakávané body, pravdepodobnosť štartu, FDR náročnosť kalendára na 5 kôl a nákupy elity Top 100.'
+            : 'Composite transfer recommendation score (0–100) weighing form, projected points, start probability, 5-GW fixture difficulty, and Top 100 elite transfers.',
+        tip: (lang) => lang === 'sk'
+            ? 'Ako chápať: 80+ = prémiová voľba na okamžitý nákup, 65–79 = silný a stabilný prestup, pod 50 = špekulácia alebo vyššie riziko.'
+            : 'How to read: 80+ = prime buy candidate, 65–79 = solid transfer target, below 50 = speculative or higher risk.'
+    },
+    now_cost: {
+        label: (lang) => lang === 'sk' ? 'Cena v FPL' : 'Price',
+        abbr: 'PRICE',
+        description: (lang) => lang === 'sk'
+            ? 'Aktuálna trhová hodnota hráča v oficiálnej hre Fantasy Premier League.'
+            : 'Current player market value in Fantasy Premier League.',
+        tip: (lang) => lang === 'sk'
+            ? 'Ako chápať: Lacnejší hráči s vysokým indexom (napr. obrancovia za £4.5m–£5.0m) sú kľúčoví pre uvoľnenie rozpočtu na prémiové hviezdy.'
+            : 'How to read: Budget players with high index scores free up crucial bank value for premium picks.'
+    },
+    selected_by_percent: {
+        label: (lang) => lang === 'sk' ? 'Celosvetové vlastníctvo' : 'Ownership (TSB%)',
+        abbr: 'OWNERSHIP',
+        description: (lang) => lang === 'sk'
+            ? 'Percento všetkých manažérov na svete, ktorí majú hráča vo svojom tíme (Teams Selected By).'
+            : 'Percentage of all active FPL managers worldwide who own this player (Teams Selected By).',
+        tip: (lang) => lang === 'sk'
+            ? 'Ako chápať: Vysoké vlastníctvo (30%+) chráni váš rank (tzv. template). Nízke vlastníctvo (<10%) slúži ako diferenciál – ak zaboduje, katapultuje vás v rebríčku vpred!'
+            : 'How to read: High ownership (30%+) protects your rank (template). Low ownership (<10%) acts as a powerful differential to climb leagues.'
+    },
+    form: {
+        label: (lang) => lang === 'sk' ? 'Forma (FPL body/zápas)' : 'Form',
+        abbr: 'FORM',
+        description: (lang) => lang === 'sk'
+            ? 'Priemerný bodový zisk hráča za jeden zápas za posledných 30 dní v oficiálnom FPL.'
+            : 'Average points scored per match over the last 30 days in official FPL.',
+        tip: (lang) => lang === 'sk'
+            ? 'Ako chápať: 7.0+ = elitná strelecká/bodová forma. Pozor: vysoká forma pri náročnom kalendári (FDR 4–5) môže rýchlo klesnúť, preto sledujte aj stĺpec DIFF.'
+            : 'How to read: 7.0+ = elite form. Note: strong form with upcoming tough fixtures (FDR 4–5) may regress, so always check DIFF too.'
+    },
+    startProbability: {
+        label: (lang) => lang === 'sk' ? 'Pravdepodobnosť štartu' : 'Start Probability',
+        abbr: 'START %',
+        description: (lang) => lang === 'sk'
+            ? 'Odhadovaná šanca na štart v základnej zostave na najbližšie ligové kolo na základe zdravotného stavu a rotácie.'
+            : 'Estimated probability of starting in the upcoming fixture based on injury news and rotation risk.',
+        tip: (lang) => lang === 'sk'
+            ? 'Ako chápať: 100% = plná pripravenosť, 75% = otáznik alebo drobné zranenie, 50% a menej = vysoké riziko neúčasti alebo lavičky.'
+            : 'How to read: 100% = fully fit, 75% = doubt/knock, 50% or less = high bench or absence risk.'
+    },
+    goalProb: {
+        label: (lang) => lang === 'sk' ? 'Stávkové kurzy Fortuna' : 'Fortuna Live Odds',
+        abbr: 'ODDS',
+        description: (lang) => lang === 'sk'
+            ? 'Reálne stávkové kurzy z Fortuna.sk prepočítané na percentuálnu pravdepodobnosť na najbližšie ligové kolo (Čisté konto pre DEF/GKP, Gól/Asistencia pre MID/FWD).'
+            : 'Real betting odds from Fortuna.sk converted into win/clean sheet/goal probability for the next gameweek.',
+        tip: (lang) => lang === 'sk'
+            ? 'Ako chápať: Objektívne ocenenie trhu stávkových kancelárií. Šanca nad 35% na čisté konto alebo nad 45% na gól/asistenciu signalizuje vysoko priaznivý zápas.'
+            : 'How to read: Market-based valuation. Clean sheet chance >35% or G+A >45% indicates prime point potential.'
+    },
+    upcomingGw: {
+        label: (lang) => lang === 'sk' ? 'Ligové kolo a súper' : 'Gameweek Fixture',
+        abbr: 'FIXTURE',
+        description: (lang) => lang === 'sk'
+            ? 'Súper v danom kole s označením domáceho (H) alebo vonkajšieho (A) zápasu a FDR náročnosťou.'
+            : 'Opponent team for that gameweek, venue (Home/Away), and FDR difficulty rating.',
+        tip: (lang) => lang === 'sk'
+            ? 'Ako chápať: Zelená (FDR 1–2) = veľmi priaznivý súper na body, Sivá (3) = vyrovnaný duel, Oranžová/Červená (4–5) = náročný gigant.'
+            : 'How to read: Green (1–2) = favorable scoring matchup, Grey (3) = balanced, Orange/Red (4–5) = tough elite team.'
+    },
+    fixtureDifficultySum: {
+        label: (lang) => lang === 'sk' ? 'Súčet obtiažnosti (5 kôl)' : 'Difficulty Sum (DIFF)',
+        abbr: 'DIFF',
+        description: (lang) => lang === 'sk'
+            ? 'Súčet FDR koeficientov (1–5) súperov v najbližších 5 ligových kolách. Čím nižšie číslo, tým priaznivejší kalendár.'
+            : 'Sum of FDR ratings across the next 5 fixtures. Lower total means a much easier run of games.',
+        tip: (lang) => lang === 'sk'
+            ? 'Ako chápať: Hodnota 8–12 znamená mimoriadne ľahký žreb a ideálny čas na kúpu. Hodnota 17+ varuje pred ťažkou sériou zápasov.'
+            : 'How to read: Score 8–12 = dream fixture run, prime time to transfer in. Score 17+ warns of grueling schedule.'
+    },
+    top100Own: {
+        label: (lang) => lang === 'sk' ? 'Vlastníctvo v Top 100' : 'Top 100 Ownership',
+        abbr: 'TOP 100 %',
+        description: (lang) => lang === 'sk'
+            ? 'Percentuálne zastúpenie hráča v tímoch 100 celosvetovo najlepších manažérov Fantasy Premier League.'
+            : 'Percentage of the top 100 worldwide FPL managers who currently hold this player in their squad.',
+        tip: (lang) => lang === 'sk'
+            ? 'Ako chápať: Ak má hráč u elity 70%+ vlastníctvo, je to základný pilier ("Core Template"). Ak ho elita nakupuje skôr než bežný trh, ide o silný prediktívny signál.'
+            : 'How to read: 70%+ elite ownership denotes a core template player. Early adoption by top 100 signals an impending market trend.'
+    },
+    top100Net: {
+        label: (lang) => lang === 'sk' ? 'Net prestupy v Top 100' : 'Top 100 Net Transfers',
+        abbr: 'T100 NET',
+        description: (lang) => lang === 'sk'
+            ? 'Čistá bilancia prestupov (nákupy mínus predaje) tohto hráča medzi manažérmi Top 100 za aktuálne kolo.'
+            : 'Net transfers (in minus out) for this player among top 100 elite managers in the current gameweek.',
+        tip: (lang) => lang === 'sk'
+            ? 'Ako chápať: Kladné číslo (napr. +8) značí masívny záujem elity ešte pred rastom celosvetovej ceny. Záporné číslo varuje pred výpredajom.'
+            : 'How to read: Positive values (e.g. +8) indicate heavy elite buying before global price rises. Negative values warn of sell-offs.'
+    }
+};
+
 const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures, events }) => {
     const [lang] = useLanguage();
     const [activePos, setActivePos] = useState<number | 'all'>('all'); // Default All
     const [horizon, setHorizon] = useState<'next' | 'next5'>('next5');
     const [showInfo, setShowInfo] = useState(false);
+    const [hoveredCol, setHoveredCol] = useState<{
+        label: string;
+        abbr: string;
+        description: string;
+        tip?: string;
+        rect: DOMRect;
+    } | null>(null);
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
         key: 'transferIndex',
         direction: 'desc'
@@ -229,21 +365,46 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
     // Get next GW headers (always 5 slots so the table layout never shifts on toggle)
     const upcomingGwHeaders = Array.from({ length: 5 }, (_, i) => (nextEvent?.id || 1) + i).filter(id => id <= 38);
 
-    // Sorting Header Component
-    const SortHeader: React.FC<{ label: string, sortKey: string, align?: "left" | "right" | "center", className?: string }> = ({ label, sortKey, align = "left", className = "" }) => {
+    // Sorting Header Component with Explainer Tooltip
+    const SortHeader: React.FC<{
+        label: string;
+        sortKey: string;
+        tooltipKey?: string;
+        align?: "left" | "right" | "center";
+        className?: string;
+    }> = ({ label, sortKey, tooltipKey, align = "left", className = "" }) => {
         const isActive = sortConfig.key === sortKey;
         const alignClass = align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
         const pxClass = className.split(' ').some(c => c.startsWith('px-')) ? '' : 'px-3';
         const pyClass = className.split(' ').some(c => c.startsWith('py-')) ? '' : 'py-3';
+        const effectiveTooltipKey = tooltipKey || (sortKey.startsWith('GW') ? 'upcomingGw' : sortKey);
+        const metricInfo = transferMetricDescriptions[effectiveTooltipKey];
+
+        const handleMouseEnter = (e: React.MouseEvent<HTMLElement>) => {
+            if (!metricInfo) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            setHoveredCol({
+                label: metricInfo.label(lang),
+                abbr: metricInfo.abbr,
+                description: metricInfo.description(lang),
+                tip: metricInfo.tip?.(lang),
+                rect
+            });
+        };
+
         return (
             <th
                 className={`${pyClass} ${pxClass} cursor-pointer hover:text-white transition-colors group select-none ${alignClass} ${className}`.trim()}
                 onClick={() => handleSort(sortKey)}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={() => setHoveredCol(null)}
             >
                 {align === "center" ? (
                     <div className="w-full flex items-center justify-center">
                         <div className="relative inline-flex items-center justify-center">
-                            <span>{label}</span>
+                            <span className="border-b border-dotted border-slate-600/70 group-hover:border-blue-400 transition-colors">
+                                {label}
+                            </span>
                             <span className="absolute left-full ml-1 flex items-center">
                                 {isActive ? (
                                     sortConfig.direction === 'asc' ? <ChevronUp size={13} className="text-blue-400 shrink-0" /> : <ChevronDown size={13} className="text-blue-400 shrink-0" />
@@ -255,7 +416,9 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                     </div>
                 ) : (
                     <div className={`flex items-center gap-1 ${align === "right" ? "justify-end" : "justify-start"}`}>
-                        <span>{label}</span>
+                        <span className="border-b border-dotted border-slate-600/70 group-hover:border-blue-400 transition-colors">
+                            {label}
+                        </span>
                         {isActive ? (
                             sortConfig.direction === 'asc' ? <ChevronUp size={13} className="text-blue-400 shrink-0" /> : <ChevronDown size={13} className="text-blue-400 shrink-0" />
                         ) : (
@@ -566,11 +729,23 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                     {/* Sticky Player Header */}
                                     <th
                                         onClick={() => handleSort('web_name')}
-                                        className="sticky left-0 z-20 bg-slate-900 py-2.5 px-2.5 min-w-[142px] max-w-[155px] border-r border-slate-700/80 shadow-[4px_0_8px_rgba(0,0,0,0.25)] cursor-pointer select-none"
+                                        onMouseEnter={(e) => {
+                                            const info = transferMetricDescriptions.web_name;
+                                            const rect = e.currentTarget.getBoundingClientRect();
+                                            setHoveredCol({
+                                                label: info.label(lang),
+                                                abbr: info.abbr,
+                                                description: info.description(lang),
+                                                tip: info.tip?.(lang),
+                                                rect
+                                            });
+                                        }}
+                                        onMouseLeave={() => setHoveredCol(null)}
+                                        className="sticky left-0 z-20 bg-slate-900 py-2.5 px-2.5 min-w-[142px] max-w-[155px] border-r border-slate-700/80 shadow-[4px_0_8px_rgba(0,0,0,0.25)] cursor-pointer select-none group"
                                     >
                                         <div className="flex items-center gap-1">
                                             <span className="text-slate-500 font-mono mr-1">#</span>
-                                            <span>{t('tp_th_player', lang)}</span>
+                                            <span className="border-b border-dotted border-slate-600/70 group-hover:border-blue-400 transition-colors">{t('tp_th_player', lang)}</span>
                                             {sortConfig.key === 'web_name' && (
                                                 sortConfig.direction === 'asc'
                                                     ? <ChevronUp size={12} className="text-blue-400 shrink-0" />
@@ -887,7 +1062,23 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-900/60 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700">
-                                <th className="py-3 px-2 w-10 text-center text-xs">#</th>
+                                <th
+                                    onMouseEnter={(e) => {
+                                        const info = transferMetricDescriptions.rank;
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        setHoveredCol({
+                                            label: info.label(lang),
+                                            abbr: info.abbr,
+                                            description: info.description(lang),
+                                            tip: info.tip?.(lang),
+                                            rect
+                                        });
+                                    }}
+                                    onMouseLeave={() => setHoveredCol(null)}
+                                    className="py-3 px-2 w-10 text-center text-xs cursor-help select-none"
+                                >
+                                    <span className="border-b border-dotted border-slate-600/70 hover:border-blue-400 transition-colors">#</span>
+                                </th>
                                 <SortHeader label={t('tp_th_player', lang)} sortKey="web_name" align="left" className="w-64 min-w-[190px]" />
                                 <SortHeader
                                     label={horizon === 'next' ? t('tp_th_gw_score', lang) : t('tp_th_index', lang)}
@@ -1133,6 +1324,54 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                     oddsData={oddsData}
                 />
             )}
+
+            {/* Column Explainer Tooltip */}
+            {hoveredCol && (() => {
+                const isNearTop = hoveredCol.rect.top < 240;
+                const leftPos = Math.max(
+                    160,
+                    Math.min(
+                        (typeof window !== 'undefined' ? window.innerWidth : 1000) - 160,
+                        hoveredCol.rect.left + hoveredCol.rect.width / 2
+                    )
+                );
+
+                return (
+                    <div
+                        style={{
+                            position: 'fixed',
+                            left: leftPos,
+                            top: isNearTop ? hoveredCol.rect.bottom + 10 : hoveredCol.rect.top - 10,
+                            transform: isNearTop ? 'translate(-50%, 0)' : 'translate(-50%, -100%)'
+                        }}
+                        className="z-[9999] pointer-events-none w-72 sm:w-80 p-3.5 bg-slate-900/98 backdrop-blur-md text-slate-200 text-xs rounded-xl shadow-2xl border border-slate-700 text-left normal-case font-normal select-none transition-all duration-150 animate-in fade-in"
+                    >
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
+                            <span className="font-bold text-white text-xs">{hoveredCol.label}</span>
+                            <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                {hoveredCol.abbr}
+                            </span>
+                        </div>
+                        <p className="text-[11px] leading-relaxed text-slate-300 whitespace-normal">
+                            {hoveredCol.description}
+                        </p>
+                        {hoveredCol.tip && (
+                            <div className="mt-2.5 pt-2 border-t border-slate-800/80 bg-slate-950/50 -mx-1 p-2 rounded-lg border border-slate-800/60">
+                                <div className="flex items-start gap-1.5 text-[10.5px] leading-snug text-amber-200/90 font-medium">
+                                    <Sparkles size={12} className="text-amber-400 shrink-0 mt-0.5" />
+                                    <span>{hoveredCol.tip}</span>
+                                </div>
+                            </div>
+                        )}
+                        {/* Arrow pointing to column header */}
+                        <div
+                            className={`absolute left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-slate-900 border-slate-700 rotate-45 ${
+                                isNearTop ? '-top-1.5 border-t border-l' : '-bottom-1.5 border-b border-r'
+                            }`}
+                        />
+                    </div>
+                );
+            })()}
 
         </div >
     );
