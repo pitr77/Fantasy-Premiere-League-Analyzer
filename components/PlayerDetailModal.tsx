@@ -63,8 +63,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
   fixtures = [],
   oddsData,
 }) => {
-  const [activeTab, setActiveTab] = useState<'history' | 'past'>('history');
-  const [matchLogTab, setMatchLogTab] = useState<'overview' | 'advanced'>('overview');
+  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'advanced' | 'past'>('overview');
   const [lang] = useLanguage();
   const [summary, setSummary] = useState<FPLElementSummary | null>(null);
   const [loading, setLoading] = useState(false);
@@ -93,6 +92,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
 
     setImgError(false);
     setError(null);
+    setActiveSubTab('overview');
 
     if (summaryCache.has(player.id)) {
       setSummary(summaryCache.get(player.id)!);
@@ -516,38 +516,6 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
             );
           })()}
 
-          {/* Navigation Tabs */}
-          <div className="flex items-center gap-2 mt-4 border-t border-slate-800/80 pt-3">
-            <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setActiveTab('history')}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                  activeTab === 'history'
-                    ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <History size={13} />
-                <span>{lang === 'sk' ? `Aktuálna sezóna (${pointsHistory.length} kôl)` : `Current Season (${pointsHistory.length} GWs)`}</span>
-              </button>
-
-              {pastSeasons.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('past')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                    activeTab === 'past'
-                      ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <Calendar size={13} />
-                  <span>{lang === 'sk' ? `Minulé sezóny (${pastSeasons.length})` : `Past Seasons (${pastSeasons.length})`}</span>
-                </button>
-              )}
-            </div>
-          </div>
         </div>
 
         {/* Modal Body / Scrollable Content */}
@@ -566,8 +534,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
             </div>
           )}
 
-          {/* TAB 1: GW HISTÓRIA */}
-          {activeTab === 'history' && !loading && (
+          {!loading && (
             <div className="space-y-6">
               {/* Gameweek Sparkline / Bar Chart */}
               {pointsHistory.length > 0 && (
@@ -626,21 +593,32 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                 <div className="p-3 sm:p-4 bg-slate-800/80 border-b border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <h3 className="text-xs sm:text-sm font-bold uppercase text-slate-200 flex items-center gap-1.5">
-                      <Activity size={14} className="text-emerald-400" />
-                      {lang === 'sk' ? 'Zápasový denník (Aktuálna sezóna)' : 'Match Log (This Season)'}
+                      {activeSubTab === 'past' ? (
+                        <>
+                          <Calendar size={14} className="text-blue-400" />
+                          <span>{lang === 'sk' ? 'Kariérna história v Premier League' : 'Premier League Career History'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Activity size={14} className="text-emerald-400" />
+                          <span>{lang === 'sk' ? 'Zápasový denník (Aktuálna sezóna)' : 'Match Log (This Season)'}</span>
+                        </>
+                      )}
                     </h3>
                     <span className="text-[11px] text-slate-400">
-                      {lang === 'sk' ? 'Spolu odohraných:' : 'Total played:'} <strong className="text-white font-mono">{player.minutes} {lang === 'sk' ? 'minút' : 'mins'}</strong>
+                      {activeSubTab === 'past'
+                        ? (lang === 'sk' ? `História minulých ročníkov (${pastSeasons.length} sezón)` : `Past seasons history (${pastSeasons.length} seasons)`)
+                        : (lang === 'sk' ? <>Spolu odohraných: <strong className="text-white font-mono">{player.minutes} minút</strong></> : <>Total played: <strong className="text-white font-mono">{player.minutes} mins</strong></>)}
                     </span>
                   </div>
 
-                  {/* Sub-Tab Switcher */}
-                  <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1 self-start sm:self-auto">
+                  {/* Sub-Tab Switcher - all switchers in one place, slightly smaller */}
+                  <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1 self-start sm:self-auto flex-wrap">
                     <button
                       type="button"
-                      onClick={() => setMatchLogTab('overview')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                        matchLogTab === 'overview'
+                      onClick={() => setActiveSubTab('overview')}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all ${
+                        activeSubTab === 'overview'
                           ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
                           : 'border-transparent text-slate-400 hover:text-slate-200'
                       }`}
@@ -650,9 +628,9 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setMatchLogTab('advanced')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                        matchLogTab === 'advanced'
+                      onClick={() => setActiveSubTab('advanced')}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all ${
+                        activeSubTab === 'advanced'
                           ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
                           : 'border-transparent text-slate-400 hover:text-slate-200'
                       }`}
@@ -660,10 +638,68 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                       <Zap size={12} />
                       <span>{lang === 'sk' ? 'Rozšírené (xG / Stats)' : 'Advanced (xG / Stats)'}</span>
                     </button>
+                    {pastSeasons.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setActiveSubTab('past')}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all ${
+                          activeSubTab === 'past'
+                            ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        <Calendar size={12} />
+                        <span>{lang === 'sk' ? `Minulé sezóny (${pastSeasons.length})` : `Past Seasons (${pastSeasons.length})`}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                {activeSubTab === 'past' ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-900/60 text-slate-400 uppercase font-semibold text-[10px] border-b border-slate-700/60 select-none">
+                          <th className="py-2.5 px-3">Sezóna</th>
+                          <th className="py-2.5 px-3 text-right">Minúty</th>
+                          <th className="py-2.5 px-3 text-right font-bold text-white">Celk. Body</th>
+                          <th className="py-2.5 px-3 text-center" title="Góly">Góly</th>
+                          <th className="py-2.5 px-3 text-center" title="Asistencie">Asistencie</th>
+                          <th className="py-2.5 px-3 text-center" title="Čisté kontá">Čisté kontá</th>
+                          <th className="py-2.5 px-3 text-center" title="Bonusové body">Bonusy</th>
+                          <th className="py-2.5 px-3 text-right">Poč. Cena</th>
+                          <th className="py-2.5 px-3 text-right">Konc. Cena</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-700/40 font-mono">
+                        {pastSeasons.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} className="py-8 text-center text-slate-400 font-sans text-xs">
+                              Žiadne predchádzajúce sezóny v databáze (nováčik v Premier League).
+                            </td>
+                          </tr>
+                        ) : (
+                          [...pastSeasons].reverse().map((s) => (
+                            <tr key={s.season_name} className="hover:bg-slate-800/60 transition-colors">
+                              <td className="py-2.5 px-3 font-bold text-white font-sans">{s.season_name}</td>
+                              <td className="py-2.5 px-3 text-right text-slate-300">{s.minutes}'</td>
+                              <td className="py-2.5 px-3 text-right font-black text-emerald-400 text-sm">
+                                {s.total_points}
+                              </td>
+                              <td className="py-2.5 px-3 text-center text-slate-200">{s.goals_scored}</td>
+                              <td className="py-2.5 px-3 text-center text-slate-200">{s.assists}</td>
+                              <td className="py-2.5 px-3 text-center text-slate-200">{s.clean_sheets}</td>
+                              <td className="py-2.5 px-3 text-center text-amber-400">{s.bonus}</td>
+                              <td className="py-2.5 px-3 text-right text-slate-400">£{(s.start_cost / 10).toFixed(1)}</td>
+                              <td className="py-2.5 px-3 text-right text-blue-300">£{(s.end_cost / 10).toFixed(1)}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="bg-slate-900/80 text-slate-400 uppercase font-bold text-[10px] border-b border-slate-700/60 select-none">
@@ -671,7 +707,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                         <th className="py-2.5 px-3 min-w-[120px]">{lang === 'sk' ? 'Súper' : 'Opponent'}</th>
                         <th className="py-2.5 px-2.5 text-center w-20">{lang === 'sk' ? 'Výsledok' : 'Result'}</th>
 
-                        {matchLogTab === 'overview' && (
+                        {activeSubTab === 'overview' && (
                           <>
                             <th className="py-2.5 px-2 text-right" title="Odohrané minúty">{lang === 'sk' ? 'Min' : 'Mins'}</th>
                             <th className="py-2.5 px-2 text-right text-white" title="FPL Body">{lang === 'sk' ? 'Body' : 'Pts'}</th>
@@ -686,7 +722,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                           </>
                         )}
 
-                        {matchLogTab === 'advanced' && (
+                        {activeSubTab === 'advanced' && (
                           <>
                             <th className="py-2.5 px-2 text-right" title="Odohrané minúty">{lang === 'sk' ? 'Min' : 'Mins'}</th>
                             <th className="py-2.5 px-2 text-right text-white" title="FPL Body">{lang === 'sk' ? 'Body' : 'Pts'}</th>
@@ -754,7 +790,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                               </td>
 
                               {/* DYNAMIC TAB 1: OVERVIEW */}
-                              {matchLogTab === 'overview' && (
+                              {activeSubTab === 'overview' && (
                                 <>
                                   <td className="py-2 px-2 text-right text-slate-300">{h.minutes}'</td>
                                   <td className="py-2 px-2 text-right">
@@ -782,7 +818,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                               )}
 
                               {/* DYNAMIC TAB 2: ADVANCED */}
-                              {matchLogTab === 'advanced' && (
+                              {activeSubTab === 'advanced' && (
                                 <>
                                   <td className="py-2 px-2 text-right text-slate-300">{h.minutes}'</td>
                                   <td className="py-2 px-2 text-right">
@@ -826,66 +862,10 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                     </tbody>
                   </table>
                 </div>
-              </div>
+              )}
             </div>
-          )}
-
-          {/* TAB 2: MINULÉ SEZÓNY */}
-          {activeTab === 'past' && !loading && (
-            <div className="space-y-4">
-              <div className="bg-slate-800/40 border border-slate-700/60 rounded-xl overflow-hidden shadow">
-                <div className="px-4 py-3 bg-slate-800/80 border-b border-slate-700/60 flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase text-slate-300 flex items-center gap-1.5">
-                    <Calendar size={14} className="text-blue-400" />
-                    Kariérna história v Premier League (minulé ročníky)
-                  </h3>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-slate-900/60 text-slate-400 uppercase font-semibold text-[10px] border-b border-slate-700/60 select-none">
-                        <th className="py-2.5 px-3">Sezóna</th>
-                        <th className="py-2.5 px-3 text-right">Minúty</th>
-                        <th className="py-2.5 px-3 text-right font-bold text-white">Celk. Body</th>
-                        <th className="py-2.5 px-3 text-center" title="Góly">Góly</th>
-                        <th className="py-2.5 px-3 text-center" title="Asistencie">Asistencie</th>
-                        <th className="py-2.5 px-3 text-center" title="Čisté kontá">Čisté kontá</th>
-                        <th className="py-2.5 px-3 text-center" title="Bonusové body">Bonusy</th>
-                        <th className="py-2.5 px-3 text-right">Poč. Cena</th>
-                        <th className="py-2.5 px-3 text-right">Konc. Cena</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-700/40 font-mono">
-                      {pastSeasons.length === 0 ? (
-                        <tr>
-                          <td colSpan={9} className="py-8 text-center text-slate-400 font-sans text-xs">
-                            Žiadne predchádzajúce sezóny v databáze (nováčik v Premier League).
-                          </td>
-                        </tr>
-                      ) : (
-                        [...pastSeasons].reverse().map((s) => (
-                          <tr key={s.season_name} className="hover:bg-slate-800/60 transition-colors">
-                            <td className="py-2.5 px-3 font-bold text-white font-sans">{s.season_name}</td>
-                            <td className="py-2.5 px-3 text-right text-slate-300">{s.minutes}'</td>
-                            <td className="py-2.5 px-3 text-right font-black text-emerald-400 text-sm">
-                              {s.total_points}
-                            </td>
-                            <td className="py-2.5 px-3 text-center text-slate-200">{s.goals_scored}</td>
-                            <td className="py-2.5 px-3 text-center text-slate-200">{s.assists}</td>
-                            <td className="py-2.5 px-3 text-center text-slate-200">{s.clean_sheets}</td>
-                            <td className="py-2.5 px-3 text-center text-amber-400">{s.bonus}</td>
-                            <td className="py-2.5 px-3 text-right text-slate-400">£{(s.start_cost / 10).toFixed(1)}</td>
-                            <td className="py-2.5 px-3 text-right text-blue-300">£{(s.end_cost / 10).toFixed(1)}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
+          </div>
+        )}
         </div>
 
         {/* Modal Footer */}
