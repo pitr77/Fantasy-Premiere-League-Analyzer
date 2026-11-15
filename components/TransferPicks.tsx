@@ -37,7 +37,7 @@ interface PlayerTransferStats extends FPLPlayer {
 
 const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures, events }) => {
     const [lang] = useLanguage();
-    const [activePos, setActivePos] = useState<number>(1); // Default GKP
+    const [activePos, setActivePos] = useState<number | 'all'>('all'); // Default All
     const [horizon, setHorizon] = useState<'next' | 'next5'>('next5');
     const [showInfo, setShowInfo] = useState(false);
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
@@ -52,10 +52,10 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
     const [oddsData, setOddsData] = useState<FortunaMatch[] | null>(null);
     const [oddsLastUpdated, setOddsLastUpdated] = useState<string | null>(null);
     const [isRefreshingOdds, setIsRefreshingOdds] = useState(false);
-    const [showOdds, setShowOdds] = useState(true);
-    const [oddsMetric, setOddsMetric] = useState<'cs' | 'goal' | 'assist' | 'ga'>('cs');
+    const showOdds = true; // odds columns always on; cells render nothing when Fortuna data is missing
+    const [oddsMetric, setOddsMetric] = useState<'cs' | 'goal' | 'assist' | 'ga'>('ga');
     const isOddsEligible = true;
-    const effectiveOddsMetric = activePos === 1 ? 'cs' : (activePos >= 3 && oddsMetric === 'cs' ? 'ga' : oddsMetric);
+    const effectiveOddsMetric = activePos === 1 ? 'cs' : oddsMetric;
 
     // Top 100 Manager signals state
     const [top100Data, setTop100Data] = useState<Top100Snapshot | null>(null);
@@ -166,7 +166,9 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
 
     // 3. Sorting & Filtering
     const displayPlayers = useMemo(() => {
-        let filtered = processedPlayers.filter(p => p.element_type === activePos);
+        let filtered = activePos === 'all'
+            ? processedPlayers
+            : processedPlayers.filter(p => p.element_type === activePos);
 
         return filtered.sort((a, b) => {
             let valA: any = a[sortConfig.key as keyof PlayerTransferStats];
@@ -267,18 +269,13 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                     className="cursor-pointer select-none group"
                     onClick={() => setShowInfo(!showInfo)}
                 >
-                    <div className="flex justify-between items-start gap-4">
+                    <div className="flex justify-between items-center gap-4">
                         <div className="flex-1">
-                            <h2 className="text-xl md:text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                            <h2 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
                                 <ArrowLeftRight className="text-blue-400 shrink-0" /> {horizon === 'next' ? t('tp_next_gw_rankings', lang) : t('tp_algo_picks', lang)}
                             </h2>
-                            <p className="text-slate-400 text-sm leading-relaxed max-w-2xl">
-                                {horizon === 'next'
-                                    ? t('tp_algo_desc_next', lang)
-                                    : t('tp_algo_desc_5', lang)}
-                            </p>
                         </div>
-                        <div className="mt-2 shrink-0 bg-slate-700/50 p-1.5 rounded-lg group-hover:bg-slate-700 transition-colors">
+                        <div className="shrink-0 bg-slate-700/50 p-1.5 rounded-lg group-hover:bg-slate-700 transition-colors">
                             {showInfo ? <ChevronUp size={16} className="text-blue-400" /> : <ChevronDown size={16} className="text-blue-400" />}
                         </div>
                     </div>
@@ -396,8 +393,8 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
                 {/* Position Tabs */}
-                <div className="grid grid-cols-4 md:flex gap-2">
-                    {[1, 2, 3, 4].map(pos => (
+                <div className="grid grid-cols-5 md:flex gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700 self-start">
+                    {(['all', 1, 2, 3, 4] as const).map(pos => (
                         <button
                             key={pos}
                             onClick={() => {
@@ -408,11 +405,12 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                 } else if (oddsMetric === 'cs') {
                                     setOddsMetric('ga');
                                 }
-                                const posLabels: Record<number, string> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
+                                const posLabels: Record<number | string, string> = { all: "ALL", 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
                                 track("transfer_picks_interaction", { action: "select_position", position: posLabels[pos] });
                             }}
-                            className={`px-2 md:px-6 py-3 rounded-lg font-bold text-xs md:text-sm flex items-center justify-center gap-2 transition-all ${activePos === pos ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
+                            className={`px-3 md:px-5 py-1.5 rounded-lg text-xs font-bold border flex items-center justify-center gap-2 transition-all ${activePos === pos ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
                         >
+                            {pos === 'all' && (lang === 'sk' ? 'Všetci' : 'All')}
                             {pos === 1 && t('tp_pos_gkp', lang)}
                             {pos === 2 && t('tp_pos_def', lang)}
                             {pos === 3 && t('tp_pos_mid', lang)}
@@ -423,16 +421,16 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
 
                 <div className="flex items-center gap-2 flex-wrap self-start md:self-auto">
                     {/* Horizon Toggle */}
-                    <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex">
+                    <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1">
                         <button
                             onClick={() => setHorizon('next')}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${horizon === 'next' ? 'bg-slate-700 text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${horizon === 'next' ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
                         >
                             {t('tp_horizon_next', lang)}
                         </button>
                         <button
                             onClick={() => setHorizon('next5')}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${horizon === 'next5' ? 'bg-slate-700 text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${horizon === 'next5' ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
                         >
                             {t('tp_horizon_next5', lang)}
                         </button>
@@ -441,29 +439,16 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                     {/* Odds Toggle & Metric Selector for DEF, MID and FWD */}
                     {isOddsEligible && (
                         <div className="flex items-center gap-1.5 flex-wrap">
-                            <button
-                                onClick={() => setShowOdds(!showOdds)}
-                                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
-                                    showOdds
-                                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.2)]'
-                                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-                                }`}
-                                title={lang === 'sk' ? "Zobraziť stávkové kurzy z Fortuny" : "Toggle bookmaker odds from Fortuna"}
-                            >
-                                <Coins size={14} className={showOdds ? "text-amber-400" : "text-slate-400"} />
-                                <span>{t('tp_odds_btn', lang)}</span>
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-0.5"></span>
-                            </button>
 
                             {showOdds && (
-                                <div className="bg-slate-800 p-0.5 rounded-xl border border-slate-700 flex items-center">
-                                    {(activePos === 1 || activePos === 2) && (
+                                <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1">
+                                    {(activePos === 'all' || activePos === 1 || activePos === 2) && (
                                         <button
                                             onClick={() => setOddsMetric('cs')}
-                                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
                                                 effectiveOddsMetric === 'cs'
-                                                    ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                                                    : 'text-slate-400 hover:text-slate-200'
+                                                    ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                                                    : 'border-transparent text-slate-400 hover:text-slate-200'
                                             }`}
                                             title={t('tp_cs_prob_tooltip', lang)}
                                         >
@@ -474,10 +459,10 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                         <>
                                             <button
                                                 onClick={() => setOddsMetric('goal')}
-                                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
                                                     effectiveOddsMetric === 'goal'
-                                                        ? 'bg-amber-500/25 text-amber-300 border border-amber-500/40 shadow-sm'
-                                                        : 'text-slate-400 hover:text-slate-200'
+                                                        ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                                                        : 'border-transparent text-slate-400 hover:text-slate-200'
                                                 }`}
                                                 title={t('tp_goal_prob_tooltip', lang)}
                                             >
@@ -485,10 +470,10 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                             </button>
                                             <button
                                                 onClick={() => setOddsMetric('assist')}
-                                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
                                                     effectiveOddsMetric === 'assist'
-                                                        ? 'bg-blue-500/25 text-blue-300 border border-blue-500/40 shadow-sm'
-                                                        : 'text-slate-400 hover:text-slate-200'
+                                                        ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                                                        : 'border-transparent text-slate-400 hover:text-slate-200'
                                                 }`}
                                                 title={t('tp_assist_prob_tooltip', lang)}
                                             >
@@ -496,10 +481,10 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                             </button>
                                             <button
                                                 onClick={() => setOddsMetric('ga')}
-                                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
                                                     effectiveOddsMetric === 'ga'
-                                                        ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                                                        : 'text-slate-400 hover:text-slate-200'
+                                                        ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                                                        : 'border-transparent text-slate-400 hover:text-slate-200'
                                                 }`}
                                                 title={t('tp_ga_prob_tooltip', lang)}
                                             >
@@ -700,6 +685,11 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                         </div>
                                                         <div className="text-[10px] text-slate-400 flex items-center gap-1 leading-tight mt-0.5">
                                                             <span className="font-mono">{getTeamShort(p.team)}</span>
+                                                            {activePos === 'all' && (
+                                                                <span className="font-mono text-[9px] text-slate-400 font-bold px-1 rounded bg-slate-700/60 border border-slate-600/40">
+                                                                    {({ 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' } as Record<number, string>)[p.element_type]}
+                                                                </span>
+                                                            )}
                                                             {mobileTab !== 'overview' && (
                                                                 <>
                                                                     <span className="text-slate-600">•</span>
@@ -999,6 +989,11 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                             </div>
                                             <div className="text-xs text-slate-500 flex items-center gap-1.5">
                                                 {getTeamShort(p.team)}
+                                                {activePos === 'all' && (
+                                                    <span className="font-mono text-[10px] text-slate-400 font-bold px-1.5 py-0.5 rounded bg-slate-700/60 border border-slate-600/40">
+                                                        {({ 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' } as Record<number, string>)[p.element_type]}
+                                                    </span>
+                                                )}
                                                 {horizon === 'next' && (p.chance_of_playing_next_round !== null && p.chance_of_playing_next_round < 75) && (
                                                     <span className="text-red-500 flex items-center gap-0.5 font-bold" title={`${p.chance_of_playing_next_round}% chance of playing`}>
                                                         <AlertTriangle size={10} /> {p.chance_of_playing_next_round}%

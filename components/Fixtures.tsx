@@ -1028,177 +1028,148 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
 
 
     return (
-        <div className="space-y-3 md:space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-500">
 
-            {/* Header & Controls */}
-            <div className="bg-slate-800 p-3 md:p-6 rounded-xl border border-slate-700 shadow-lg">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-2 md:gap-4">
-                    <div>
-                        <h2 className="text-lg md:text-2xl font-bold flex items-center gap-2 text-white mb-0.5 md:mb-2">
-                            <Calendar className="w-4 h-4 md:w-6 md:h-6 text-purple-400" />
-                            {lang === 'sk' ? 'Zápasy & FDR Plánovač' : 'Fixtures & FDR Planner'}
-                        </h2>
-                    </div>
-
-                    <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-700 w-full md:w-auto">
-                        <button
-                            onClick={() => setActiveTab('schedule')}
-                            className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 py-1 md:py-2 rounded-md text-[10px] md:text-sm font-bold transition-all ${activeTab === 'schedule' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
-                        >
-                            <Calendar size={12} className="md:w-3.5 md:h-3.5" /> {lang === 'sk' ? 'Rozpis zápasov' : 'Schedule'}
-                        </button>
-                        <button
-                            onClick={() => {
-                                setActiveTab('planner');
-                            }}
-                            className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 py-1 md:py-2 rounded-md text-[10px] md:text-sm font-bold transition-all ${activeTab === 'planner' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
-                        >
-                            <LayoutGrid size={12} className="md:w-3.5 md:h-3.5" /> {lang === 'sk' ? 'FDR Matica' : 'FDR Matrix'}
-                        </button>
-                        <button
-                            onClick={() => {
-                                setActiveTab('reality');
-                            }}
-                            className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 py-1 md:py-2 rounded-md text-[10px] md:text-sm font-bold transition-all ${activeTab === 'reality' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20' : 'text-slate-400 hover:text-white'}`}
-                        >
-                            <TrendingUp size={12} className="md:w-3.5 md:h-3.5 text-amber-400" />
-                            <span>FDR Reality Check</span>
-                            <span className="text-[8px] px-1 py-0.2 rounded-full bg-emerald-500 text-white font-black leading-none ml-0.5">{lang === 'sk' ? 'NOVÉ' : 'NEW'}</span>
-                        </button>
-                    </div>
+            {/* 1. Standalone Header Frame */}
+            <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+                <div className="flex justify-between items-center gap-4">
+                    <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2 text-white">
+                        <Calendar className="w-5 h-5 md:w-6 md:h-6 text-blue-400 shrink-0" />
+                        {lang === 'sk' ? 'Zápasy & FDR Plánovač' : 'Fixtures & FDR Planner'}
+                    </h2>
                 </div>
+            </div>
 
-                {/* Filter Controls Row (Schedule & Matrix only) */}
-                {activeTab !== 'reality' && (
-                <div className="mt-3 md:mt-6 flex flex-col sm:flex-row gap-2 md:gap-4 items-center bg-slate-900/50 p-1.5 md:p-3 rounded-lg border border-slate-700">
-
-                    {/* Month Selector */}
-                    <div className="relative w-full sm:w-auto">
-                        <select
-                            value={selectedMonth}
-                            onChange={(e) => handleMonthChange(e.target.value)}
-                            className="w-full sm:w-48 appearance-none bg-slate-800 text-white text-[11px] md:text-sm font-bold border border-slate-600 rounded px-3 md:px-4 py-1 md:py-2 pr-8 focus:ring-2 focus:ring-purple-500 outline-none"
-                        >
-                            {months.map(m => (
-                                <option key={m.name} value={m.name}>{m.name}</option>
-                            ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
-                    </div>
-
-                    {/* Navigation Buttons */}
-                    <div className="flex items-center gap-1.5 md:gap-2 w-full sm:w-auto justify-center">
-                        <button
-                            onClick={handlePrevGw}
-                            disabled={selectedEvent <= 1}
-                            className="p-1 md:p-2 bg-slate-800 rounded border border-slate-600 text-white hover:bg-slate-700 disabled:opacity-50 transition-colors"
-                        >
-                            <ChevronLeft size={14} className="md:w-4 md:h-4" />
-                        </button>
-
-                        {/* Gameweek Selector */}
-                        <div className="relative flex-1 sm:flex-none">
-                            <select
-                                value={selectedEvent}
-                                onChange={(e) => handleGwChange(Number(e.target.value))}
-                                className="w-full sm:w-64 appearance-none bg-slate-800 text-white text-[11px] md:text-sm font-bold border border-slate-600 rounded px-2 md:px-4 py-1 md:py-2 pr-8 focus:ring-2 focus:ring-purple-500 outline-none text-center"
-                            >
-                                {months.find(m => m.name === selectedMonth)?.events.map(e => (
-                                    <option key={e.id} value={e.id}>
-                                        {e.name} {e.is_current ? '(Cur)' : e.is_next ? '(Next)' : ''}
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
-                        </div>
-
-                        <button
-                            onClick={handleNextGw}
-                            disabled={selectedEvent >= 38}
-                            className="p-1 md:p-2 bg-slate-800 rounded border border-slate-600 text-white hover:bg-slate-700 disabled:opacity-50 transition-colors"
-                        >
-                            <ChevronRight size={14} className="md:w-4 md:h-4" />
-                        </button>
-                    </div>
-
-                    {/* Fortuna Odds Toggle & Refresh Controls */}
-                    <div className="w-full sm:w-auto sm:ml-auto flex items-center justify-end gap-1.5 md:gap-2 flex-wrap">
-                        {/* Toggle button */}
-                        <button
-                            onClick={() => setShowOdds(!showOdds)}
-                            className={`flex items-center gap-1.5 px-3 py-1 md:py-2 rounded text-[11px] md:text-sm font-bold border transition-all ${
-                                showOdds
-                                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.2)]'
-                                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-                            }`}
-                            title="Zobraziť stávkové kurzy z Fortuna.sk"
-                        >
-                            <Coins size={14} className={showOdds ? "text-amber-400" : "text-slate-400"} />
-                            <span>Kurzy Fortuna</span>
-                            {oddsData && oddsData.length > 0 && (
-                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Kurzy sú aktívne"></span>
-                            )}
-                        </button>
-
-                        {/* On-demand refresh button */}
-                        <button
-                            onClick={handleRefreshOdds}
-                            disabled={isRefreshingOdds}
-                            className={`flex items-center gap-1.5 px-2.5 py-1 md:py-2 rounded text-[11px] md:text-xs font-semibold border transition-all ${
-                                isRefreshingOdds
-                                    ? 'bg-slate-800/80 border-slate-700 text-slate-400 cursor-not-allowed'
-                                    : refreshStatus === 'success'
-                                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
-                                    : refreshStatus === 'error'
-                                    ? 'bg-rose-500/20 border-rose-500/50 text-rose-300'
-                                    : 'bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white hover:border-slate-600'
-                            }`}
-                            title={
-                                oddsLastUpdated
-                                    ? `Naposledy aktualizované: ${formatLastUpdated(oddsLastUpdated)}. Kliknutím stiahnete najčerstvejšie kurzy z Fortuna.sk`
-                                    : 'Stiahnuť aktuálne kurzy z Fortuna.sk'
-                            }
-                        >
-                            <RefreshCw
-                                size={13}
-                                className={`${isRefreshingOdds ? 'animate-spin text-amber-400' : refreshStatus === 'success' ? 'text-emerald-400' : 'text-slate-400'}`}
-                            />
-                            <span>
-                                {isRefreshingOdds
-                                    ? 'Aktualizujem...'
-                                    : refreshStatus === 'success'
-                                    ? 'Aktualizované!'
-                                    : refreshStatus === 'error'
-                                    ? 'Chyba spojenia'
-                                    : oddsLastUpdated
-                                    ? formatLastUpdated(oddsLastUpdated)
-                                    : 'Aktualizovať'}
-                            </span>
-                        </button>
-                    </div>
-                </div>
-                )}
-
-                {/* New Premium Collapsible Info Section */}
-                <div className="mt-3 md:mt-6 bg-slate-900/40 border border-slate-700/60 rounded-xl overflow-hidden shadow-lg transition-all border-l-4 border-l-purple-500/50">
+            {/* 2. Controls Row (Tabs on left, Gameweek & Odds on right) */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-1">
+                {/* Main Tab Switcher */}
+                <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1 w-full sm:w-auto self-start">
                     <button
-                        onClick={() => setShowInfo(!showInfo)}
-                        className="w-full flex items-center justify-between p-2 md:p-4 hover:bg-slate-800/40 transition-all group"
+                        onClick={() => setActiveTab('schedule')}
+                        className={`flex-1 sm:flex-none px-3 md:px-5 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-2 ${
+                            activeTab === 'schedule'
+                                ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                                : 'border-transparent text-slate-400 hover:text-slate-200'
+                        }`}
                     >
-                        <div className="flex items-center gap-2 md:gap-3">
-                            <div className="p-1 md:p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
-                                <HelpCircle size={16} className="md:w-4.5 md:h-4.5" />
-                            </div>
-                            <div className="text-left">
-                                <h4 className="font-bold text-white text-[11px] md:text-base">Understanding our Dynamic Model</h4>
-                                <p className="text-[9px] md:text-xs text-slate-400 hidden md:block">How we calculate difficulty beyond FPL FDR</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest hidden md:inline">{showInfo ? 'Close' : 'Details'}</span>
-                            {showInfo ? <ChevronUp size={16} className="text-purple-400" /> : <ChevronDown size={16} className="text-purple-400" />}
-                        </div>
+                        <span>{lang === 'sk' ? 'Rozpis zápasov' : 'Schedule'}</span>
                     </button>
+                    <button
+                        onClick={() => setActiveTab('planner')}
+                        className={`flex-1 sm:flex-none px-3 md:px-5 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-2 ${
+                            activeTab === 'planner'
+                                ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                                : 'border-transparent text-slate-400 hover:text-slate-200'
+                        }`}
+                    >
+                        <span>{lang === 'sk' ? 'FDR Matica' : 'FDR Matrix'}</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('reality')}
+                        className={`flex-1 sm:flex-none px-3 md:px-5 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-2 ${
+                            activeTab === 'reality'
+                                ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                                : 'border-transparent text-slate-400 hover:text-slate-200'
+                        }`}
+                    >
+                        <span>FDR Reality Check</span>
+                    </button>
+                </div>
+
+                {/* Gameweek Selector & Fortuna Odds (Schedule & Matrix only) */}
+                {activeTab !== 'reality' && (
+                    <div className="flex items-center gap-2 flex-wrap self-start md:self-auto">
+                        {/* Gameweek Selector with Navigation */}
+                        <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1 shadow-sm">
+                            <button
+                                onClick={handlePrevGw}
+                                disabled={selectedEvent <= 1}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 disabled:opacity-30 transition-colors"
+                            >
+                                <ChevronLeft size={14} />
+                            </button>
+
+                            <div className="relative">
+                                <select
+                                    value={selectedEvent}
+                                    onChange={(e) => handleGwChange(Number(e.target.value))}
+                                    className="appearance-none bg-transparent text-white text-xs font-bold px-3 py-1 pr-6 outline-none text-center cursor-pointer"
+                                >
+                                    {events.map(e => (
+                                        <option key={e.id} value={e.id} className="bg-slate-800 text-white">
+                                            {e.name} {e.is_current ? '(Cur)' : e.is_next ? '(Next)' : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+                            </div>
+
+                            <button
+                                onClick={handleNextGw}
+                                disabled={selectedEvent >= 38}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 disabled:opacity-30 transition-colors"
+                            >
+                                <ChevronRight size={14} />
+                            </button>
+                        </div>
+
+                        {/* Fortuna Odds Toggle & Refresh Controls */}
+                        <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1 shadow-sm">
+                            <button
+                                onClick={() => setShowOdds(!showOdds)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                                    showOdds
+                                        ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                                        : 'border-transparent text-slate-400 hover:text-slate-200'
+                                }`}
+                                title="Zobraziť stávkové kurzy z Fortuna.sk"
+                            >
+                                <span>Kurzy Fortuna</span>
+                                {oddsData && oddsData.length > 0 && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Kurzy sú aktívne"></span>
+                                )}
+                            </button>
+
+                            <button
+                                onClick={handleRefreshOdds}
+                                disabled={isRefreshingOdds}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 transition-colors disabled:opacity-50"
+                                title={
+                                    oddsLastUpdated
+                                        ? `Naposledy aktualizované: ${formatLastUpdated(oddsLastUpdated)}. Kliknutím stiahnete najčerstvejšie kurzy z Fortuna.sk`
+                                        : 'Stiahnuť aktuálne kurzy z Fortuna.sk'
+                                }
+                            >
+                                <RefreshCw
+                                    size={13}
+                                    className={`${isRefreshingOdds ? 'animate-spin text-amber-400' : refreshStatus === 'success' ? 'text-emerald-400' : 'text-slate-400'}`}
+                                />
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* 4. Collapsible Info Section */}
+            <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-lg transition-all">
+                <button
+                    onClick={() => setShowInfo(!showInfo)}
+                    className="w-full flex items-center justify-between p-3 md:p-4 hover:bg-slate-700/30 transition-all group"
+                >
+                    <div className="flex items-center gap-2 md:gap-3">
+                        <div className="p-1.5 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                            <HelpCircle size={15} className="text-blue-400" />
+                        </div>
+                        <div className="text-left">
+                            <h4 className="font-bold text-white text-xs md:text-sm">Understanding our Dynamic Model</h4>
+                            <p className="text-[10px] md:text-xs text-slate-400 hidden sm:block">How we calculate difficulty beyond FPL FDR</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest hidden md:inline">{showInfo ? 'Close' : 'Details'}</span>
+                        {showInfo ? <ChevronUp size={15} className="text-blue-400" /> : <ChevronDown size={15} className="text-blue-400" />}
+                    </div>
+                </button>
 
                     {showInfo && (
                         <div className="p-6 border-t border-slate-700/60 bg-slate-900/20 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -1282,7 +1253,6 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                         </div>
                     )}
                 </div>
-            </div>
 
             {activeTab === 'schedule' && renderSchedule()}
             {activeTab === 'planner' && renderPlanner()}

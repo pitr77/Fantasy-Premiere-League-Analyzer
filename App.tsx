@@ -64,7 +64,7 @@ export enum View {
 }
 
 function App() {
-  const [view, setView] = useState<View>(View.DASHBOARD);
+  const [view, setView] = useState<View>(View.FIXTURES);
   const PRO_PAYWALL_ENABLED = false;
   const ENABLE_EXPERIMENTAL_SECTIONS = false;
   const DEV_AUTH_BYPASS =
@@ -338,16 +338,16 @@ function App() {
           </button>
 
           <nav className="flex items-center gap-1">
+            <HeaderNavItem v={View.FIXTURES} label={t('nav_fixtures', lang)} />
+            <HeaderNavItem v={View.TRANSFER_PICKS} label={t('nav_transfer_picks', lang)} />
+            <HeaderNavItem v={View.STATS} label={t('nav_player_stats', lang)} />
             <HeaderNavItem v={View.LEAGUE_TABLE} label={t('nav_league_table', lang)} />
             <HeaderNavItem v={View.TEAM_ANALYSIS} label={t('nav_team_analysis', lang)} />
             <HeaderNavItem v={View.PERIOD_ANALYSIS} label={t('nav_period_analysis', lang)} />
-            <HeaderNavItem v={View.FIXTURES} label={t('nav_fixtures', lang)} />
-            <HeaderNavItem v={View.TRANSFER_PICKS} label={t('nav_transfer_picks', lang)} />
             <HeaderNavItem v={View.TOP_MANAGERS} label={t('nav_top_managers', lang)} />
             <HeaderNavItem v={View.LEAGUE_OWNERSHIP} label={t('nav_league_ownership', lang)} />
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.OPTIMAL_SQUAD} label={t('nav_optimal_squad', lang)} />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.TEAM} label={t('nav_my_team', lang)} />}
-            <HeaderNavItem v={View.STATS} label={t('nav_player_stats', lang)} />
           </nav>
         </div>
 
@@ -404,12 +404,12 @@ function App() {
           </div>
 
           <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto custom-scrollbar">
-            <NavItem v={View.LEAGUE_TABLE} label={t('nav_league_table', lang)} icon={Trophy} />
-            <NavItem v={View.TEAM_ANALYSIS} label={t('nav_team_analysis', lang)} icon={Search} />
-            <NavItem v={View.PERIOD_ANALYSIS} label={t('nav_period_analysis', lang)} icon={CalendarRange} />
             <NavItem v={View.FIXTURES} label={t('nav_fixtures', lang)} icon={Calendar} />
             <NavItem v={View.TRANSFER_PICKS} label={t('nav_transfer_picks', lang)} icon={ArrowLeftRight} />
             <NavItem v={View.STATS} label={t('nav_player_stats', lang)} icon={BarChart2} />
+            <NavItem v={View.LEAGUE_TABLE} label={t('nav_league_table', lang)} icon={Trophy} />
+            <NavItem v={View.TEAM_ANALYSIS} label={t('nav_team_analysis', lang)} icon={Search} />
+            <NavItem v={View.PERIOD_ANALYSIS} label={t('nav_period_analysis', lang)} icon={CalendarRange} />
             <NavItem v={View.DETAILED_STATS} label={lang === 'sk' ? 'Detailné analýzy' : 'Detailed Analyses'} icon={Activity} />
             <NavItem v={View.TOP_MANAGERS} label={t('nav_top_managers', lang)} icon={Users} />
             <NavItem v={View.LEAGUE_OWNERSHIP} label={t('nav_league_ownership', lang)} icon={Trophy} />

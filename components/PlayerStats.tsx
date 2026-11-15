@@ -5,14 +5,10 @@ import { FPLPlayer, FPLTeam, FPLFixture } from '../types';
 import {
   Search,
   ChevronDown,
-  Info,
-  Flame,
-  Shield,
-  Zap,
-  ArrowLeftRight,
-  LayoutDashboard,
+  ChevronUp,
+  ArrowUpDown,
   X,
-  Globe
+  BarChart2
 } from 'lucide-react';
 import { PlayerDetailModal } from './PlayerDetailModal';
 import { useLanguage, Language } from '../lib/language';
@@ -23,7 +19,7 @@ interface PlayerStatsProps {
   fixtures?: FPLFixture[];
 }
 
-export type StatsTab = 'overview' | 'attack' | 'defense' | 'involvement' | 'transfers';
+export type StatsTab = 'overview' | 'advanced';
 
 interface MetricColumn {
   key: string;
@@ -44,7 +40,7 @@ const TAB_COLUMNS: Record<StatsTab, MetricColumn[]> = {
       description: (lang) => lang === 'sk' 
         ? 'Aktuálna trhová cena hráča vo Fantasy Premier League (v miliónoch).'
         : 'Current market price in Fantasy Premier League (in millions).',
-      align: 'right',
+      align: 'center',
       getValue: (p) => p.now_cost / 10,
       format: (val) => <span className="font-mono text-blue-300 font-semibold">£{Number(val).toFixed(1)}m</span>
     },
@@ -55,7 +51,7 @@ const TAB_COLUMNS: Record<StatsTab, MetricColumn[]> = {
       description: (lang) => lang === 'sk'
         ? 'Celkový počet bodov získaných v prebiehajúcej sezóne.'
         : 'Total points accumulated across all gameweeks this season.',
-      align: 'right',
+      align: 'center',
       getValue: (p) => p.total_points ?? 0,
       format: (val) => <span className="font-mono font-black text-emerald-400 text-sm">{val}</span>
     },
@@ -66,7 +62,7 @@ const TAB_COLUMNS: Record<StatsTab, MetricColumn[]> = {
       description: (lang) => lang === 'sk'
         ? 'Priemerný bodový zisk hráča za zápas za posledných 30 dní.'
         : 'Average points per match scored by the player over the last 30 days.',
-      align: 'right',
+      align: 'center',
       getValue: (p) => parseFloat(p.form) || 0,
       format: (val) => (
         <span className={`font-mono font-bold ${Number(val) >= 6 ? 'text-emerald-400' : Number(val) >= 4 ? 'text-blue-300' : 'text-slate-300'}`}>
@@ -81,7 +77,7 @@ const TAB_COLUMNS: Record<StatsTab, MetricColumn[]> = {
       description: (lang) => lang === 'sk'
         ? 'Vlastníctvo: Percento tímov vo svetovom FPL, ktoré majú hráča na súpiske (Teams Selected By).'
         : 'Ownership: Percentage of all active FPL fantasy managers who own this player (Teams Selected By).',
-      align: 'right',
+      align: 'center',
       getValue: (p) => parseFloat(p.selected_by_percent) || 0,
       format: (val) => <span className="font-mono text-purple-300 font-semibold">{Number(val).toFixed(1)}%</span>
     },
@@ -92,7 +88,7 @@ const TAB_COLUMNS: Record<StatsTab, MetricColumn[]> = {
       description: (lang) => lang === 'sk'
         ? 'Priemerný počet bodov na jeden odohraný zápas v sezóne.'
         : 'Points Per Game: Average points scored per match played this season.',
-      align: 'right',
+      align: 'center',
       getValue: (p) => parseFloat(p.points_per_game) || 0,
       format: (val) => <span className="font-mono text-slate-300">{Number(val).toFixed(1)}</span>
     },
@@ -103,7 +99,7 @@ const TAB_COLUMNS: Record<StatsTab, MetricColumn[]> = {
       description: (lang) => lang === 'sk'
         ? 'Celkový počet odohraných minút v aktuálnej sezóne.'
         : 'Total minutes played on pitch this season.',
-      align: 'right',
+      align: 'center',
       getValue: (p) => p.minutes ?? 0,
       format: (val) => <span className="font-mono text-slate-400 text-xs">{val}'</span>
     },
@@ -114,12 +110,12 @@ const TAB_COLUMNS: Record<StatsTab, MetricColumn[]> = {
       description: (lang) => lang === 'sk'
         ? 'Pomer cena/výkon: Celkový počet bodov na každú £1m ceny hráča (Value for Money).'
         : 'Value for Money: Total points divided by current cost in £m.',
-      align: 'right',
+      align: 'center',
       getValue: (p) => (p.total_points ?? 0) / (p.now_cost / 10 || 1),
       format: (val) => <span className="font-mono text-indigo-300 font-semibold">{Number(val).toFixed(1)}</span>
     }
   ],
-  attack: [
+  advanced: [
     {
       key: 'goals_scored',
       label: (lang) => lang === 'sk' ? 'Góly' : 'Goals',
@@ -149,7 +145,7 @@ const TAB_COLUMNS: Record<StatsTab, MetricColumn[]> = {
       description: (lang) => lang === 'sk'
         ? 'Expected Goals: Štatistická kvalita a pravdepodobnosť gólu zo všetkých striel hráča.'
         : 'Expected Goals: Statistical probability and quality of shots converting to goals.',
-      align: 'right',
+      align: 'center',
       getValue: (p) => parseFloat(p.expected_goals || '0') || 0,
       format: (val) => <span className="font-mono text-emerald-300 font-semibold">{Number(val).toFixed(2)}</span>
     },
@@ -160,7 +156,7 @@ const TAB_COLUMNS: Record<StatsTab, MetricColumn[]> = {
       description: (lang) => lang === 'sk'
         ? 'Expected Assists: Pravdepodobnosť, že prihrávky hráča vyústia do gólovej asistencie.'
         : 'Expected Assists: Likelihood that passes result in a goal assist.',
-      align: 'right',
+      align: 'center',
       getValue: (p) => parseFloat(p.expected_assists || '0') || 0,
       format: (val) => <span className="font-mono text-blue-300 font-semibold">{Number(val).toFixed(2)}</span>
     },
@@ -171,34 +167,10 @@ const TAB_COLUMNS: Record<StatsTab, MetricColumn[]> = {
       description: (lang) => lang === 'sk'
         ? 'Expected Goal Involvement: Súčet xG a xA hráča (celkový útočný potenciál).'
         : 'Expected Goal Involvement: Combined xG + xA attacking potential.',
-      align: 'right',
+      align: 'center',
       getValue: (p) => parseFloat(p.expected_goal_involvements || '0') || 0,
       format: (val) => <span className="font-mono text-purple-300 font-bold">{Number(val).toFixed(2)}</span>
     },
-    {
-      key: 'threat',
-      label: (lang) => lang === 'sk' ? 'Hrozba' : 'Threat',
-      abbr: 'THR',
-      description: (lang) => lang === 'sk'
-        ? 'Zložka ICT indexu merajúca mieru priameho ohrozenia bránky súpera.'
-        : 'ICT component measuring direct threat on the opponent\'s goal.',
-      align: 'right',
-      getValue: (p) => parseFloat(p.threat || '0') || 0,
-      format: (val) => <span className="font-mono text-slate-300">{Number(val).toFixed(0)}</span>
-    },
-    {
-      key: 'creativity',
-      label: (lang) => lang === 'sk' ? 'Kreativita' : 'Creativity',
-      abbr: 'CRE',
-      description: (lang) => lang === 'sk'
-        ? 'Zložka ICT indexu hodnotiaca produkciu gólových šancí a kľúčových pasov.'
-        : 'ICT component assessing chance creation and key passing frequency.',
-      align: 'right',
-      getValue: (p) => parseFloat(p.creativity || '0') || 0,
-      format: (val) => <span className="font-mono text-slate-300">{Number(val).toFixed(0)}</span>
-    }
-  ],
-  defense: [
     {
       key: 'clean_sheets',
       label: (lang) => lang === 'sk' ? 'Čisté kontá' : 'Clean Sheets',
@@ -209,28 +181,6 @@ const TAB_COLUMNS: Record<StatsTab, MetricColumn[]> = {
       align: 'center',
       getValue: (p) => p.clean_sheets ?? 0,
       format: (val) => <span className={`font-mono font-bold ${Number(val) > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>{val}</span>
-    },
-    {
-      key: 'goals_conceded',
-      label: (lang) => lang === 'sk' ? 'Inkasované' : 'Conceded',
-      abbr: 'GC',
-      description: (lang) => lang === 'sk'
-        ? 'Počet inkasovaných gólov počas hráčovej prítomnosti na trávniku.'
-        : 'Goals conceded while player was on the pitch.',
-      align: 'center',
-      getValue: (p) => p.goals_conceded ?? 0,
-      format: (val) => <span className="font-mono text-slate-400">{val}</span>
-    },
-    {
-      key: 'expected_goals_conceded',
-      label: () => 'xGC',
-      abbr: 'xGC',
-      description: (lang) => lang === 'sk'
-        ? 'Expected Goals Conceded: Štatistická kvalita šancí, ktorým obrana hráča čelila.'
-        : 'Expected Goals Conceded: Statistical quality of chances conceded.',
-      align: 'right',
-      getValue: (p) => parseFloat(p.expected_goals_conceded || '0') || 0,
-      format: (val) => <span className="font-mono text-rose-300">{Number(val).toFixed(2)}</span>
     },
     {
       key: 'saves',
@@ -244,200 +194,26 @@ const TAB_COLUMNS: Record<StatsTab, MetricColumn[]> = {
       format: (val) => <span className={`font-mono ${Number(val) > 0 ? 'text-amber-300 font-bold' : 'text-slate-500'}`}>{val}</span>
     },
     {
-      key: 'clearances_blocks_interceptions',
-      label: () => 'CBI',
-      abbr: 'CBI',
-      description: (lang) => lang === 'sk'
-        ? 'Clearances, Blocks, Interceptions: Celkový počet odkopov, blokov a zachytených lôpt.'
-        : 'Clearances, Blocks & Interceptions defensively combined.',
-      align: 'right',
-      getValue: (p) => p.clearances_blocks_interceptions ?? 0,
-      format: (val) => <span className="font-mono text-slate-300">{val}</span>
-    },
-    {
-      key: 'recoveries',
-      label: (lang) => lang === 'sk' ? 'Získané' : 'Recoveries',
-      abbr: 'R',
-      description: (lang) => lang === 'sk'
-        ? 'Počet získaných voľných lôpt v poli (významný faktor pre BPS obrancov a záložníkov).'
-        : 'Loose ball recoveries on field (major BPS booster for defenders/midfielders).',
-      align: 'right',
-      getValue: (p) => p.recoveries ?? 0,
-      format: (val) => <span className="font-mono text-slate-300">{val}</span>
-    },
-    {
-      key: 'tackles',
-      label: (lang) => lang === 'sk' ? 'Odoberania' : 'Tackles',
-      abbr: 'T',
-      description: (lang) => lang === 'sk'
-        ? 'Úspešné odoberania lopty v defenzívnych súbojoch (Tackles).'
-        : 'Successful tackles winning or dispossessing the opponent.',
-      align: 'right',
-      getValue: (p) => p.tackles ?? 0,
-      format: (val) => <span className="font-mono text-slate-300">{val}</span>
-    }
-  ],
-  involvement: [
-    {
-      key: 'bonus',
-      label: (lang) => lang === 'sk' ? 'Bonusy' : 'Bonus',
-      abbr: 'BP',
-      description: (lang) => lang === 'sk'
-        ? 'Celkový počet bonusových bodov udelených trom najlepším hráčom zápasu (3, 2 alebo 1 bod).'
-        : 'Bonus points awarded to the top 3 match performers (3, 2, or 1 pt).',
-      align: 'center',
-      getValue: (p) => p.bonus ?? 0,
-      format: (val) => <span className={`font-mono font-bold ${Number(val) > 0 ? 'text-amber-400 text-sm' : 'text-slate-500'}`}>{val}</span>
-    },
-    {
-      key: 'bps',
-      label: () => 'BPS',
-      abbr: 'BPS',
-      description: (lang) => lang === 'sk'
-        ? 'Bonus Points System: Komplexné hodnotenie každého dotyku, prihrávky a akcie v zápase.'
-        : 'Bonus Points System: Comprehensive metric evaluating every action on pitch.',
-      align: 'right',
-      getValue: (p) => p.bps ?? 0,
-      format: (val) => <span className="font-mono text-amber-300 font-bold">{val}</span>
-    },
-    {
-      key: 'influence',
-      label: (lang) => lang === 'sk' ? 'Vplyv' : 'Influence',
-      abbr: 'INF',
-      description: (lang) => lang === 'sk'
-        ? 'Zložka ICT indexu merajúca mieru vplyvu hráča na výsledok a priebeh zápasu.'
-        : 'ICT component evaluating overall match effect and game state influence.',
-      align: 'right',
-      getValue: (p) => parseFloat(p.influence || '0') || 0,
-      format: (val) => <span className="font-mono text-slate-300">{Number(val).toFixed(0)}</span>
-    },
-    {
       key: 'ict_index',
       label: () => 'ICT',
-      abbr: 'II',
+      abbr: 'ICT',
       description: (lang) => lang === 'sk'
         ? 'Kombinovaný oficiálny index FPL (Influence + Creativity + Threat).'
         : 'Official FPL metric combining Influence, Creativity, and Threat.',
-      align: 'right',
+      align: 'center',
       getValue: (p) => parseFloat(p.ict_index || '0') || 0,
       format: (val) => <span className="font-mono text-purple-400 font-bold">{Number(val).toFixed(1)}</span>
     },
     {
-      key: 'yellow_cards',
-      label: (lang) => lang === 'sk' ? 'Žlté' : 'Yellow',
-      abbr: 'YC',
+      key: 'bps',
+      label: (lang) => lang === 'sk' ? 'Bonusy' : 'BPS',
+      abbr: 'BPS',
       description: (lang) => lang === 'sk'
-        ? 'Žlté karty udelené hráčovi (každá žltá karta = -1 bod).'
-        : 'Yellow cards received (-1 pt each).',
+        ? 'Bonus Points System: Podrobný štatistický algoritmus určujúci zisk bonusových bodov.'
+        : 'Bonus Points System: Detailed algorithmic score determining bonus allocation.',
       align: 'center',
-      getValue: (p) => p.yellow_cards ?? 0,
-      format: (val) => (
-        <span className={`font-mono px-1.5 py-0.5 rounded text-xs ${Number(val) > 0 ? 'bg-amber-400/20 text-amber-300 font-bold' : 'text-slate-500'}`}>
-          {val}
-        </span>
-      )
-    },
-    {
-      key: 'red_cards',
-      label: (lang) => lang === 'sk' ? 'Červené' : 'Red',
-      abbr: 'RC',
-      description: (lang) => lang === 'sk'
-        ? 'Červené karty udelené hráčovi (každá červená karta = -3 body).'
-        : 'Red cards received (-3 pts each).',
-      align: 'center',
-      getValue: (p) => p.red_cards ?? 0,
-      format: (val) => (
-        <span className={`font-mono px-1.5 py-0.5 rounded text-xs ${Number(val) > 0 ? 'bg-rose-500/30 text-rose-300 font-black' : 'text-slate-500'}`}>
-          {val}
-        </span>
-      )
-    },
-    {
-      key: 'penalties_saved',
-      label: (lang) => lang === 'sk' ? 'Chytené pen.' : 'Pen. Saved',
-      abbr: 'PS',
-      description: (lang) => lang === 'sk'
-        ? 'Počet zlikvidovaných penált brankárom (+5 bodov za chytenú penaltu).'
-        : 'Penalties saved by goalkeeper (+5 pts each).',
-      align: 'center',
-      getValue: (p) => p.penalties_saved ?? 0,
-      format: (val) => <span className={`font-mono ${Number(val) > 0 ? 'text-emerald-400 font-black' : 'text-slate-500'}`}>{val}</span>
-    }
-  ],
-  transfers: [
-    {
-      key: 'selected_by_percent',
-      label: (lang) => lang === 'sk' ? 'Vlast.%' : 'TSB%',
-      abbr: 'TSB%',
-      description: (lang) => lang === 'sk'
-        ? 'Percentuálne zastúpenie hráča v zostavách všetkých manažérov na svete.'
-        : 'Percentage of all active FPL fantasy managers who own this player.',
-      align: 'right',
-      getValue: (p) => parseFloat(p.selected_by_percent) || 0,
-      format: (val) => <span className="font-mono text-purple-300 font-bold">{Number(val).toFixed(1)}%</span>
-    },
-    {
-      key: 'transfers_in_event',
-      label: (lang) => lang === 'sk' ? 'Kúpené' : 'Transfers In',
-      abbr: 'IN',
-      description: (lang) => lang === 'sk'
-        ? 'Počet manažérov, ktorí tohto hráča kúpili pred najbližšou uzávierkou kola.'
-        : 'Managers who transferred this player IN ahead of the next deadline.',
-      align: 'right',
-      getValue: (p) => p.transfers_in_event ?? 0,
-      format: (val) => <span className="font-mono text-emerald-400 font-bold">+{Number(val).toLocaleString()}</span>
-    },
-    {
-      key: 'transfers_out_event',
-      label: (lang) => lang === 'sk' ? 'Predané' : 'Transfers Out',
-      abbr: 'OUT',
-      description: (lang) => lang === 'sk'
-        ? 'Počet manažérov, ktorí tohto hráča predali pred najbližšou uzávierkou kola.'
-        : 'Managers who transferred this player OUT ahead of the next deadline.',
-      align: 'right',
-      getValue: (p) => p.transfers_out_event ?? 0,
-      format: (val) => <span className="font-mono text-rose-400 font-bold">-{Number(val).toLocaleString()}</span>
-    },
-    {
-      key: 'net_transfers',
-      label: (lang) => lang === 'sk' ? 'Čistá bilancia' : 'Net Transfers',
-      abbr: 'NET',
-      description: (lang) => lang === 'sk'
-        ? 'Čistý rozdiel prestupov v aktuálnom kole (Kúpené - Predané). Hlavný indikátor zmien cien.'
-        : 'Net transfer balance (In minus Out) this gameweek. Key price change driver.',
-      align: 'right',
-      getValue: (p) => (p.transfers_in_event ?? 0) - (p.transfers_out_event ?? 0),
-      format: (val) => {
-        const num = Number(val);
-        const color = num > 0 ? 'text-emerald-400' : num < 0 ? 'text-rose-400' : 'text-slate-400';
-        return <span className={`font-mono font-black ${color}`}>{num > 0 ? `+${num.toLocaleString()}` : num.toLocaleString()}</span>;
-      }
-    },
-    {
-      key: 'cost_change_start',
-      label: (lang) => lang === 'sk' ? 'Zmena ceny' : 'Price Δ',
-      abbr: 'Δ£',
-      description: (lang) => lang === 'sk'
-        ? 'Celkový pohyb ceny hráča od úvodnej štartovacej ceny na začiatku ročníka.'
-        : 'Total price change since season start.',
-      align: 'right',
-      getValue: (p) => (p.cost_change_start ?? 0) / 10,
-      format: (val) => {
-        const num = Number(val);
-        const color = num > 0 ? 'text-emerald-400' : num < 0 ? 'text-rose-400' : 'text-slate-400';
-        return <span className={`font-mono font-bold ${color}`}>{num > 0 ? `+£${num.toFixed(1)}m` : num < 0 ? `-£${Math.abs(num).toFixed(1)}m` : '£0.0m'}</span>;
-      }
-    },
-    {
-      key: 'transfers_in',
-      label: (lang) => lang === 'sk' ? 'Celk. nákupy' : 'Total In',
-      abbr: 'TOT IN',
-      description: (lang) => lang === 'sk'
-        ? 'Celkový kumulatívny počet nákupov hráča od začiatku sezóny.'
-        : 'Cumulative transfers in since gameweek 1.',
-      align: 'right',
-      getValue: (p) => p.transfers_in ?? 0,
-      format: (val) => <span className="font-mono text-slate-300 text-xs">{Number(val).toLocaleString()}</span>
+      getValue: (p) => p.bps ?? 0,
+      format: (val) => <span className="font-mono text-amber-300 font-bold">{val}</span>
     }
   ]
 };
@@ -445,54 +221,38 @@ const TAB_COLUMNS: Record<StatsTab, MetricColumn[]> = {
 const TAB_CONFIG: { 
   id: StatsTab; 
   label: (lang: Language) => string; 
-  icon: React.ReactNode; 
   defaultSort: string 
 }[] = [
   { 
     id: 'overview', 
     label: (lang) => lang === 'sk' ? 'Prehľad' : 'Overview', 
-    icon: <LayoutDashboard size={14} />, 
     defaultSort: 'total_points' 
   },
   { 
-    id: 'attack', 
-    label: (lang) => lang === 'sk' ? 'Útok & xG' : 'Attack & xG', 
-    icon: <Flame size={14} />, 
+    id: 'advanced', 
+    label: (lang) => lang === 'sk' ? 'Rozšírené' : 'Advanced', 
     defaultSort: 'goals_scored' 
-  },
-  { 
-    id: 'defense', 
-    label: (lang) => lang === 'sk' ? 'Obrana & Brankári' : 'Defense & GK', 
-    icon: <Shield size={14} />, 
-    defaultSort: 'clean_sheets' 
-  },
-  { 
-    id: 'involvement', 
-    label: (lang) => lang === 'sk' ? 'Bonusy & ICT' : 'Bonus & ICT', 
-    icon: <Zap size={14} />, 
-    defaultSort: 'bps' 
-  },
-  { 
-    id: 'transfers', 
-    label: (lang) => lang === 'sk' ? 'Prestupy & Trh' : 'Transfers & Market', 
-    icon: <ArrowLeftRight size={14} />, 
-    defaultSort: 'net_transfers' 
-  },
+  }
 ];
 
-const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtures }) => {
-  const [lang, setLang] = useLanguage();
-  const [activeTab, setActiveTab] = useState<StatsTab>('overview');
-  const [searchTerm, setSearchTerm] = useState("");
+export const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtures }) => {
+  const [lang] = useLanguage();
+  const [searchTerm, setSearchTerm] = useState('');
   const [teamFilter, setTeamFilter] = useState<number | 'all'>('all');
   const [posFilter, setPosFilter] = useState<number | 'all'>('all');
-  const [pageSize, setPageSize] = useState<number | 'all'>(50);
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ 
-    key: 'total_points', 
-    direction: 'desc' 
+  const [activeTab, setActiveTab] = useState<StatsTab>('overview');
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
+    key: 'total_points',
+    direction: 'desc'
   });
   const [selectedPlayerForDetail, setSelectedPlayerForDetail] = useState<FPLPlayer | null>(null);
-  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [hoveredMetric, setHoveredMetric] = useState<{
+    key: string;
+    label: string;
+    abbr: string;
+    description: string;
+    rect: DOMRect;
+  } | null>(null);
 
   const activeColumns = useMemo(() => TAB_COLUMNS[activeTab], [activeTab]);
 
@@ -500,53 +260,50 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtures }) =
     setActiveTab(newTab);
     const colExists = TAB_COLUMNS[newTab].some(c => c.key === sortConfig.key);
     if (!colExists) {
-      const def = TAB_CONFIG.find(t => t.id === newTab)?.defaultSort || 'total_points';
-      setSortConfig({ key: def, direction: 'desc' });
+      const config = TAB_CONFIG.find(t => t.id === newTab);
+      setSortConfig({
+        key: config?.defaultSort || TAB_COLUMNS[newTab][0].key,
+        direction: 'desc'
+      });
     }
   };
 
-  // --- Leaderboard Data ---
   const filteredAndSortedPlayers = useMemo(() => {
-    let result = players;
-
-    // 1. Filter
-    if (searchTerm) {
-      const lower = searchTerm.toLowerCase();
-      result = result.filter(p => 
-        p.web_name.toLowerCase().includes(lower) || 
-        p.second_name.toLowerCase().includes(lower) ||
-        p.first_name.toLowerCase().includes(lower)
-      );
-    }
-    if (teamFilter !== 'all') {
-      result = result.filter(p => p.team === teamFilter);
-    }
-    if (posFilter !== 'all') {
-      result = result.filter(p => p.element_type === posFilter);
-    }
-
-    // 2. Sort
-    result = [...result].sort((a, b) => {
-      const metric = activeColumns.find(c => c.key === sortConfig.key);
-      let valA: number | string = metric ? metric.getValue(a) : (a as any)[sortConfig.key];
-      let valB: number | string = metric ? metric.getValue(b) : (b as any)[sortConfig.key];
-
-      if (typeof valA === 'string') valA = parseFloat(valA) || 0;
-      if (typeof valB === 'string') valB = parseFloat(valB) || 0;
-
-      if (valA === valB) {
-        return (b.total_points ?? 0) - (a.total_points ?? 0);
+    let result = players.filter(player => {
+      if (searchTerm) {
+        const query = searchTerm.toLowerCase();
+        const fullName = `${player.first_name} ${player.second_name}`.toLowerCase();
+        const webName = player.web_name.toLowerCase();
+        if (!fullName.includes(query) && !webName.includes(query)) {
+          return false;
+        }
       }
+
+      if (teamFilter !== 'all' && player.team !== teamFilter) {
+        return false;
+      }
+
+      if (posFilter !== 'all' && player.element_type !== posFilter) {
+        return false;
+      }
+
+      return true;
+    });
+
+    result.sort((a, b) => {
+      const metric = activeColumns.find(c => c.key === sortConfig.key);
+      let valA: any = metric ? metric.getValue(a) : (a as any)[sortConfig.key];
+      let valB: any = metric ? metric.getValue(b) : (b as any)[sortConfig.key];
+
+      if (typeof valA === 'string' && !isNaN(Number(valA))) valA = Number(valA);
+      if (typeof valB === 'string' && !isNaN(Number(valB))) valB = Number(valB);
+
+      if (valA === valB) return (b.total_points || 0) - (a.total_points || 0);
       return sortConfig.direction === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
     });
 
     return result;
   }, [players, searchTerm, teamFilter, posFilter, sortConfig, activeColumns]);
-
-  const paginatedPlayers = useMemo(() => {
-    if (pageSize === 'all') return filteredAndSortedPlayers;
-    return filteredAndSortedPlayers.slice(0, pageSize);
-  }, [filteredAndSortedPlayers, pageSize]);
 
   const handleSort = (key: string) => {
     setSortConfig(current => {
@@ -559,204 +316,113 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtures }) =
 
   const getTeam = (teamId: number) => teams.find(t => t.id === teamId);
 
-  const SortIcon = ({ colKey }: { colKey: string }) => {
-    if (sortConfig.key !== colKey) {
-      return <span className="opacity-20 text-[10px] ml-0.5">↕</span>;
-    }
-    return (
-      <span className="text-purple-400 font-black text-xs ml-0.5">
-        {sortConfig.direction === 'asc' ? '▲' : '▼'}
-      </span>
-    );
-  };
-
   return (
-    <div className="space-y-4">
-      {/* Container Card */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-visible">
-        {/* Header with Title & Language Switcher */}
-        <div className="p-4 sm:p-6 border-b border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                  {lang === 'sk' ? 'PREMIER LEAGUE DATABÁZA' : 'PREMIER LEAGUE DATABASE'}
-                </span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                {lang === 'sk' ? 'Štatistiky Hráčov' : 'Player Statistics'}
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl">
-                {lang === 'sk' 
-                  ? 'Kompletné oficiálne štatistiky FPL rozdelené do prehľadných tematických kategórií. Kliknutím na meno hráča otvoríte jeho profil.'
-                  : 'Official comprehensive FPL metrics organized into focused categories. Click any player name to open their full profile.'}
-              </p>
-            </div>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+        <h2 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
+          <BarChart2 className="text-blue-400 shrink-0" />
+          {lang === 'sk' ? 'Štatistiky Hráčov' : 'Player Statistics'}
+        </h2>
+      </div>
 
-            {/* Top Controls: Language Switcher & Page Size */}
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              {/* Language Switcher */}
-              <div className="flex items-center bg-slate-950 border border-slate-700/80 rounded-xl p-1 shadow-inner">
-                <button
-                  type="button"
-                  onClick={() => setLang('sk')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                    lang === 'sk'
-                      ? 'bg-purple-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                  }`}
-                  title="Slovenčina"
-                >
-                  <span className="text-sm leading-none">🇸🇰</span>
-                  <span>SK</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLang('en')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                    lang === 'en'
-                      ? 'bg-purple-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                  }`}
-                  title="English"
-                >
-                  <span className="text-sm leading-none">🇬🇧</span>
-                  <span>EN</span>
-                </button>
-              </div>
-
-              {/* Page Size Toggle */}
-              <div className="flex items-center bg-slate-950 border border-slate-700/80 rounded-xl p-1">
-                <span className="text-[10px] text-slate-400 font-bold px-2 uppercase tracking-wider hidden sm:inline">
-                  {lang === 'sk' ? 'Zobraziť:' : 'Show:'}
-                </span>
-                {([50, 100, 'all'] as const).map((limit) => (
-                  <button
-                    key={limit}
-                    onClick={() => setPageSize(limit)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
-                      pageSize === limit
-                        ? 'bg-purple-600 text-white shadow'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                    }`}
-                  >
-                    {limit === 'all' ? (lang === 'sk' ? 'Všetci' : 'All') : `Top ${limit}`}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* TAB SWITCHER */}
-          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 custom-scrollbar border-b border-slate-800/80 mb-4">
-            {TAB_CONFIG.map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabChange(tab.id)}
-                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all shadow-sm ${
-                    isActive
-                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-500/20'
-                      : 'bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/40'
-                  }`}
-                >
-                  {tab.icon}
-                  <span>{tab.label(lang)}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Filters Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 sm:gap-3">
-            {/* Search Input */}
-            <div className="relative sm:col-span-6 lg:col-span-5">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
-              <input 
-                type="text" 
-                placeholder={lang === 'sk' ? "Hľadať hráča podľa mena..." : "Search player by name..."}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-950/80 border border-slate-700/80 text-white text-xs sm:text-sm rounded-xl pl-10 pr-9 py-2 focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 outline-none transition-all placeholder:text-slate-500"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-            
-            {/* Team Filter */}
-            <div className="relative sm:col-span-3 lg:col-span-4">
-              <select 
-                value={teamFilter}
-                onChange={(e) => setTeamFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                className="w-full bg-slate-950/80 border border-slate-700/80 text-white text-xs sm:text-sm rounded-xl px-3 py-2 appearance-none focus:ring-2 focus:ring-purple-500/50 outline-none cursor-pointer pr-8"
-              >
-                <option value="all">
-                  {lang === 'sk' ? `Všetky kluby (${teams.length})` : `All Clubs (${teams.length})`}
-                </option>
-                {teams.map(t => <option key={t.id} value={t.id}>{t.name} ({t.short_name})</option>)}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
-            </div>
-
-            {/* Position Filter */}
-            <div className="relative sm:col-span-3 lg:col-span-3">
-              <select 
-                value={posFilter}
-                onChange={(e) => setPosFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                className="w-full bg-slate-950/80 border border-slate-700/80 text-white text-xs sm:text-sm rounded-xl px-3 py-2 appearance-none focus:ring-2 focus:ring-purple-500/50 outline-none cursor-pointer pr-8"
-              >
-                <option value="all">{lang === 'sk' ? 'Všetky pozície' : 'All Positions'}</option>
-                <option value={1}>{lang === 'sk' ? 'Brankári (GKP)' : 'Goalkeepers (GKP)'}</option>
-                <option value={2}>{lang === 'sk' ? 'Obrancovia (DEF)' : 'Defenders (DEF)'}</option>
-                <option value={3}>{lang === 'sk' ? 'Záložníci (MID)' : 'Midfielders (MID)'}</option>
-                <option value={4}>{lang === 'sk' ? 'Útočníci (FWD)' : 'Forwards (FWD)'}</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
-            </div>
-          </div>
+      {/* Controls row: Positions filter on left, 2 Categories on right */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-1">
+        {/* Position Filter */}
+        <div className="grid grid-cols-5 md:flex gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700 self-start">
+          {(['all', 1, 2, 3, 4] as const).map((pos) => (
+            <button
+              key={pos}
+              type="button"
+              onClick={() => setPosFilter(pos)}
+              className={`px-3 md:px-5 py-1.5 rounded-lg text-xs font-bold border flex items-center justify-center gap-2 transition-all ${
+                posFilter === pos
+                  ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {pos === 'all'
+                ? (lang === 'sk' ? 'Všetci' : 'All')
+                : ({ 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' } as Record<number, string>)[pos]}
+            </button>
+          ))}
         </div>
 
-        {/* Informative Tooltip Hint */}
-        <div className="px-4 sm:px-6 py-2 bg-slate-950/50 border-b border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-          <div className="flex items-center gap-1.5">
-            <Info size={13} className="text-blue-400 shrink-0" />
-            <span>
-              {lang === 'sk' ? (
-                <>Pre vysvetlenie metriky prejdite myšou na ikonu <strong className="text-slate-300">(i)</strong> v záhlaví. Kliknutím zoradíte tabuľku.</>
-              ) : (
-                <>Hover over the <strong className="text-slate-300">(i)</strong> icon in any column header for explanations. Click to sort.</>
-              )}
-            </span>
-          </div>
-          <span className="font-mono text-slate-500 hidden sm:inline">
-            {lang === 'sk' ? 'Zobrazených:' : 'Showing:'} <strong className="text-slate-300">{filteredAndSortedPlayers.length}</strong> {lang === 'sk' ? 'hráčov' : 'players'}
-          </span>
+        {/* 2 Categories Switcher (Overview vs Advanced) */}
+        <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1 self-start md:self-auto">
+          {TAB_CONFIG.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={`px-3 md:px-4 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                activeTab === tab.id
+                  ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {tab.label(lang)}
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Table Container - compact padding & clear widths to avoid horizontal scroll */}
+      {/* Search & Club Filters */}
+      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+        {/* Search Input */}
+        <div className="relative sm:col-span-7 lg:col-span-8">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+          <input 
+            type="text" 
+            placeholder={lang === 'sk' ? "Hľadať hráča podľa mena..." : "Search player by name..."}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-slate-800 border border-slate-700 text-white text-xs sm:text-sm rounded-xl pl-10 pr-9 py-2 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-500 shadow-sm"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        
+        {/* Team Filter */}
+        <div className="relative sm:col-span-5 lg:col-span-4">
+          <select 
+            value={teamFilter}
+            onChange={(e) => setTeamFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+            className="w-full bg-slate-800 border border-slate-700 text-white text-xs sm:text-sm rounded-xl px-3 py-2 appearance-none focus:ring-2 focus:ring-blue-500/50 outline-none cursor-pointer pr-8 shadow-sm"
+          >
+            <option value="all">
+              {lang === 'sk' ? `Všetky kluby (${teams.length})` : `All Clubs (${teams.length})`}
+            </option>
+            {teams.map(t => <option key={t.id} value={t.id}>{t.name} ({t.short_name})</option>)}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+        </div>
+      </div>
+
+      {/* Main Table Card */}
+      <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-lg overflow-hidden">
+        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-950/90 text-slate-400 text-xs uppercase font-extrabold border-b border-slate-800 select-none">
-                <th className="py-2.5 px-2 font-extrabold w-9 text-center text-slate-500">#</th>
-                <th className="py-2.5 px-3 font-extrabold min-w-[130px] sm:min-w-[150px]">
+              <tr className="bg-slate-900/60 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700 select-none">
+                <th className="py-3 px-2 w-10 text-center text-xs text-slate-500">#</th>
+                <th className="py-3 px-3 font-bold text-left min-w-[130px] sm:min-w-[150px]">
                   {lang === 'sk' ? 'Hráč' : 'Player'}
                 </th>
-                <th className="py-2.5 px-2 font-extrabold w-20 sm:w-24">
+                <th className="py-3 px-2 font-bold text-left w-20 sm:w-24">
                   {lang === 'sk' ? 'Klub' : 'Club'}
                 </th>
-                <th className="py-2.5 px-2 font-extrabold text-center w-14">
+                <th className="py-3 px-2 font-bold text-center w-14">
                   {lang === 'sk' ? 'Poz' : 'Pos'}
                 </th>
 
-                {/* Dynamic Columns for active tab with Info Tooltips */}
+                {/* Dynamic Columns for active tab with Hover Tooltip */}
                 {activeColumns.map((col) => {
                   const isSorted = sortConfig.key === col.key;
                   const label = col.label(lang);
@@ -766,56 +432,37 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtures }) =
                     <th
                       key={col.key}
                       onClick={() => handleSort(col.key)}
-                      className={`py-2.5 px-2 sm:px-2.5 font-extrabold cursor-pointer transition-colors relative group/th ${
-                        col.align === 'center' ? 'text-center' : col.align === 'left' ? 'text-left' : 'text-right'
-                      } ${isSorted ? 'text-white bg-slate-800/40' : 'hover:text-white hover:bg-slate-800/20'}`}
+                      onMouseEnter={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setHoveredMetric({
+                          key: col.key,
+                          label,
+                          abbr: col.abbr,
+                          description,
+                          rect
+                        });
+                      }}
+                      onMouseLeave={() => setHoveredMetric(null)}
+                      className={`py-3 px-2.5 font-bold cursor-pointer transition-colors relative group/th select-none text-center ${
+                        isSorted ? 'text-blue-400 bg-slate-700/30' : 'hover:text-white hover:bg-slate-700/20'
+                      }`}
                     >
-                      <div className={`inline-flex items-center gap-1 ${
-                        col.align === 'center' ? 'justify-center' : col.align === 'left' ? 'justify-start' : 'justify-end'
-                      }`}>
-                        <span className="whitespace-nowrap">{label}</span>
-                        <SortIcon colKey={col.key} />
-                        
-                        {/* Info Icon with Hover/Click Tooltip */}
-                        <div
-                          className="relative inline-flex items-center ml-0.5 group/info"
-                          onMouseEnter={() => setActiveTooltip(col.key)}
-                          onMouseLeave={() => setActiveTooltip(null)}
-                        >
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveTooltip(curr => curr === col.key ? null : col.key);
-                            }}
-                            className="p-0.5 text-slate-500 hover:text-blue-400 group-hover/info:text-blue-400 transition-colors cursor-help focus:outline-none"
-                            title={description}
-                          >
-                            <Info size={11} className="opacity-70 group-hover/info:opacity-100" />
-                          </button>
-
-                          {/* Hover Tooltip Popup */}
-                          <div
-                            className={`${
-                              activeTooltip === col.key
-                                ? 'visible opacity-100 pointer-events-auto'
-                                : 'invisible opacity-0 pointer-events-none group-hover/info:visible group-hover/info:opacity-100'
-                            } transition-all duration-200 absolute z-50 bottom-full mb-2 right-1/2 translate-x-1/2 w-60 sm:w-64 p-3 bg-slate-900/98 backdrop-blur-md text-slate-200 text-xs rounded-xl shadow-2xl border border-slate-700 text-left normal-case font-normal`}
-                          >
-                            <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-1.5">
-                              <span className="font-bold text-white text-xs">{label}</span>
-                              <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                                {col.abbr}
-                              </span>
-                            </div>
-                            <p className="text-[11px] leading-relaxed text-slate-300">
-                              {description}
-                            </p>
-                            <div className="mt-2 pt-1 border-t border-slate-800/80 text-[10px] text-slate-500 flex items-center justify-between">
-                              <span>{lang === 'sk' ? 'Kliknutím zoradíte' : 'Click column to sort'}</span>
-                              <span className="text-purple-400 font-mono font-bold">{col.key}</span>
-                            </div>
-                          </div>
+                      <div className="w-full flex items-center justify-center">
+                        <div className="relative inline-flex items-center justify-center">
+                          <span className="whitespace-nowrap border-b border-dotted border-slate-600/70 group-hover/th:border-blue-400 transition-colors">
+                            {label}
+                          </span>
+                          <span className="absolute left-full ml-1 flex items-center">
+                            {isSorted ? (
+                              sortConfig.direction === 'asc' ? (
+                                <ChevronUp size={12} className="text-blue-400 shrink-0" />
+                              ) : (
+                                <ChevronDown size={12} className="text-blue-400 shrink-0" />
+                              )
+                            ) : (
+                              <ArrowUpDown size={11} className="text-slate-600 opacity-0 group-hover/th:opacity-100 transition-opacity shrink-0" />
+                            )}
+                          </span>
                         </div>
                       </div>
                     </th>
@@ -824,22 +471,22 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtures }) =
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-800/60 text-xs sm:text-sm">
-              {paginatedPlayers.length === 0 ? (
+            <tbody className="divide-y divide-slate-700/50 text-sm">
+              {filteredAndSortedPlayers.length === 0 ? (
                 <tr>
-                  <td colSpan={4 + activeColumns.length} className="py-12 text-center text-slate-400">
-                    <div className="max-w-xs mx-auto space-y-2">
-                      <p className="text-base font-bold text-slate-300">
+                  <td colSpan={4 + activeColumns.length} className="py-12 text-center text-slate-500">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Search size={28} className="text-slate-600 mb-1" />
+                      <p className="text-sm font-semibold text-slate-400">
                         {lang === 'sk' ? 'Nenašli sa žiadni hráči' : 'No players found'}
                       </p>
-                      <p className="text-xs text-slate-500">
-                        {lang === 'sk' 
-                          ? 'Skúste zmeniť vyhľadávací výraz alebo upravte zvolené filtre.'
-                          : 'Try adjusting your search query or clear the active filters.'}
-                      </p>
                       <button
-                        onClick={() => { setSearchTerm(''); setTeamFilter('all'); setPosFilter('all'); }}
-                        className="text-xs text-purple-400 hover:text-purple-300 font-bold underline pt-2"
+                        onClick={() => {
+                          setSearchTerm('');
+                          setTeamFilter('all');
+                          setPosFilter('all');
+                        }}
+                        className="text-xs text-blue-400 hover:text-blue-300 underline mt-1"
                       >
                         {lang === 'sk' ? 'Resetovať filtre' : 'Reset filters'}
                       </button>
@@ -847,7 +494,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtures }) =
                   </td>
                 </tr>
               ) : (
-                paginatedPlayers.map((player, idx) => {
+                filteredAndSortedPlayers.map((player, idx) => {
                   const team = getTeam(player.team);
                   const posConfig = player.element_type === 1 
                     ? { short: "GKP", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" }
@@ -860,17 +507,17 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtures }) =
                   return (
                     <tr
                       key={player.id}
-                      className="hover:bg-slate-800/40 transition-colors group cursor-pointer"
+                      className="group hover:bg-slate-700/30 transition-all cursor-pointer"
                       onClick={() => setSelectedPlayerForDetail(player)}
                     >
                       {/* Rank */}
-                      <td className="py-2.5 px-2 text-center font-mono text-slate-500 text-xs">
+                      <td className="py-3 px-2 text-center font-mono text-slate-500 text-xs">
                         {idx + 1}
                       </td>
 
                       {/* Player Name */}
-                      <td className="py-2.5 px-3">
-                        <div className="font-bold text-white group-hover:text-purple-400 transition-colors flex items-center gap-1.5">
+                      <td className="py-3 px-3 text-left">
+                        <div className="font-bold text-white group-hover:text-blue-400 transition-colors flex items-center gap-1.5">
                           <span className="truncate">{player.web_name}</span>
                           {player.chance_of_playing_next_round !== null && player.chance_of_playing_next_round !== 100 && (
                             <span 
@@ -887,13 +534,13 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtures }) =
                       </td>
 
                       {/* Team */}
-                      <td className="py-2.5 px-2 text-slate-300 font-medium">
+                      <td className="py-3 px-2 text-slate-300 font-medium text-left">
                         <span className="hidden sm:inline">{team?.name || '—'}</span>
                         <span className="sm:hidden font-mono text-xs text-slate-400">{team?.short_name || '—'}</span>
                       </td>
 
                       {/* Position */}
-                      <td className="py-2.5 px-2 text-center">
+                      <td className="py-3 px-2 text-center">
                         <span className={`text-[10px] font-black font-mono px-1.5 py-0.5 rounded border ${posConfig.color}`}>
                           {posConfig.short}
                         </span>
@@ -907,9 +554,9 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtures }) =
                         return (
                           <td
                             key={col.key}
-                            className={`py-2.5 px-2 sm:px-2.5 ${
+                            className={`py-3 px-3 ${
                               col.align === 'center' ? 'text-center' : col.align === 'left' ? 'text-left' : 'text-right'
-                            } ${isSortedCol ? 'bg-purple-950/15' : ''}`}
+                            } ${isSortedCol ? 'bg-slate-700/30' : ''}`}
                           >
                             {col.format(rawVal, player)}
                           </td>
@@ -923,8 +570,8 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtures }) =
           </table>
         </div>
 
-        {/* Footer info */}
-        <div className="p-3 sm:p-4 bg-slate-950/60 border-t border-slate-800 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+        {/* Footer info bar */}
+        <div className="p-3 sm:p-4 bg-slate-900/60 border-t border-slate-700 text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>
             {lang === 'sk'
               ? `Celkovo v databáze: ${players.length} hráčov Premier League`
@@ -947,11 +594,55 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtures }) =
         </div>
       </div>
 
+      {/* Floating Tooltip positioned ABOVE the hovered column header */}
+      {hoveredMetric && (() => {
+        const isNearTop = hoveredMetric.rect.top < 150;
+        const leftPos = Math.max(
+          150,
+          Math.min(
+            (typeof window !== 'undefined' ? window.innerWidth : 1000) - 150,
+            hoveredMetric.rect.left + hoveredMetric.rect.width / 2
+          )
+        );
+
+        return (
+          <div
+            style={{
+              position: 'fixed',
+              left: leftPos,
+              top: isNearTop ? hoveredMetric.rect.bottom + 10 : hoveredMetric.rect.top - 10,
+              transform: isNearTop ? 'translate(-50%, 0)' : 'translate(-50%, -100%)'
+            }}
+            className="z-[9999] pointer-events-none w-64 sm:w-72 p-3 bg-slate-900/98 backdrop-blur-md text-slate-200 text-xs rounded-xl shadow-2xl border border-slate-700 text-left normal-case font-normal select-none transition-all duration-150 animate-in fade-in"
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-1.5">
+              <span className="font-bold text-white text-xs">{hoveredMetric.label}</span>
+              <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                {hoveredMetric.abbr}
+              </span>
+            </div>
+            <p className="text-[11px] leading-relaxed text-slate-300 whitespace-normal">
+              {hoveredMetric.description}
+            </p>
+            <div className="mt-2 pt-1 border-t border-slate-800/80 text-[10px] text-slate-500 flex items-center justify-between">
+              <span>{lang === 'sk' ? 'Kliknutím zoradíte' : 'Click column to sort'}</span>
+              <span className="font-mono text-slate-400">{hoveredMetric.key}</span>
+            </div>
+            {/* Arrow pointing to the column header */}
+            <div
+              className={`absolute left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-slate-900 border-slate-700 rotate-45 ${
+                isNearTop ? '-top-1.5 border-t border-l' : '-bottom-1.5 border-b border-r'
+              }`}
+            />
+          </div>
+        );
+      })()}
+
       {/* Player Detail Modal */}
       {selectedPlayerForDetail && (
         <PlayerDetailModal
           player={selectedPlayerForDetail}
-          isOpen={true}
+          isOpen={Boolean(selectedPlayerForDetail)}
           onClose={() => setSelectedPlayerForDetail(null)}
           teams={teams}
           allPlayers={players}
