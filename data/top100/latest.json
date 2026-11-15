@@ -2,8 +2,8 @@
   "gw": 10,
   "closedDeadlineGw": 10,
   "planningForGw": 11,
-  "refreshedAt": "14-Nov-2026 05:11",
-  "sourceUrl": "https://docs.google.com/spreadsheets/d/1HcQsj3aVbvlak135JK_akFxQ68hG6ioV2HRtOpr-6JM/gviz/tq?tqx=out:csv&gid=1027845484",
+  "refreshedAt": "15-Nov-2026 05:14",
+  "sourceUrl": "https://docs.google.com/spreadsheets/d/1HcQsj3aVbvlak135JK_akFxQ68hG6ioV2HRtOpr-6JM/gviz/tq?tqx=out:csv&gid=1101664732",
   "mostBought": {
     "player": "Gabriel",
     "team": "Arsenal",
@@ -85,9 +85,9 @@
       "player": "António João Silva",
       "pos": "DEF",
       "team": "Bournemouth",
-      "in": 4,
+      "in": 3,
       "out": 0,
-      "net": 4,
+      "net": 3,
       "form": 6.8,
       "signalType": "net_buy"
     },
@@ -161,17 +161,6 @@
     },
     {
       "rank": 3,
-      "player": "Lewis Hall",
-      "pos": "DEF",
-      "team": "Newcastle",
-      "in": 0,
-      "out": 5,
-      "net": -5,
-      "form": 3.8,
-      "signalType": "net_sell"
-    },
-    {
-      "rank": 4,
       "player": "Kevin Schade",
       "pos": "MID",
       "team": "Brentford",
@@ -179,6 +168,17 @@
       "out": 5,
       "net": -5,
       "form": 1.5,
+      "signalType": "net_sell"
+    },
+    {
+      "rank": 4,
+      "player": "Lewis Hall",
+      "pos": "DEF",
+      "team": "Newcastle",
+      "in": 0,
+      "out": 4,
+      "net": -4,
+      "form": 3.8,
       "signalType": "net_sell"
     },
     {
@@ -260,7 +260,7 @@
       "totalActivity": 6,
       "net": 4,
       "form": 6.5,
-      "ownership": "31.4%",
+      "ownership": "31.5%",
       "signalType": "divided"
     },
     {
@@ -274,7 +274,7 @@
       "totalActivity": 5,
       "net": 1,
       "form": 8.8,
-      "ownership": "31.3%",
+      "ownership": "31.4%",
       "signalType": "divided"
     },
     {
@@ -302,7 +302,7 @@
       "totalActivity": 2,
       "net": 0,
       "form": 7.5,
-      "ownership": "14.7%",
+      "ownership": "14.8%",
       "signalType": "divided"
     }
   ],
@@ -312,32 +312,32 @@
       "in": 5,
       "out": 5,
       "net": 0,
-      "shareIn": "7.4%",
-      "shareOut": "7.4%"
+      "shareIn": "7.5%",
+      "shareOut": "7.5%"
     },
     {
       "pos": "DEF",
-      "in": 18,
-      "out": 18,
+      "in": 17,
+      "out": 17,
       "net": 0,
-      "shareIn": "26.5%",
-      "shareOut": "26.5%"
+      "shareIn": "25.4%",
+      "shareOut": "25.4%"
     },
     {
       "pos": "MID",
       "in": 21,
       "out": 21,
       "net": 0,
-      "shareIn": "30.9%",
-      "shareOut": "30.9%"
+      "shareIn": "31.3%",
+      "shareOut": "31.3%"
     },
     {
       "pos": "FWD",
       "in": 24,
       "out": 24,
       "net": 0,
-      "shareIn": "35.3%",
-      "shareOut": "35.3%"
+      "shareIn": "35.8%",
+      "shareOut": "35.8%"
     }
   ],
   "playerLookup": {
@@ -396,15 +396,15 @@
       "form": 7.2,
       "signalType": "net_buy"
     },
-    "lewishall": {
+    "kevinschade": {
       "rank": 3,
-      "player": "Lewis Hall",
-      "pos": "DEF",
-      "team": "Newcastle",
+      "player": "Kevin Schade",
+      "pos": "MID",
+      "team": "Brentford",
       "in": 0,
       "out": 5,
       "net": -5,
-      "form": 3.8,
+      "form": 1.5,
       "signalType": "net_sell"
     },
     "alexanderisak": {
@@ -418,15 +418,15 @@
       "form": 7,
       "signalType": "net_buy"
     },
-    "kevinschade": {
+    "lewishall": {
       "rank": 4,
-      "player": "Kevin Schade",
-      "pos": "MID",
-      "team": "Brentford",
+      "player": "Lewis Hall",
+      "pos": "DEF",
+      "team": "Newcastle",
       "in": 0,
-      "out": 5,
-      "net": -5,
-      "form": 1.5,
+      "out": 4,
+      "net": -4,
+      "form": 3.8,
       "signalType": "net_sell"
     },
     "marcustavernier": {
@@ -456,9 +456,9 @@
       "player": "António João Silva",
       "pos": "DEF",
       "team": "Bournemouth",
-      "in": 4,
+      "in": 3,
       "out": 0,
-      "net": 4,
+      "net": 3,
       "form": 6.8,
       "signalType": "net_buy"
     },
@@ -572,7 +572,7 @@
       "totalActivity": 5,
       "net": 1,
       "form": 8.8,
-      "ownership": "31.3%",
+      "ownership": "31.4%",
       "signalType": "divided"
     },
     "colepalmer": {
@@ -600,7 +600,7 @@
       "totalActivity": 2,
       "net": 0,
       "form": 7.5,
-      "ownership": "14.7%",
+      "ownership": "14.8%",
       "signalType": "divided"
     }
   },
@@ -610,31 +610,31 @@
         {
           "rank": 1,
           "player": "David Raya",
-          "own": "72.7%",
+          "own": "71.0%",
           "team": "Arsenal"
         },
         {
           "rank": 2,
           "player": "Bart Verbruggen",
-          "own": "35.4%",
+          "own": "37.0%",
           "team": "Brighton"
         },
         {
           "rank": 3,
           "player": "Martin Dubravka",
-          "own": "19.2%",
+          "own": "20.0%",
           "team": "Spurs"
         },
         {
           "rank": 4,
           "player": "Antonín Kinsky",
-          "own": "13.1%",
+          "own": "13.0%",
           "team": "Spurs"
         },
         {
           "rank": 5,
           "player": "James Trafford",
-          "own": "11.1%",
+          "own": "12.0%",
           "team": "Leeds"
         }
       ],
@@ -642,31 +642,31 @@
         {
           "rank": 1,
           "player": "Ezri Konsa",
-          "own": "76.8%",
+          "own": "76.0%",
           "team": "Arsenal"
         },
         {
           "rank": 2,
           "player": "Maxim De Cuyper",
-          "own": "70.7%",
+          "own": "71.0%",
           "team": "Brighton"
         },
         {
           "rank": 3,
           "player": "Riccardo Calafiori",
-          "own": "64.6%",
+          "own": "63.0%",
           "team": "Arsenal"
         },
         {
           "rank": 4,
           "player": "Jan Paul Van Hecke",
-          "own": "50.5%",
+          "own": "50.0%",
           "team": "Spurs"
         },
         {
           "rank": 5,
           "player": "Tarik Muharemović",
-          "own": "50.5%",
+          "own": "49.0%",
           "team": "Leeds"
         }
       ],
@@ -674,31 +674,31 @@
         {
           "rank": 1,
           "player": "Pascal Groß",
-          "own": "88.9%",
+          "own": "89.0%",
           "team": "Brighton"
         },
         {
           "rank": 2,
           "player": "Morgan Rogers",
-          "own": "87.9%",
+          "own": "87.0%",
           "team": "Chelsea"
         },
         {
           "rank": 3,
           "player": "Cole Palmer",
-          "own": "67.7%",
+          "own": "68.0%",
           "team": "Chelsea"
         },
         {
           "rank": 4,
           "player": "Marcus Tavernier",
-          "own": "63.6%",
+          "own": "65.0%",
           "team": "Bournemouth"
         },
         {
           "rank": 5,
           "player": "Johan Manzambi",
-          "own": "35.4%",
+          "own": "34.0%",
           "team": "Aston Villa"
         }
       ],
@@ -712,26 +712,26 @@
         {
           "rank": 2,
           "player": "Nicolas N.Jackson",
-          "own": "79.8%",
+          "own": "79.0%",
           "team": "Aston Villa"
         },
         {
           "rank": 3,
           "player": "Thierno Barry",
-          "own": "60.6%",
+          "own": "60.0%",
           "team": "Everton"
         },
         {
           "rank": 4,
-          "player": "Alexander Isak",
-          "own": "21.2%",
-          "team": "Liverpool"
+          "player": "Francisco Evanilson Evanilson",
+          "own": "22.0%",
+          "team": "Bournemouth"
         },
         {
           "rank": 5,
-          "player": "Francisco Evanilson Evanilson",
-          "own": "21.2%",
-          "team": "Bournemouth"
+          "player": "Alexander Isak",
+          "own": "21.0%",
+          "team": "Liverpool"
         }
       ]
     },
@@ -743,7 +743,7 @@
         "team": "Man City",
         "price": "£15.80",
         "top100Own": 99,
-        "appearances": 98,
+        "appearances": 99,
         "overallOwn": 78.8,
         "tier": "Template Core",
         "status": "Core",
@@ -755,9 +755,9 @@
         "pos": "MID",
         "team": "Brighton",
         "price": "£6.30",
-        "top100Own": 88.9,
-        "appearances": 88,
-        "overallOwn": 48.1,
+        "top100Own": 89,
+        "appearances": 89,
+        "overallOwn": 48.2,
         "tier": "Template Core",
         "status": "Core",
         "delta": 40.8
@@ -768,12 +768,12 @@
         "pos": "MID",
         "team": "Chelsea",
         "price": "£8.20",
-        "top100Own": 87.9,
+        "top100Own": 87,
         "appearances": 87,
         "overallOwn": 54,
         "tier": "Template Core",
         "status": "Core",
-        "delta": 33.9
+        "delta": 33
       },
       {
         "rank": 4,
@@ -781,51 +781,51 @@
         "pos": "FWD",
         "team": "Aston Villa",
         "price": "£7.10",
-        "top100Own": 79.8,
+        "top100Own": 79,
         "appearances": 79,
-        "overallOwn": 31.3,
+        "overallOwn": 31.4,
         "tier": "Template Core",
         "status": "Core",
-        "delta": 48.5
+        "delta": 47.6
       },
       {
         "rank": 5,
         "player": "Ezri Konsa",
         "pos": "DEF",
         "team": "Arsenal",
-        "price": "£4.80",
-        "top100Own": 76.8,
+        "price": "£4.90",
+        "top100Own": 76,
         "appearances": 76,
-        "overallOwn": 24.6,
+        "overallOwn": 24.7,
         "tier": "Template Core",
         "status": "Core",
-        "delta": 52.2
+        "delta": 51.3
       },
       {
         "rank": 6,
-        "player": "David Raya",
-        "pos": "GK",
-        "team": "Arsenal",
-        "price": "£6.20",
-        "top100Own": 72.7,
-        "appearances": 72,
-        "overallOwn": 47.6,
-        "tier": "Template Core",
-        "status": "Core",
-        "delta": 25.1
-      },
-      {
-        "rank": 7,
         "player": "Maxim De Cuyper",
         "pos": "DEF",
         "team": "Brighton",
         "price": "£5.50",
-        "top100Own": 70.7,
-        "appearances": 70,
+        "top100Own": 71,
+        "appearances": 71,
         "overallOwn": 47.9,
         "tier": "Template Core",
         "status": "Core",
-        "delta": 22.8
+        "delta": 23.1
+      },
+      {
+        "rank": 7,
+        "player": "David Raya",
+        "pos": "GK",
+        "team": "Arsenal",
+        "price": "£6.20",
+        "top100Own": 71,
+        "appearances": 71,
+        "overallOwn": 47.6,
+        "tier": "Template Core",
+        "status": "Core",
+        "delta": 23.4
       },
       {
         "rank": 8,
@@ -833,38 +833,38 @@
         "pos": "MID",
         "team": "Chelsea",
         "price": "£9.80",
-        "top100Own": 67.7,
-        "appearances": 67,
+        "top100Own": 68,
+        "appearances": 68,
         "overallOwn": 28.3,
         "tier": "Template Core",
         "status": "Core",
-        "delta": 39.4
+        "delta": 39.7
       },
       {
         "rank": 9,
-        "player": "Riccardo Calafiori",
-        "pos": "DEF",
-        "team": "Arsenal",
-        "price": "£5.90",
-        "top100Own": 64.6,
-        "appearances": 64,
-        "overallOwn": 48.7,
-        "tier": "Template Core",
-        "status": "Core",
-        "delta": 15.9
-      },
-      {
-        "rank": 10,
         "player": "Marcus Tavernier",
         "pos": "MID",
         "team": "Bournemouth",
         "price": "£6.70",
-        "top100Own": 63.6,
-        "appearances": 63,
-        "overallOwn": 31.4,
+        "top100Own": 65,
+        "appearances": 65,
+        "overallOwn": 31.5,
         "tier": "Template Core",
         "status": "Core",
-        "delta": 32.2
+        "delta": 33.5
+      },
+      {
+        "rank": 10,
+        "player": "Riccardo Calafiori",
+        "pos": "DEF",
+        "team": "Arsenal",
+        "price": "£5.90",
+        "top100Own": 63,
+        "appearances": 63,
+        "overallOwn": 48.7,
+        "tier": "Template Core",
+        "status": "Core",
+        "delta": 14.3
       },
       {
         "rank": 11,
@@ -872,12 +872,12 @@
         "pos": "FWD",
         "team": "Everton",
         "price": "£5.70",
-        "top100Own": 60.6,
+        "top100Own": 60,
         "appearances": 60,
         "overallOwn": 10.8,
         "tier": "Template Core",
         "status": "Core",
-        "delta": 49.8
+        "delta": 49.2
       },
       {
         "rank": 12,
@@ -885,12 +885,12 @@
         "pos": "DEF",
         "team": "Spurs",
         "price": "£5.10",
-        "top100Own": 50.5,
+        "top100Own": 50,
         "appearances": 50,
-        "overallOwn": 14.7,
+        "overallOwn": 14.8,
         "tier": "Template Core",
         "status": "Core",
-        "delta": 35.8
+        "delta": 35.2
       },
       {
         "rank": 13,
@@ -898,12 +898,12 @@
         "pos": "DEF",
         "team": "Leeds",
         "price": "£5.10",
-        "top100Own": 50.5,
-        "appearances": 50,
-        "overallOwn": 6.4,
-        "tier": "Template Core",
-        "status": "Core",
-        "delta": 44.1
+        "top100Own": 49,
+        "appearances": 49,
+        "overallOwn": 6.5,
+        "tier": "Strong Template",
+        "status": "Strong",
+        "delta": 42.5
       },
       {
         "rank": 14,
@@ -911,12 +911,12 @@
         "pos": "DEF",
         "team": "Arsenal",
         "price": "£8.10",
-        "top100Own": 44.4,
-        "appearances": 44,
+        "top100Own": 46,
+        "appearances": 46,
         "overallOwn": 26.2,
         "tier": "Strong Template",
         "status": "Strong",
-        "delta": 18.2
+        "delta": 19.8
       },
       {
         "rank": 15,
@@ -924,12 +924,12 @@
         "pos": "GK",
         "team": "Brighton",
         "price": "£4.70",
-        "top100Own": 35.4,
-        "appearances": 35,
+        "top100Own": 37,
+        "appearances": 37,
         "overallOwn": 24,
         "tier": "Strong Template",
         "status": "Strong",
-        "delta": 11.4
+        "delta": 13
       },
       {
         "rank": 16,
@@ -937,12 +937,12 @@
         "pos": "MID",
         "team": "Aston Villa",
         "price": "£6.20",
-        "top100Own": 35.4,
-        "appearances": 35,
-        "overallOwn": 8.6,
+        "top100Own": 34,
+        "appearances": 34,
+        "overallOwn": 8.5,
         "tier": "Strong Template",
         "status": "Strong",
-        "delta": 26.8
+        "delta": 25.5
       },
       {
         "rank": 17,
@@ -950,12 +950,12 @@
         "pos": "DEF",
         "team": "Brighton",
         "price": "£5.30",
-        "top100Own": 33.3,
+        "top100Own": 33,
         "appearances": 33,
         "overallOwn": 9.4,
         "tier": "Strong Template",
         "status": "Strong",
-        "delta": 23.9
+        "delta": 23.6
       },
       {
         "rank": 18,
@@ -963,64 +963,64 @@
         "pos": "DEF",
         "team": "Bournemouth",
         "price": "£5.10",
-        "top100Own": 26.3,
+        "top100Own": 26,
         "appearances": 26,
         "overallOwn": 3.7,
         "tier": "Strong Template",
         "status": "Strong",
-        "delta": 22.6
+        "delta": 22.3
       },
       {
         "rank": 19,
-        "player": "Alexander Isak",
-        "pos": "FWD",
-        "team": "Liverpool",
-        "price": "£9.30",
-        "top100Own": 21.2,
-        "appearances": 21,
-        "overallOwn": 25.1,
-        "tier": "Differential",
-        "status": "Differential",
-        "delta": -3.9
-      },
-      {
-        "rank": 20,
         "player": "Francisco Evanilson Evanilson",
         "pos": "FWD",
         "team": "Bournemouth",
         "price": "£6.50",
-        "top100Own": 21.2,
-        "appearances": 21,
+        "top100Own": 22,
+        "appearances": 22,
         "overallOwn": 23.9,
         "tier": "Differential",
         "status": "Differential",
-        "delta": -2.7
+        "delta": -1.9
+      },
+      {
+        "rank": 20,
+        "player": "Alexander Isak",
+        "pos": "FWD",
+        "team": "Liverpool",
+        "price": "£9.30",
+        "top100Own": 21,
+        "appearances": 21,
+        "overallOwn": 25.1,
+        "tier": "Differential",
+        "status": "Differential",
+        "delta": -4.1
       },
       {
         "rank": 21,
-        "player": "Kiernan Dewsbury-Hall",
-        "pos": "MID",
-        "team": "Everton",
-        "price": "£6.70",
-        "top100Own": 20.2,
-        "appearances": 20,
-        "overallOwn": 7.2,
-        "tier": "Differential",
-        "status": "Differential",
-        "delta": 13
-      },
-      {
-        "rank": 22,
         "player": "Martin Dubravka",
         "pos": "GK",
         "team": "Spurs",
         "price": "£4.00",
-        "top100Own": 19.2,
-        "appearances": 19,
+        "top100Own": 20,
+        "appearances": 20,
         "overallOwn": 15.2,
         "tier": "Differential",
         "status": "Differential",
-        "delta": 4
+        "delta": 4.8
+      },
+      {
+        "rank": 22,
+        "player": "Kiernan Dewsbury-Hall",
+        "pos": "MID",
+        "team": "Everton",
+        "price": "£6.70",
+        "top100Own": 20,
+        "appearances": 20,
+        "overallOwn": 7.2,
+        "tier": "Differential",
+        "status": "Differential",
+        "delta": 12.8
       },
       {
         "rank": 23,
@@ -1028,12 +1028,12 @@
         "pos": "DEF",
         "team": "Newcastle",
         "price": "£5.20",
-        "top100Own": 16.2,
+        "top100Own": 16,
         "appearances": 16,
         "overallOwn": 18.2,
         "tier": "Differential",
         "status": "Differential",
-        "delta": -2
+        "delta": -2.2
       },
       {
         "rank": 24,
@@ -1041,64 +1041,64 @@
         "pos": "MID",
         "team": "Brentford",
         "price": "£6.10",
-        "top100Own": 16.2,
+        "top100Own": 16,
         "appearances": 16,
         "overallOwn": 12.8,
         "tier": "Differential",
         "status": "Differential",
-        "delta": 3.4
+        "delta": 3.2
       },
       {
         "rank": 25,
-        "player": "Antonín Kinsky",
-        "pos": "GK",
-        "team": "Spurs",
-        "price": "£4.40",
-        "top100Own": 13.1,
-        "appearances": 13,
-        "overallOwn": 15.6,
-        "tier": "Differential",
-        "status": "Differential",
-        "delta": -2.5
-      },
-      {
-        "rank": 26,
         "player": "Harvey Barnes",
         "pos": "MID",
         "team": "Newcastle",
         "price": "£6.10",
-        "top100Own": 13.1,
-        "appearances": 13,
+        "top100Own": 14,
+        "appearances": 14,
         "overallOwn": 6.6,
         "tier": "Differential",
         "status": "Differential",
-        "delta": 6.5
+        "delta": 7.4
+      },
+      {
+        "rank": 26,
+        "player": "Antonín Kinsky",
+        "pos": "GK",
+        "team": "Spurs",
+        "price": "£4.40",
+        "top100Own": 13,
+        "appearances": 13,
+        "overallOwn": 15.6,
+        "tier": "Differential",
+        "status": "Differential",
+        "delta": -2.6
       },
       {
         "rank": 27,
-        "player": "Bryan Mbeumo",
-        "pos": "MID",
-        "team": "Man Utd",
-        "price": "£7.90",
-        "top100Own": 11.1,
-        "appearances": 11,
-        "overallOwn": 19.1,
-        "tier": "Differential",
-        "status": "Differential",
-        "delta": -8
-      },
-      {
-        "rank": 28,
         "player": "Dominic Calvert-Lewin",
         "pos": "FWD",
         "team": "Leeds",
         "price": "£6.00",
-        "top100Own": 11.1,
-        "appearances": 11,
+        "top100Own": 12,
+        "appearances": 12,
         "overallOwn": 17.5,
         "tier": "Differential",
         "status": "Differential",
-        "delta": -6.4
+        "delta": -5.5
+      },
+      {
+        "rank": 28,
+        "player": "James Trafford",
+        "pos": "GK",
+        "team": "Leeds",
+        "price": "£5.00",
+        "top100Own": 12,
+        "appearances": 12,
+        "overallOwn": 6.5,
+        "tier": "Differential",
+        "status": "Differential",
+        "delta": 5.5
       },
       {
         "rank": 29,
@@ -1106,25 +1106,25 @@
         "pos": "MID",
         "team": "Nottingham Forest",
         "price": "£7.80",
-        "top100Own": 11.1,
+        "top100Own": 11,
         "appearances": 11,
         "overallOwn": 9.3,
         "tier": "Differential",
         "status": "Differential",
-        "delta": 1.8
+        "delta": 1.7
       },
       {
         "rank": 30,
-        "player": "James Trafford",
-        "pos": "GK",
-        "team": "Leeds",
-        "price": "£5.00",
-        "top100Own": 11.1,
-        "appearances": 11,
-        "overallOwn": 6.5,
+        "player": "Bryan Mbeumo",
+        "pos": "MID",
+        "team": "Man Utd",
+        "price": "£7.90",
+        "top100Own": 10,
+        "appearances": 10,
+        "overallOwn": 19,
         "tier": "Differential",
         "status": "Differential",
-        "delta": 4.6
+        "delta": -9
       },
       {
         "rank": 31,
@@ -1132,12 +1132,12 @@
         "pos": "MID",
         "team": "Arsenal",
         "price": "£6.70",
-        "top100Own": 9.1,
+        "top100Own": 9,
         "appearances": 9,
         "overallOwn": 16.5,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": -7.4
+        "delta": -7.5
       },
       {
         "rank": 32,
@@ -1145,155 +1145,155 @@
         "pos": "MID",
         "team": "Hull City",
         "price": "£4.50",
-        "top100Own": 9.1,
+        "top100Own": 9,
         "appearances": 9,
         "overallOwn": 4.3,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": 4.8
+        "delta": 4.7
       },
       {
         "rank": 33,
-        "player": "Jack Rudoni",
-        "pos": "MID",
-        "team": "Coventry City",
-        "price": "£4.90",
-        "top100Own": 8.1,
-        "appearances": 8,
-        "overallOwn": 1.2,
-        "tier": "Elite Differential",
-        "status": "Elite Diff",
-        "delta": 6.9
-      },
-      {
-        "rank": 34,
         "player": "James Tarkowski",
         "pos": "DEF",
         "team": "Everton",
         "price": "£6.20",
-        "top100Own": 7.1,
-        "appearances": 7,
+        "top100Own": 8,
+        "appearances": 8,
         "overallOwn": 19.3,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": -12.2
+        "delta": -11.3
+      },
+      {
+        "rank": 34,
+        "player": "Jack Rudoni",
+        "pos": "MID",
+        "team": "Coventry City",
+        "price": "£4.90",
+        "top100Own": 8,
+        "appearances": 8,
+        "overallOwn": 1.2,
+        "tier": "Elite Differential",
+        "status": "Elite Diff",
+        "delta": 6.8
       },
       {
         "rank": 35,
+        "player": "Enzo E.Le Fée",
+        "pos": "MID",
+        "team": "Sunderland",
+        "price": "£5.70",
+        "top100Own": 7,
+        "appearances": 7,
+        "overallOwn": 2.8,
+        "tier": "Elite Differential",
+        "status": "Elite Diff",
+        "delta": 4.2
+      },
+      {
+        "rank": 36,
         "player": "Joško Gvardiol",
         "pos": "DEF",
         "team": "Man City",
         "price": "£5.60",
-        "top100Own": 6.1,
+        "top100Own": 6,
         "appearances": 6,
-        "overallOwn": 22.6,
+        "overallOwn": 22.5,
         "tier": "Elite Differential",
         "status": "Elite Diff",
         "delta": -16.5
       },
       {
-        "rank": 36,
+        "rank": 37,
         "player": "Issa Diop",
         "pos": "DEF",
         "team": "Ipswich Town",
         "price": "£3.90",
-        "top100Own": 6.1,
+        "top100Own": 6,
         "appearances": 6,
         "overallOwn": 9.8,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": -3.7
+        "delta": -3.8
       },
       {
-        "rank": 37,
+        "rank": 38,
+        "player": "Bobby Thomas",
+        "pos": "DEF",
+        "team": "Coventry City",
+        "price": "£4.00",
+        "top100Own": 6,
+        "appearances": 6,
+        "overallOwn": 7.3,
+        "tier": "Elite Differential",
+        "status": "Elite Diff",
+        "delta": -1.3
+      },
+      {
+        "rank": 39,
         "player": "Jérémy Doku",
         "pos": "MID",
         "team": "Man City",
         "price": "£7.50",
-        "top100Own": 6.1,
+        "top100Own": 6,
         "appearances": 6,
         "overallOwn": 4.5,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": 1.6
+        "delta": 1.5
       },
       {
-        "rank": 38,
+        "rank": 40,
         "player": "Diego Gomez",
         "pos": "MID",
         "team": "Brighton",
         "price": "£5.00",
-        "top100Own": 6.1,
+        "top100Own": 6,
         "appearances": 6,
         "overallOwn": 4.3,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": 1.8
+        "delta": 1.7
       },
       {
-        "rank": 39,
+        "rank": 41,
         "player": "Alex Palmer",
         "pos": "GK",
         "team": "Ipswich Town",
         "price": "£4.00",
-        "top100Own": 6.1,
+        "top100Own": 6,
         "appearances": 6,
         "overallOwn": 3.4,
+        "tier": "Elite Differential",
+        "status": "Elite Diff",
+        "delta": 2.6
+      },
+      {
+        "rank": 42,
+        "player": "Josh King",
+        "pos": "MID",
+        "team": "Fulham",
+        "price": "£5.50",
+        "top100Own": 6,
+        "appearances": 6,
+        "overallOwn": 3.3,
         "tier": "Elite Differential",
         "status": "Elite Diff",
         "delta": 2.7
       },
       {
-        "rank": 40,
-        "player": "Josh King",
-        "pos": "MID",
-        "team": "Fulham",
-        "price": "£5.50",
-        "top100Own": 6.1,
-        "appearances": 6,
-        "overallOwn": 3.3,
-        "tier": "Elite Differential",
-        "status": "Elite Diff",
-        "delta": 2.8
-      },
-      {
-        "rank": 41,
+        "rank": 43,
         "player": "Đorđe Petrović",
         "pos": "GK",
         "team": "Bournemouth",
         "price": "£4.50",
-        "top100Own": 6.1,
+        "top100Own": 6,
         "appearances": 6,
         "overallOwn": 3.2,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": 2.9
-      },
-      {
-        "rank": 42,
-        "player": "Enzo E.Le Fée",
-        "pos": "MID",
-        "team": "Sunderland",
-        "price": "£5.70",
-        "top100Own": 6.1,
-        "appearances": 6,
-        "overallOwn": 2.8,
-        "tier": "Elite Differential",
-        "status": "Elite Diff",
-        "delta": 3.3
-      },
-      {
-        "rank": 43,
-        "player": "Dan Bentley",
-        "pos": "GK",
-        "team": "Coventry City",
-        "price": "£4.00",
-        "top100Own": 6.1,
-        "appearances": 6,
-        "overallOwn": 1,
-        "tier": "Elite Differential",
-        "status": "Elite Diff",
-        "delta": 5.1
+        "delta": 2.8
       },
       {
         "rank": 44,
@@ -1301,12 +1301,12 @@
         "pos": "GK",
         "team": "Ipswich Town",
         "price": "£4.00",
-        "top100Own": 6.1,
+        "top100Own": 6,
         "appearances": 6,
         "overallOwn": 0.6,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": 5.5
+        "delta": 5.4
       },
       {
         "rank": 45,
@@ -1314,103 +1314,103 @@
         "pos": "FWD",
         "team": "Chelsea",
         "price": "£7.60",
-        "top100Own": 5.1,
+        "top100Own": 5,
         "appearances": 5,
-        "overallOwn": 31.6,
+        "overallOwn": 31.5,
         "tier": "Elite Differential",
         "status": "Elite Diff",
         "delta": -26.5
       },
       {
         "rank": 46,
-        "player": "Bobby Thomas",
-        "pos": "DEF",
-        "team": "Coventry City",
-        "price": "£4.00",
-        "top100Own": 5.1,
-        "appearances": 5,
-        "overallOwn": 7.3,
-        "tier": "Elite Differential",
-        "status": "Elite Diff",
-        "delta": -2.2
-      },
-      {
-        "rank": 47,
         "player": "John Egan",
         "pos": "DEF",
         "team": "Hull City",
         "price": "£4.10",
-        "top100Own": 5.1,
+        "top100Own": 5,
         "appearances": 5,
         "overallOwn": 6.6,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": -1.5
+        "delta": -1.6
       },
       {
-        "rank": 48,
+        "rank": 47,
         "player": "Kristoffer Ajer",
         "pos": "DEF",
         "team": "Brentford",
         "price": "£4.50",
-        "top100Own": 5.1,
+        "top100Own": 5,
         "appearances": 5,
         "overallOwn": 4,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": 1.1
+        "delta": 1
       },
       {
-        "rank": 49,
+        "rank": 48,
         "player": "Fraser Forster",
         "pos": "GK",
         "team": "Bournemouth",
         "price": "£4.00",
-        "top100Own": 5.1,
+        "top100Own": 5,
         "appearances": 5,
         "overallOwn": 3.4,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": 1.7
+        "delta": 1.6
       },
       {
-        "rank": 50,
+        "rank": 49,
         "player": "Jason Steele",
         "pos": "GK",
         "team": "Brighton",
-        "price": "£4.00",
-        "top100Own": 5.1,
+        "price": "£3.90",
+        "top100Own": 5,
         "appearances": 5,
         "overallOwn": 3.4,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": 1.7
+        "delta": 1.6
       },
       {
-        "rank": 51,
+        "rank": 50,
         "player": "James Hill",
         "pos": "DEF",
         "team": "Bournemouth",
         "price": "£5.60",
-        "top100Own": 5.1,
+        "top100Own": 5,
         "appearances": 5,
-        "overallOwn": 3,
+        "overallOwn": 3.1,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": 2.1
+        "delta": 1.9
       },
       {
-        "rank": 52,
+        "rank": 51,
         "player": "Rayan Vitor Rayan",
         "pos": "MID",
         "team": "Bournemouth",
         "price": "£6.30",
-        "top100Own": 5.1,
+        "top100Own": 5,
         "appearances": 5,
         "overallOwn": 2.4,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": 2.7
+        "delta": 2.6
+      },
+      {
+        "rank": 52,
+        "player": "Dan Bentley",
+        "pos": "GK",
+        "team": "Coventry City",
+        "price": "£4.00",
+        "top100Own": 5,
+        "appearances": 5,
+        "overallOwn": 1,
+        "tier": "Elite Differential",
+        "status": "Elite Diff",
+        "delta": 4
       },
       {
         "rank": 53,
@@ -1420,13 +1420,26 @@
         "price": "£11.60",
         "top100Own": 4,
         "appearances": 4,
-        "overallOwn": 20.4,
+        "overallOwn": 20.3,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": -16.4
+        "delta": -16.3
       },
       {
         "rank": 54,
+        "player": "Nobel Mendy",
+        "pos": "DEF",
+        "team": "Hull City",
+        "price": "£4.10",
+        "top100Own": 4,
+        "appearances": 4,
+        "overallOwn": 4.5,
+        "tier": "Elite Differential",
+        "status": "Elite Diff",
+        "delta": -0.5
+      },
+      {
+        "rank": 55,
         "player": "Dara O'Shea",
         "pos": "DEF",
         "team": "Ipswich Town",
@@ -1439,7 +1452,7 @@
         "delta": 1.2
       },
       {
-        "rank": 55,
+        "rank": 56,
         "player": "Rayan Cherki",
         "pos": "MID",
         "team": "Man City",
@@ -1452,7 +1465,7 @@
         "delta": -30.5
       },
       {
-        "rank": 56,
+        "rank": 57,
         "player": "Jayden Bogle",
         "pos": "DEF",
         "team": "Leeds",
@@ -1465,20 +1478,20 @@
         "delta": -8.2
       },
       {
-        "rank": 57,
-        "player": "Nobel Mendy",
+        "rank": 58,
+        "player": "Vitalii Mykolenko",
         "pos": "DEF",
-        "team": "Hull City",
-        "price": "£4.10",
+        "team": "Everton",
+        "price": "£4.60",
         "top100Own": 3,
         "appearances": 3,
-        "overallOwn": 4.5,
+        "overallOwn": 2.5,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": -1.5
+        "delta": 0.5
       },
       {
-        "rank": 58,
+        "rank": 59,
         "player": "Benjamin Lecomte",
         "pos": "GK",
         "team": "Fulham",
@@ -1491,7 +1504,7 @@
         "delta": 1.9
       },
       {
-        "rank": 59,
+        "rank": 60,
         "player": "Dominik Szoboszlai",
         "pos": "MID",
         "team": "Liverpool",
@@ -1504,20 +1517,20 @@
         "delta": -11.4
       },
       {
-        "rank": 60,
+        "rank": 61,
         "player": "Mohamed Belloumi",
         "pos": "MID",
         "team": "Hull City",
         "price": "£5.30",
         "top100Own": 2,
         "appearances": 2,
-        "overallOwn": 9.6,
+        "overallOwn": 9.5,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": -7.6
+        "delta": -7.5
       },
       {
-        "rank": 61,
+        "rank": 62,
         "player": "Pedro Pedro Porro",
         "pos": "DEF",
         "team": "Spurs",
@@ -1530,7 +1543,7 @@
         "delta": -2.9
       },
       {
-        "rank": 62,
+        "rank": 63,
         "player": "Jeremy Jacquet",
         "pos": "DEF",
         "team": "Liverpool",
@@ -1543,7 +1556,7 @@
         "delta": -2.7
       },
       {
-        "rank": 63,
+        "rank": 64,
         "player": "Bradley Barcola",
         "pos": "MID",
         "team": "Liverpool",
@@ -1556,7 +1569,7 @@
         "delta": -2.4
       },
       {
-        "rank": 64,
+        "rank": 65,
         "player": "Zion Suzuki",
         "pos": "GK",
         "team": "Aston Villa",
@@ -1569,19 +1582,6 @@
         "delta": -1.1
       },
       {
-        "rank": 65,
-        "player": "Vitalii Mykolenko",
-        "pos": "DEF",
-        "team": "Everton",
-        "price": "£4.60",
-        "top100Own": 2,
-        "appearances": 2,
-        "overallOwn": 2.5,
-        "tier": "Elite Differential",
-        "status": "Elite Diff",
-        "delta": -0.5
-      },
-      {
         "rank": 66,
         "player": "Mohammed Kudus",
         "pos": "MID",
@@ -1589,10 +1589,10 @@
         "price": "£6.60",
         "top100Own": 2,
         "appearances": 2,
-        "overallOwn": 2,
+        "overallOwn": 2.1,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": 0
+        "delta": -0.1
       },
       {
         "rank": 67,
@@ -1648,19 +1648,32 @@
       },
       {
         "rank": 71,
+        "player": "Declan Rice",
+        "pos": "MID",
+        "team": "Arsenal",
+        "price": "£7.50",
+        "top100Own": 1,
+        "appearances": 1,
+        "overallOwn": 13.7,
+        "tier": "Elite Differential",
+        "status": "Elite Diff",
+        "delta": -12.7
+      },
+      {
+        "rank": 72,
         "player": "Igor Thiago Thiago",
         "pos": "FWD",
         "team": "Brentford",
         "price": "£7.80",
         "top100Own": 1,
         "appearances": 1,
-        "overallOwn": 8.1,
+        "overallOwn": 8,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": -7.1
+        "delta": -7
       },
       {
-        "rank": 72,
+        "rank": 73,
         "player": "Gianluigi Donnarumma",
         "pos": "GK",
         "team": "Man City",
@@ -1673,7 +1686,7 @@
         "delta": -6.1
       },
       {
-        "rank": 73,
+        "rank": 74,
         "player": "Cody Gakpo",
         "pos": "MID",
         "team": "Liverpool",
@@ -1686,7 +1699,7 @@
         "delta": -6
       },
       {
-        "rank": 74,
+        "rank": 75,
         "player": "Milan van Ewijk",
         "pos": "DEF",
         "team": "Coventry City",
@@ -1699,20 +1712,20 @@
         "delta": -5.9
       },
       {
-        "rank": 75,
+        "rank": 76,
         "player": "Florian Wirtz",
         "pos": "MID",
         "team": "Liverpool",
         "price": "£7.20",
         "top100Own": 1,
         "appearances": 1,
-        "overallOwn": 5.6,
+        "overallOwn": 5.7,
         "tier": "Elite Differential",
         "status": "Elite Diff",
-        "delta": -4.6
+        "delta": -4.7
       },
       {
-        "rank": 76,
+        "rank": 77,
         "player": "Iliman Ndiaye",
         "pos": "MID",
         "team": "Man City",
@@ -1725,7 +1738,7 @@
         "delta": -4.4
       },
       {
-        "rank": 77,
+        "rank": 78,
         "player": "Neco N.Williams",
         "pos": "DEF",
         "team": "Nottingham Forest",
@@ -1738,7 +1751,7 @@
         "delta": -4.3
       },
       {
-        "rank": 78,
+        "rank": 79,
         "player": "Pedro Neto",
         "pos": "MID",
         "team": "Chelsea",
@@ -1751,7 +1764,7 @@
         "delta": -4
       },
       {
-        "rank": 79,
+        "rank": 80,
         "player": "Daniel Muñoz",
         "pos": "DEF",
         "team": "Nottingham Forest",
@@ -1764,7 +1777,7 @@
         "delta": -3.2
       },
       {
-        "rank": 80,
+        "rank": 81,
         "player": "Alisson A.Becker",
         "pos": "GK",
         "team": "Liverpool",
@@ -1777,7 +1790,7 @@
         "delta": -3.1
       },
       {
-        "rank": 81,
+        "rank": 82,
         "player": "Christos Tzolis",
         "pos": "MID",
         "team": "Arsenal",
@@ -1790,7 +1803,7 @@
         "delta": -2.9
       },
       {
-        "rank": 82,
+        "rank": 83,
         "player": "Gonzalo",
         "pos": "FWD",
         "team": "Fulham",
@@ -1803,7 +1816,7 @@
         "delta": -2.6
       },
       {
-        "rank": 83,
+        "rank": 84,
         "player": "Andrew Robertson",
         "pos": "DEF",
         "team": "Spurs",
@@ -1816,7 +1829,7 @@
         "delta": -1.7
       },
       {
-        "rank": 84,
+        "rank": 85,
         "player": "James Justin",
         "pos": "DEF",
         "team": "Leeds",
@@ -1829,7 +1842,7 @@
         "delta": -1.4
       },
       {
-        "rank": 85,
+        "rank": 86,
         "player": "Phil Foden",
         "pos": "MID",
         "team": "Man City",
@@ -1842,7 +1855,7 @@
         "delta": -1.3
       },
       {
-        "rank": 86,
+        "rank": 87,
         "player": "Anton Stach",
         "pos": "MID",
         "team": "Leeds",
@@ -1855,7 +1868,7 @@
         "delta": -0.6
       },
       {
-        "rank": 87,
+        "rank": 88,
         "player": "Alex Iwobi",
         "pos": "MID",
         "team": "Fulham",
@@ -1868,7 +1881,7 @@
         "delta": -0.5
       },
       {
-        "rank": 88,
+        "rank": 89,
         "player": "Jay Dasilva",
         "pos": "DEF",
         "team": "Coventry City",
@@ -1881,7 +1894,7 @@
         "delta": -0.4
       },
       {
-        "rank": 89,
+        "rank": 90,
         "player": "Ola Aina",
         "pos": "DEF",
         "team": "Nottingham Forest",
@@ -1894,7 +1907,7 @@
         "delta": -0.4
       },
       {
-        "rank": 90,
+        "rank": 91,
         "player": "Matz Sels",
         "pos": "GK",
         "team": "Nottingham Forest",
@@ -1907,7 +1920,7 @@
         "delta": -0.3
       },
       {
-        "rank": 91,
+        "rank": 92,
         "player": "Brandon Austin",
         "pos": "GK",
         "team": "Spurs",
@@ -1920,7 +1933,7 @@
         "delta": 0
       },
       {
-        "rank": 92,
+        "rank": 93,
         "player": "Carl Rushworth",
         "pos": "GK",
         "team": "Coventry City",
@@ -1933,7 +1946,7 @@
         "delta": 0.2
       },
       {
-        "rank": 93,
+        "rank": 94,
         "player": "George George Hemmings",
         "pos": "MID",
         "team": "Aston Villa",
@@ -1946,7 +1959,7 @@
         "delta": 0.3
       },
       {
-        "rank": 94,
+        "rank": 95,
         "player": "Jorrel Hato",
         "pos": "DEF",
         "team": "Chelsea",
@@ -1959,7 +1972,7 @@
         "delta": 0.5
       },
       {
-        "rank": 95,
+        "rank": 96,
         "player": "Matt Crooks",
         "pos": "MID",
         "team": "Hull City",
@@ -1972,7 +1985,7 @@
         "delta": 0.5
       },
       {
-        "rank": 96,
+        "rank": 97,
         "player": "James Wright",
         "pos": "GK",
         "team": "Aston Villa",
@@ -1985,7 +1998,7 @@
         "delta": 0.6
       },
       {
-        "rank": 97,
+        "rank": 98,
         "player": "Tyler Adams",
         "pos": "MID",
         "team": "Bournemouth",
@@ -1998,7 +2011,7 @@
         "delta": 0.7
       },
       {
-        "rank": 98,
+        "rank": 99,
         "player": "Tom Heaton",
         "pos": "GK",
         "team": "Man Utd",
@@ -2011,7 +2024,7 @@
         "delta": 0.9
       },
       {
-        "rank": 99,
+        "rank": 100,
         "player": "James McAtee",
         "pos": "MID",
         "team": "Nottingham Forest",
@@ -2025,5 +2038,5 @@
       }
     ]
   },
-  "cachedAt": 1794685138036
+  "cachedAt": 1794728903910
 }

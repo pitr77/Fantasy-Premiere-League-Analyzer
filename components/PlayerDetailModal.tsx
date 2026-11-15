@@ -63,9 +63,8 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
   fixtures = [],
   oddsData,
 }) => {
-  const [activeTab, setActiveTab] = useState<'history' | 'rankings' | 'past'>('history');
-  const [matchLogTab, setMatchLogTab] = useState<'overview' | 'attack' | 'defense' | 'transfers'>('overview');
-  const [activeMatchTooltip, setActiveMatchTooltip] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'history' | 'past'>('history');
+  const [matchLogTab, setMatchLogTab] = useState<'overview' | 'advanced'>('overview');
   const [lang] = useLanguage();
   const [summary, setSummary] = useState<FPLElementSummary | null>(null);
   const [loading, setLoading] = useState(false);
@@ -145,60 +144,6 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
       return tNorm.includes(playerNorm) || playerNorm.includes(tNorm);
     }) || null;
   }, [player, top100Snapshot]);
-
-  // League Rankings within position and overall
-  const rankings = useMemo(() => {
-    if (!player || !allPlayers || allPlayers.length === 0) return null;
-
-    const samePos = allPlayers.filter((p) => p && p.element_type === player.element_type);
-    const totalInPos = samePos.length;
-    const totalOverall = allPlayers.length;
-
-    // Helper to calculate rank (1-based)
-    const getRank = (list: FPLPlayer[], scoreFn: (p: FPLPlayer) => number) => {
-      if (!list || list.length === 0) return null;
-      const sorted = [...list].sort((a, b) => (scoreFn(b) || 0) - (scoreFn(a) || 0));
-      const idx = sorted.findIndex((p) => p?.id === player.id);
-      return idx >= 0 ? idx + 1 : null;
-    };
-
-    const pointsRankPos = getRank(samePos, (p) => p.total_points);
-    const pointsRankAll = getRank(allPlayers, (p) => p.total_points);
-
-    const formRankPos = getRank(samePos, (p) => parseFloat(p.form) || 0);
-    const formRankAll = getRank(allPlayers, (p) => parseFloat(p.form) || 0);
-
-    const valueRankPos = getRank(samePos, (p) => p.total_points / (p.now_cost / 10 || 1));
-    const valueRankAll = getRank(allPlayers, (p) => p.total_points / (p.now_cost / 10 || 1));
-
-    const ictRankPos = getRank(samePos, (p) => parseFloat(p.ict_index) || 0);
-    const ictRankAll = getRank(allPlayers, (p) => parseFloat(p.ict_index) || 0);
-
-    const bpsRankPos = getRank(samePos, (p) => p.bps || 0);
-    const bpsRankAll = getRank(allPlayers, (p) => p.bps || 0);
-
-    const ownRankPos = getRank(samePos, (p) => parseFloat(p.selected_by_percent) || 0);
-
-    // Percentile in points within position (100 = best)
-    const pointsPercentile = pointsRankPos ? Math.round(((totalInPos - pointsRankPos + 1) / totalInPos) * 100) : 0;
-
-    return {
-      pointsRankPos,
-      pointsRankAll,
-      formRankPos,
-      formRankAll,
-      valueRankPos,
-      valueRankAll,
-      ictRankPos,
-      ictRankAll,
-      bpsRankPos,
-      bpsRankAll,
-      ownRankPos,
-      pointsPercentile,
-      totalInPos,
-      totalOverall,
-    };
-  }, [player, allPlayers]);
 
   // Upcoming 5-6 fixtures using Dynamic FDR consistent with Transfer Picks & Dashboard
   const upcomingFixtures = useMemo(() => {
@@ -309,7 +254,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
     : '0';
 
   const getPointsBadgeClass = (pts: number) => {
-    if (pts >= 10) return 'bg-purple-500/20 text-purple-300 border-purple-500/50 shadow-[0_0_8px_rgba(168,85,247,0.2)] font-black';
+    if (pts >= 10) return 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.25)] font-black';
     if (pts >= 6) return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold';
     if (pts >= 3) return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
     return 'bg-slate-800 text-slate-400 border-slate-700';
@@ -572,42 +517,36 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
           })()}
 
           {/* Navigation Tabs */}
-          <div className="flex items-center gap-2 mt-5 border-t border-slate-800 pt-3">
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'history'
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <History size={14} />
-              <span>GW História ({pointsHistory.length} kôl)</span>
-            </button>
+          <div className="flex items-center gap-2 mt-4 border-t border-slate-800/80 pt-3">
+            <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab('history')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                  activeTab === 'history'
+                    ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <History size={13} />
+                <span>{lang === 'sk' ? `Aktuálna sezóna (${pointsHistory.length} kôl)` : `Current Season (${pointsHistory.length} GWs)`}</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('rankings')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'rankings'
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <Trophy size={14} />
-              <span>Rebríčky & Percentily</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('past')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'past'
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <Calendar size={14} />
-              <span>Minulé sezóny ({pastSeasons.length})</span>
-            </button>
+              {pastSeasons.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('past')}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                    activeTab === 'past'
+                      ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Calendar size={13} />
+                  <span>{lang === 'sk' ? `Minulé sezóny (${pastSeasons.length})` : `Past Seasons (${pastSeasons.length})`}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -639,7 +578,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                       Vývoj bodov po jednotlivých kolách
                     </span>
                     <span className="text-[11px] font-mono text-slate-400">
-                      Priemer: <strong className="text-emerald-400">{avgGwPoints} pts/GW</strong> · Max: <strong className="text-purple-300">{maxGwPoints} pts</strong>
+                      Priemer: <strong className="text-emerald-400">{avgGwPoints} pts/GW</strong> · Max: <strong className="text-amber-300">{maxGwPoints} pts</strong>
                     </span>
                   </div>
 
@@ -662,7 +601,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                           <div
                             className={`w-full rounded-t transition-all group-hover:brightness-125 ${
                               h.total_points >= 10
-                                ? 'bg-gradient-to-t from-purple-600 to-purple-400'
+                                ? 'bg-gradient-to-t from-amber-500 to-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
                                 : h.total_points >= 6
                                 ? 'bg-gradient-to-t from-emerald-600 to-emerald-400'
                                 : h.total_points >= 3
@@ -696,14 +635,14 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                   </div>
 
                   {/* Sub-Tab Switcher */}
-                  <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-700/80 rounded-xl p-1 self-start sm:self-auto overflow-x-auto max-w-full">
+                  <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1 self-start sm:self-auto">
                     <button
                       type="button"
                       onClick={() => setMatchLogTab('overview')}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
                         matchLogTab === 'overview'
-                          ? 'bg-blue-600 text-white shadow'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                          ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                          : 'border-transparent text-slate-400 hover:text-slate-200'
                       }`}
                     >
                       <Activity size={12} />
@@ -711,39 +650,15 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setMatchLogTab('attack')}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                        matchLogTab === 'attack'
-                          ? 'bg-blue-600 text-white shadow'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                      onClick={() => setMatchLogTab('advanced')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                        matchLogTab === 'advanced'
+                          ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                          : 'border-transparent text-slate-400 hover:text-slate-200'
                       }`}
                     >
-                      <Flame size={12} />
-                      <span>{lang === 'sk' ? 'Útok & xG' : 'Attack & xG'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMatchLogTab('defense')}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                        matchLogTab === 'defense'
-                          ? 'bg-blue-600 text-white shadow'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                      }`}
-                    >
-                      <Shield size={12} />
-                      <span>{lang === 'sk' ? 'Obrana' : 'Defense'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMatchLogTab('transfers')}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                        matchLogTab === 'transfers'
-                          ? 'bg-blue-600 text-white shadow'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                      }`}
-                    >
-                      <ArrowLeftRight size={12} />
-                      <span>{lang === 'sk' ? 'Prestupy' : 'Transfers'}</span>
+                      <Zap size={12} />
+                      <span>{lang === 'sk' ? 'Rozšírené (xG / Stats)' : 'Advanced (xG / Stats)'}</span>
                     </button>
                   </div>
                 </div>
@@ -752,40 +667,15 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="bg-slate-900/80 text-slate-400 uppercase font-bold text-[10px] border-b border-slate-700/60 select-none">
-                        <th className="py-2.5 px-2.5 w-12">{lang === 'sk' ? 'Kolo' : 'GW'}</th>
+                        <th className="py-2.5 px-2.5 w-12 text-center">{lang === 'sk' ? 'Kolo' : 'GW'}</th>
                         <th className="py-2.5 px-3 min-w-[120px]">{lang === 'sk' ? 'Súper' : 'Opponent'}</th>
                         <th className="py-2.5 px-2.5 text-center w-20">{lang === 'sk' ? 'Výsledok' : 'Result'}</th>
 
-                        {/* TAB 1: OVERVIEW COLUMNS */}
                         {matchLogTab === 'overview' && (
                           <>
-                            <th className="py-2.5 px-2 text-right">
-                              <span className="inline-flex items-center gap-1">
-                                <span>{lang === 'sk' ? 'Min' : 'Mins'}</span>
-                                <div className="relative inline-flex group/info" onMouseEnter={() => setActiveMatchTooltip('min')} onMouseLeave={() => setActiveMatchTooltip(null)}>
-                                  <button type="button" onClick={() => setActiveMatchTooltip(curr => curr === 'min' ? null : 'min')} className="text-slate-500 hover:text-blue-400">
-                                    <Info size={11} />
-                                  </button>
-                                  <div className={`${activeMatchTooltip === 'min' ? 'visible opacity-100' : 'invisible opacity-0 group-hover/info:visible group-hover/info:opacity-100'} transition-all absolute z-50 bottom-full mb-1 right-0 w-48 p-2 bg-slate-900 text-slate-200 text-[11px] rounded-lg shadow-xl border border-slate-700 font-normal normal-case`}>
-                                    {lang === 'sk' ? 'Odohrané minúty v zápase.' : 'Minutes played in the match.'}
-                                  </div>
-                                </div>
-                              </span>
-                            </th>
-                            <th className="py-2.5 px-2 text-right text-white">
-                              <span className="inline-flex items-center gap-1">
-                                <span>{lang === 'sk' ? 'Body' : 'Pts'}</span>
-                                <div className="relative inline-flex group/info" onMouseEnter={() => setActiveMatchTooltip('pts')} onMouseLeave={() => setActiveMatchTooltip(null)}>
-                                  <button type="button" onClick={() => setActiveMatchTooltip(curr => curr === 'pts' ? null : 'pts')} className="text-slate-500 hover:text-blue-400">
-                                    <Info size={11} />
-                                  </button>
-                                  <div className={`${activeMatchTooltip === 'pts' ? 'visible opacity-100' : 'invisible opacity-0 group-hover/info:visible group-hover/info:opacity-100'} transition-all absolute z-50 bottom-full mb-1 right-0 w-48 p-2 bg-slate-900 text-slate-200 text-[11px] rounded-lg shadow-xl border border-slate-700 font-normal normal-case`}>
-                                    {lang === 'sk' ? 'Celkový počet získaných FPL bodov v tomto zápase.' : 'Total FPL points earned in this fixture.'}
-                                  </div>
-                                </div>
-                              </span>
-                            </th>
-                            <th className="py-2.5 px-2 text-center" title="Góly">G</th>
+                            <th className="py-2.5 px-2 text-right" title="Odohrané minúty">{lang === 'sk' ? 'Min' : 'Mins'}</th>
+                            <th className="py-2.5 px-2 text-right text-white" title="FPL Body">{lang === 'sk' ? 'Body' : 'Pts'}</th>
+                            <th className="py-2.5 px-2 text-center" title="Strelené góly">G</th>
                             <th className="py-2.5 px-2 text-center" title="Asistencie">A</th>
                             <th className="py-2.5 px-2 text-center" title="Čisté konto">CS</th>
                             <th className="py-2.5 px-2 text-center" title="Bonusové body">Bonus</th>
@@ -796,107 +686,19 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                           </>
                         )}
 
-                        {/* TAB 2: ATTACK & xG COLUMNS */}
-                        {matchLogTab === 'attack' && (
+                        {matchLogTab === 'advanced' && (
                           <>
-                            <th className="py-2.5 px-2 text-right">{lang === 'sk' ? 'Min' : 'Mins'}</th>
-                            <th className="py-2.5 px-2 text-right text-white">{lang === 'sk' ? 'Body' : 'Pts'}</th>
-                            <th className="py-2.5 px-2 text-center" title="Góly">G</th>
-                            <th className="py-2.5 px-2 text-center" title="Asistencie">A</th>
-                            <th className="py-2.5 px-2.5 text-right">
-                              <span className="inline-flex items-center gap-1">
-                                <span>xG</span>
-                                <div className="relative inline-flex group/info" onMouseEnter={() => setActiveMatchTooltip('xg')} onMouseLeave={() => setActiveMatchTooltip(null)}>
-                                  <button type="button" onClick={() => setActiveMatchTooltip(curr => curr === 'xg' ? null : 'xg')} className="text-slate-500 hover:text-blue-400">
-                                    <Info size={11} />
-                                  </button>
-                                  <div className={`${activeMatchTooltip === 'xg' ? 'visible opacity-100' : 'invisible opacity-0 group-hover/info:visible group-hover/info:opacity-100'} transition-all absolute z-50 bottom-full mb-1 right-0 w-52 p-2 bg-slate-900 text-slate-200 text-[11px] rounded-lg shadow-xl border border-slate-700 font-normal normal-case`}>
-                                    {lang === 'sk' ? 'Expected Goals: Kvalita a pravdepodobnosť strelených gólov.' : 'Expected Goals: Statistical shot quality.'}
-                                  </div>
-                                </div>
-                              </span>
-                            </th>
-                            <th className="py-2.5 px-2.5 text-right">
-                              <span className="inline-flex items-center gap-1">
-                                <span>xA</span>
-                                <div className="relative inline-flex group/info" onMouseEnter={() => setActiveMatchTooltip('xa')} onMouseLeave={() => setActiveMatchTooltip(null)}>
-                                  <button type="button" onClick={() => setActiveMatchTooltip(curr => curr === 'xa' ? null : 'xa')} className="text-slate-500 hover:text-blue-400">
-                                    <Info size={11} />
-                                  </button>
-                                  <div className={`${activeMatchTooltip === 'xa' ? 'visible opacity-100' : 'invisible opacity-0 group-hover/info:visible group-hover/info:opacity-100'} transition-all absolute z-50 bottom-full mb-1 right-0 w-52 p-2 bg-slate-900 text-slate-200 text-[11px] rounded-lg shadow-xl border border-slate-700 font-normal normal-case`}>
-                                    {lang === 'sk' ? 'Expected Assists: Pravdepodobnosť asistencie z prihrávok.' : 'Expected Assists: Likelihood of passes resulting in assists.'}
-                                  </div>
-                                </div>
-                              </span>
-                            </th>
-                            <th className="py-2.5 px-2.5 text-right text-purple-300">
-                              <span className="inline-flex items-center gap-1">
-                                <span>xGI</span>
-                                <div className="relative inline-flex group/info" onMouseEnter={() => setActiveMatchTooltip('xgi')} onMouseLeave={() => setActiveMatchTooltip(null)}>
-                                  <button type="button" onClick={() => setActiveMatchTooltip(curr => curr === 'xgi' ? null : 'xgi')} className="text-slate-500 hover:text-blue-400">
-                                    <Info size={11} />
-                                  </button>
-                                  <div className={`${activeMatchTooltip === 'xgi' ? 'visible opacity-100' : 'invisible opacity-0 group-hover/info:visible group-hover/info:opacity-100'} transition-all absolute z-50 bottom-full mb-1 right-0 w-52 p-2 bg-slate-900 text-slate-200 text-[11px] rounded-lg shadow-xl border border-slate-700 font-normal normal-case`}>
-                                    {lang === 'sk' ? 'Expected Goal Involvement: Súčet xG a xA hráča v zápase.' : 'Expected Goal Involvement: Combined xG + xA in fixture.'}
-                                  </div>
-                                </div>
-                              </span>
-                            </th>
-                            <th className="py-2.5 px-2.5 text-right" title="Threat">{lang === 'sk' ? 'Hrozba' : 'Threat'}</th>
-                            <th className="py-2.5 px-2.5 text-right" title="Creativity">{lang === 'sk' ? 'Kreativita' : 'Creativity'}</th>
-                          </>
-                        )}
-
-                        {/* TAB 3: DEFENSE COLUMNS */}
-                        {matchLogTab === 'defense' && (
-                          <>
-                            <th className="py-2.5 px-2 text-right">{lang === 'sk' ? 'Min' : 'Mins'}</th>
-                            <th className="py-2.5 px-2 text-right text-white">{lang === 'sk' ? 'Body' : 'Pts'}</th>
-                            <th className="py-2.5 px-2 text-center" title="Clean Sheet">CS</th>
-                            <th className="py-2.5 px-2 text-center" title="Goals Conceded">GC</th>
-                            <th className="py-2.5 px-2.5 text-right">
-                              <span className="inline-flex items-center gap-1">
-                                <span>xGC</span>
-                                <div className="relative inline-flex group/info" onMouseEnter={() => setActiveMatchTooltip('xgc')} onMouseLeave={() => setActiveMatchTooltip(null)}>
-                                  <button type="button" onClick={() => setActiveMatchTooltip(curr => curr === 'xgc' ? null : 'xgc')} className="text-slate-500 hover:text-blue-400">
-                                    <Info size={11} />
-                                  </button>
-                                  <div className={`${activeMatchTooltip === 'xgc' ? 'visible opacity-100' : 'invisible opacity-0 group-hover/info:visible group-hover/info:opacity-100'} transition-all absolute z-50 bottom-full mb-1 right-0 w-52 p-2 bg-slate-900 text-slate-200 text-[11px] rounded-lg shadow-xl border border-slate-700 font-normal normal-case`}>
-                                    {lang === 'sk' ? 'Expected Goals Conceded: Štatistická kvalita šancí, ktorým obrana čelila.' : 'Expected Goals Conceded: Quality of chances conceded by team.'}
-                                  </div>
-                                </div>
-                              </span>
-                            </th>
-                            <th className="py-2.5 px-2 text-center" title="Zákroky / Saves">S</th>
-                            <th className="py-2.5 px-2 text-center" title="Žlté karty">YC</th>
-                            <th className="py-2.5 px-2 text-center" title="Červené karty">RC</th>
-                            <th className="py-2.5 px-2 text-center" title="Chytené penalty">PS</th>
-                            <th className="py-2.5 px-2.5 text-right" title="BPS Score">BPS</th>
-                          </>
-                        )}
-
-                        {/* TAB 4: TRANSFERS COLUMNS */}
-                        {matchLogTab === 'transfers' && (
-                          <>
-                            <th className="py-2.5 px-2 text-right text-white">{lang === 'sk' ? 'Body' : 'Pts'}</th>
-                            <th className="py-2.5 px-2.5 text-right">{lang === 'sk' ? 'Cena' : 'Price'}</th>
-                            <th className="py-2.5 px-2.5 text-right text-emerald-400">{lang === 'sk' ? 'Kúpené' : 'In'}</th>
-                            <th className="py-2.5 px-2.5 text-right text-rose-400">{lang === 'sk' ? 'Predané' : 'Out'}</th>
-                            <th className="py-2.5 px-2.5 text-right">
-                              <span className="inline-flex items-center gap-1">
-                                <span>{lang === 'sk' ? 'Net' : 'Net'}</span>
-                                <div className="relative inline-flex group/info" onMouseEnter={() => setActiveMatchTooltip('net')} onMouseLeave={() => setActiveMatchTooltip(null)}>
-                                  <button type="button" onClick={() => setActiveMatchTooltip(curr => curr === 'net' ? null : 'net')} className="text-slate-500 hover:text-blue-400">
-                                    <Info size={11} />
-                                  </button>
-                                  <div className={`${activeMatchTooltip === 'net' ? 'visible opacity-100' : 'invisible opacity-0 group-hover/info:visible group-hover/info:opacity-100'} transition-all absolute z-50 bottom-full mb-1 right-0 w-52 p-2 bg-slate-900 text-slate-200 text-[11px] rounded-lg shadow-xl border border-slate-700 font-normal normal-case`}>
-                                    {lang === 'sk' ? 'Čistá bilancia nákupov a predajov pred daným kolom.' : 'Net transfer balance (In minus Out) before the deadline.'}
-                                  </div>
-                                </div>
-                              </span>
-                            </th>
-                            <th className="py-2.5 px-3 text-right">{lang === 'sk' ? 'Vlastníkov' : 'Owners'}</th>
-                            <th className="py-2.5 px-2.5 text-right text-purple-300" title="ICT Index">ICT</th>
+                            <th className="py-2.5 px-2 text-right" title="Odohrané minúty">{lang === 'sk' ? 'Min' : 'Mins'}</th>
+                            <th className="py-2.5 px-2 text-right text-white" title="FPL Body">{lang === 'sk' ? 'Body' : 'Pts'}</th>
+                            <th className="py-2.5 px-2.5 text-right" title="Expected Goals">xG</th>
+                            <th className="py-2.5 px-2.5 text-right" title="Expected Assists">xA</th>
+                            <th className="py-2.5 px-2.5 text-right text-emerald-300" title="Expected Goal Involvement">xGI</th>
+                            <th className="py-2.5 px-2.5 text-right text-amber-300" title="ICT Index">ICT</th>
+                            <th className="py-2.5 px-2.5 text-right" title="Threat (Hrozba)">Threat</th>
+                            <th className="py-2.5 px-2.5 text-right" title="Creativity (Kreativita)">Creat</th>
+                            <th className="py-2.5 px-2 text-center" title="Inkasované góly (Goals Conceded)">GC</th>
+                            <th className="py-2.5 px-2 text-center" title="Zákroky brankára (Saves)">Saves</th>
+                            <th className="py-2.5 px-2.5 text-right" title="Bonus Points System">BPS</th>
                           </>
                         )}
                       </tr>
@@ -979,20 +781,14 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                                 </>
                               )}
 
-                              {/* DYNAMIC TAB 2: ATTACK */}
-                              {matchLogTab === 'attack' && (
+                              {/* DYNAMIC TAB 2: ADVANCED */}
+                              {matchLogTab === 'advanced' && (
                                 <>
                                   <td className="py-2 px-2 text-right text-slate-300">{h.minutes}'</td>
                                   <td className="py-2 px-2 text-right">
                                     <span className={`inline-block px-1.5 py-0.5 rounded border text-xs ${getPointsBadgeClass(h.total_points)}`}>
                                       {h.total_points}
                                     </span>
-                                  </td>
-                                  <td className={`py-2 px-2 text-center ${h.goals_scored > 0 ? 'text-emerald-400 font-black' : 'text-slate-500'}`}>
-                                    {h.goals_scored}
-                                  </td>
-                                  <td className={`py-2 px-2 text-center ${h.assists > 0 ? 'text-blue-400 font-black' : 'text-slate-500'}`}>
-                                    {h.assists}
                                   </td>
                                   <td className="py-2 px-2.5 text-right text-emerald-300 font-sans text-[11px] font-semibold">
                                     {h.expected_goals || '0.00'}
@@ -1000,8 +796,11 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                                   <td className="py-2 px-2.5 text-right text-blue-300 font-sans text-[11px] font-semibold">
                                     {h.expected_assists || '0.00'}
                                   </td>
-                                  <td className="py-2 px-2.5 text-right text-purple-300 font-sans text-[11px] font-bold">
+                                  <td className="py-2 px-2.5 text-right text-emerald-400 font-sans text-[11px] font-bold">
                                     {xgiVal}
+                                  </td>
+                                  <td className="py-2 px-2.5 text-right text-amber-300 font-bold">
+                                    {Number(h.ict_index || 0).toFixed(1)}
                                   </td>
                                   <td className="py-2 px-2.5 text-right text-slate-300">
                                     {Number(h.threat || 0).toFixed(0)}
@@ -1009,84 +808,14 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                                   <td className="py-2 px-2.5 text-right text-slate-300">
                                     {Number(h.creativity || 0).toFixed(0)}
                                   </td>
-                                </>
-                              )}
-
-                              {/* DYNAMIC TAB 3: DEFENSE */}
-                              {matchLogTab === 'defense' && (
-                                <>
-                                  <td className="py-2 px-2 text-right text-slate-300">{h.minutes}'</td>
-                                  <td className="py-2 px-2 text-right">
-                                    <span className={`inline-block px-1.5 py-0.5 rounded border text-xs ${getPointsBadgeClass(h.total_points)}`}>
-                                      {h.total_points}
-                                    </span>
-                                  </td>
-                                  <td className={`py-2 px-2 text-center ${h.clean_sheets > 0 ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
-                                    {h.clean_sheets}
-                                  </td>
-                                  <td className="py-2 px-2 text-center text-slate-400">{h.goals_conceded}</td>
-                                  <td className="py-2 px-2.5 text-right text-rose-300 font-sans text-[11px]">
-                                    {h.expected_goals_conceded || '-'}
+                                  <td className="py-2 px-2 text-center text-slate-400">
+                                    {h.goals_conceded}
                                   </td>
                                   <td className={`py-2 px-2 text-center ${h.saves > 0 ? 'text-amber-300 font-bold' : 'text-slate-500'}`}>
-                                    {h.saves}
+                                    {h.saves || '-'}
                                   </td>
-                                  <td className="py-2 px-2 text-center">
-                                    {h.yellow_cards > 0 ? (
-                                      <span className="px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 text-[10px] font-bold">
-                                        {h.yellow_cards}
-                                      </span>
-                                    ) : (
-                                      <span className="text-slate-600">-</span>
-                                    )}
-                                  </td>
-                                  <td className="py-2 px-2 text-center">
-                                    {h.red_cards > 0 ? (
-                                      <span className="px-1.5 py-0.2 rounded bg-rose-500/25 text-rose-300 text-[10px] font-bold">
-                                        {h.red_cards}
-                                      </span>
-                                    ) : (
-                                      <span className="text-slate-600">-</span>
-                                    )}
-                                  </td>
-                                  <td className="py-2 px-2 text-center">
-                                    {h.penalties_saved > 0 ? (
-                                      <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-black">
-                                        +{h.penalties_saved}
-                                      </span>
-                                    ) : (
-                                      <span className="text-slate-600">-</span>
-                                    )}
-                                  </td>
-                                  <td className="py-2 px-2.5 text-right text-amber-300 font-bold">{h.bps}</td>
-                                </>
-                              )}
-
-                              {/* DYNAMIC TAB 4: TRANSFERS */}
-                              {matchLogTab === 'transfers' && (
-                                <>
-                                  <td className="py-2 px-2 text-right">
-                                    <span className={`inline-block px-1.5 py-0.5 rounded border text-xs ${getPointsBadgeClass(h.total_points)}`}>
-                                      {h.total_points}
-                                    </span>
-                                  </td>
-                                  <td className="py-2 px-2.5 text-right text-blue-300">£{(h.value / 10).toFixed(1)}m</td>
-                                  <td className="py-2 px-2.5 text-right text-emerald-400">
-                                    +{h.transfers_in.toLocaleString()}
-                                  </td>
-                                  <td className="py-2 px-2.5 text-right text-rose-400">
-                                    -{h.transfers_out.toLocaleString()}
-                                  </td>
-                                  <td className="py-2 px-2.5 text-right font-bold">
-                                    <span className={netTransfers > 0 ? 'text-emerald-400' : netTransfers < 0 ? 'text-rose-400' : 'text-slate-400'}>
-                                      {netTransfers > 0 ? `+${netTransfers.toLocaleString()}` : netTransfers.toLocaleString()}
-                                    </span>
-                                  </td>
-                                  <td className="py-2 px-3 text-right text-slate-300 text-[11px]">
-                                    {h.selected.toLocaleString()}
-                                  </td>
-                                  <td className="py-2 px-2.5 text-right text-purple-300 font-bold">
-                                    {Number(h.ict_index || 0).toFixed(1)}
+                                  <td className="py-2 px-2.5 text-right text-slate-300 font-bold">
+                                    {h.bps}
                                   </td>
                                 </>
                               )}
@@ -1101,200 +830,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
             </div>
           )}
 
-          {/* TAB 2: REBRÍČKY & PERCENTILY */}
-          {activeTab === 'rankings' && (
-            <div className="space-y-6">
-              {rankings && (
-                <>
-                  {/* Percentile Highlight Card */}
-                  <div className="bg-gradient-to-r from-blue-900/40 via-purple-900/30 to-slate-900 border border-blue-500/30 p-5 rounded-xl shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div>
-                      <div className="text-xs uppercase font-bold text-blue-400 flex items-center gap-1.5 mb-1">
-                        <Trophy size={16} /> Ligový percentil hráča
-                      </div>
-                      <h4 className="text-lg font-black text-white">
-                        Lepší ako <span className="text-emerald-400 font-mono text-xl">{rankings.pointsPercentile}%</span> hráčov na pozícii {posInfo.short}
-                      </h4>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Hodnotenie na základe celkového bodového zisku v aktuálnej sezóne.
-                      </p>
-                    </div>
-
-                    <div className="bg-slate-900/80 border border-slate-700/80 px-4 py-2.5 rounded-xl text-center shrink-0">
-                      <div className="text-[10px] uppercase font-bold text-slate-400">Poradie v pozícii</div>
-                      <div className="text-xl font-black font-mono text-white">
-                        #{rankings.pointsRankPos} <span className="text-xs text-slate-400 font-normal">z {rankings.totalInPos}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Ranking Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                    {/* Points Rank */}
-                    <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs uppercase font-bold text-slate-400 flex items-center gap-1.5">
-                          <Trophy size={14} className="text-amber-400" /> Celkové body
-                        </span>
-                        <span className="text-sm font-black font-mono text-white">{player.total_points} pts</span>
-                      </div>
-                      <div className="space-y-1.5 pt-2 border-t border-slate-700/40 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">V pozícii ({posInfo.short}):</span>
-                          <strong className="font-mono text-emerald-400">#{rankings.pointsRankPos} / {rankings.totalInPos}</strong>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Celá Premier League:</span>
-                          <strong className="font-mono text-slate-300">#{rankings.pointsRankAll} / {rankings.totalOverall}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Form Rank */}
-                    <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs uppercase font-bold text-slate-400 flex items-center gap-1.5">
-                          <TrendingUp size={14} className="text-emerald-400" /> Aktuálna forma
-                        </span>
-                        <span className="text-sm font-black font-mono text-emerald-400">{player.form}</span>
-                      </div>
-                      <div className="space-y-1.5 pt-2 border-t border-slate-700/40 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">V pozícii ({posInfo.short}):</span>
-                          <strong className="font-mono text-emerald-400">#{rankings.formRankPos} / {rankings.totalInPos}</strong>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Celá Premier League:</span>
-                          <strong className="font-mono text-slate-300">#{rankings.formRankAll} / {rankings.totalOverall}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Value for Money (Points per £1m) */}
-                    <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs uppercase font-bold text-slate-400 flex items-center gap-1.5">
-                          <DollarSign size={14} className="text-blue-400" /> Pomer cena / výkon
-                        </span>
-                        <span className="text-sm font-black font-mono text-blue-300">
-                          {(player.total_points / (player.now_cost / 10 || 1)).toFixed(1)} pts/£m
-                        </span>
-                      </div>
-                      <div className="space-y-1.5 pt-2 border-t border-slate-700/40 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">V pozícii ({posInfo.short}):</span>
-                          <strong className="font-mono text-emerald-400">#{rankings.valueRankPos} / {rankings.totalInPos}</strong>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Celá Premier League:</span>
-                          <strong className="font-mono text-slate-300">#{rankings.valueRankAll} / {rankings.totalOverall}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* ICT Index */}
-                    <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs uppercase font-bold text-slate-400 flex items-center gap-1.5">
-                          <Zap size={14} className="text-purple-400" /> ICT Index
-                        </span>
-                        <span className="text-sm font-black font-mono text-purple-300">{player.ict_index}</span>
-                      </div>
-                      <div className="space-y-1.5 pt-2 border-t border-slate-700/40 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">V pozícii ({posInfo.short}):</span>
-                          <strong className="font-mono text-emerald-400">#{rankings.ictRankPos} / {rankings.totalInPos}</strong>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Celá Premier League:</span>
-                          <strong className="font-mono text-slate-300">#{rankings.ictRankAll} / {rankings.totalOverall}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* BPS Rank */}
-                    <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs uppercase font-bold text-slate-400 flex items-center gap-1.5">
-                          <Award size={14} className="text-amber-400" /> Bonus System (BPS)
-                        </span>
-                        <span className="text-sm font-black font-mono text-amber-300">{player.bps}</span>
-                      </div>
-                      <div className="space-y-1.5 pt-2 border-t border-slate-700/40 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">V pozícii ({posInfo.short}):</span>
-                          <strong className="font-mono text-emerald-400">#{rankings.bpsRankPos} / {rankings.totalInPos}</strong>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Celá Premier League:</span>
-                          <strong className="font-mono text-slate-300">#{rankings.bpsRankAll} / {rankings.totalOverall}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Ownership Rank */}
-                    <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs uppercase font-bold text-slate-400 flex items-center gap-1.5">
-                          <Users size={14} className="text-slate-400" /> Popularita (Vlastníctvo)
-                        </span>
-                        <span className="text-sm font-black font-mono text-white">{player.selected_by_percent}%</span>
-                      </div>
-                      <div className="space-y-1.5 pt-2 border-t border-slate-700/40 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">V pozícii ({posInfo.short}):</span>
-                          <strong className="font-mono text-purple-300">#{rankings.ownRankPos} / {rankings.totalInPos}</strong>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Status v tíme:</span>
-                          <strong className="font-mono text-slate-300">
-                            {parseFloat(player.selected_by_percent) > 20 ? 'Šablóna (Core)' : 'Diferenciál'}
-                          </strong>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Top 100 Manager Intel Details */}
-              {top100Signal && (
-                <div className="bg-slate-800/50 border border-slate-700/70 p-4 rounded-xl">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-xs font-bold uppercase text-amber-400 flex items-center gap-1.5">
-                      <Flame size={14} /> Top 100 Manažérsky konsenzus
-                    </h4>
-                    <span className="text-[10px] font-mono text-slate-400">
-                      Uzávierka GW{top100Snapshot?.closedDeadlineGw || 6}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-300 mb-3">
-                    Aktivita najlepších 100 manažérov na svete pri prestupoch tohto hráča:
-                  </p>
-                  <div className="grid grid-cols-3 gap-3 text-center font-mono">
-                    <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-700/50">
-                      <div className="text-[10px] text-slate-400 uppercase">Kúpené (IN)</div>
-                      <div className="text-sm font-black text-emerald-400">+{top100Signal.in}x</div>
-                    </div>
-                    <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-700/50">
-                      <div className="text-[10px] text-slate-400 uppercase">Predané (OUT)</div>
-                      <div className="text-sm font-black text-rose-400">-{top100Signal.out}x</div>
-                    </div>
-                    <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-700/50">
-                      <div className="text-[10px] text-slate-400 uppercase">Čistá bilancia (Net)</div>
-                      <div className={`text-sm font-black ${
-                        top100Signal.net > 0 ? 'text-emerald-400' : top100Signal.net < 0 ? 'text-rose-400' : 'text-slate-400'
-                      }`}>
-                        {top100Signal.net > 0 ? `+${top100Signal.net}` : top100Signal.net}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB 3: MINULÉ SEZÓNY */}
+          {/* TAB 2: MINULÉ SEZÓNY */}
           {activeTab === 'past' && !loading && (
             <div className="space-y-4">
               <div className="bg-slate-800/40 border border-slate-700/60 rounded-xl overflow-hidden shadow">
