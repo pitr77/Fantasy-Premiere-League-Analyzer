@@ -363,7 +363,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
                 <div className="bg-slate-800/80 border border-slate-700/60 px-2.5 py-1.5 rounded-lg">
                   <div className="text-[10px] uppercase font-bold text-slate-400">Cena</div>
-                  <div className="text-sm font-black font-mono text-blue-400">£{(player.now_cost / 10).toFixed(1)}m</div>
+                  <div className="text-sm font-black font-mono text-white">£{(player.now_cost / 10).toFixed(1)}m</div>
                 </div>
                 <div className="bg-slate-800/80 border border-slate-700/60 px-2.5 py-1.5 rounded-lg">
                   <div className="text-[10px] uppercase font-bold text-slate-400">Celk. Body</div>
@@ -371,16 +371,20 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                 </div>
                 <div className="bg-slate-800/80 border border-slate-700/60 px-2.5 py-1.5 rounded-lg">
                   <div className="text-[10px] uppercase font-bold text-slate-400">Forma</div>
-                  <div className="text-sm font-black font-mono text-emerald-400">{player.form}</div>
+                  <div className="text-sm font-black font-mono text-white">{player.form}</div>
                 </div>
                 <div className="bg-slate-800/80 border border-slate-700/60 px-2.5 py-1.5 rounded-lg">
                   <div className="text-[10px] uppercase font-bold text-slate-400">Vlastníctvo</div>
-                  <div className="text-sm font-black font-mono text-purple-300">{player.selected_by_percent}%</div>
+                  <div className="text-sm font-black font-mono text-white">{player.selected_by_percent}%</div>
                 </div>
                 <div className="bg-slate-800/80 border border-slate-700/60 px-2.5 py-1.5 rounded-lg col-span-2 sm:col-span-1">
                   <div className="text-[10px] uppercase font-bold text-slate-400">Dostupnosť</div>
                   <div className={`text-sm font-black font-mono ${
-                    (player.chance_of_playing_next_round ?? 100) >= 75 ? 'text-emerald-400' : 'text-rose-400'
+                    player.chance_of_playing_next_round !== null && player.chance_of_playing_next_round < 100
+                      ? player.chance_of_playing_next_round >= 75
+                        ? 'text-amber-400'
+                        : 'text-rose-400'
+                      : 'text-white'
                   }`}>
                     {player.chance_of_playing_next_round ?? 100}%
                   </div>
