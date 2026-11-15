@@ -580,13 +580,13 @@ const TeamAnalysis: React.FC<TeamAnalysisProps> = ({ teams, fixtures }) => {
 
                   {activeTab === 'ATTACK' ? (
                     <>
-                      {renderTh('scored', lang === 'sk' ? 'Góly' : 'Scored', 'text-right', 'w-[20%] sm:w-auto')}
+                      {renderTh('scored', lang === 'sk' ? 'Góly' : 'Scored', 'text-center', 'w-[20%] sm:w-auto')}
                       {renderTh('gs_per_game', lang === 'sk' ? 'GS / Z' : 'GS/G', 'text-right text-white font-bold', 'w-[30%] sm:w-auto')}
                       {renderTh('fts', lang === 'sk' ? 'Bez gólu (FTS)' : 'FTS', 'text-center', 'hidden md:table-cell')}
                     </>
                   ) : (
                     <>
-                      {renderTh('conceded', lang === 'sk' ? 'Inkas.' : 'Conceded', 'text-right', 'w-[20%] sm:w-auto')}
+                      {renderTh('conceded', lang === 'sk' ? 'Inkas.' : 'Conceded', 'text-center', 'w-[20%] sm:w-auto')}
                       {renderTh('gc_per_game', lang === 'sk' ? 'GC / Z' : 'GC/G', 'text-right text-white font-bold', 'w-[30%] sm:w-auto')}
                       {renderTh('cs', lang === 'sk' ? 'Čisté kontá (CS)' : 'CS', 'text-center', 'hidden md:table-cell')}
                     </>
@@ -682,7 +682,7 @@ const TeamAnalysis: React.FC<TeamAnalysisProps> = ({ teams, fixtures }) => {
                       {/* ATTACK METRICS */}
                       {activeTab === 'ATTACK' ? (
                         <>
-                          <td className="py-2.5 px-3 md:py-3 md:px-5 text-right text-slate-300 border-b border-slate-700/50 font-mono font-semibold">
+                          <td className="py-2.5 px-3 md:py-3 md:px-5 text-center text-slate-300 border-b border-slate-700/50 font-mono font-semibold">
                             {team.scored}
                           </td>
                           <td className="py-2.5 px-3 md:py-3 md:px-5 text-right border-b border-slate-700/50">
@@ -709,7 +709,7 @@ const TeamAnalysis: React.FC<TeamAnalysisProps> = ({ teams, fixtures }) => {
                       ) : (
                         /* DEFENSE METRICS */
                         <>
-                          <td className="py-2.5 px-3 md:py-3 md:px-5 text-right text-slate-300 border-b border-slate-700/50 font-mono font-semibold">
+                          <td className="py-2.5 px-3 md:py-3 md:px-5 text-center text-slate-300 border-b border-slate-700/50 font-mono font-semibold">
                             {team.conceded}
                           </td>
                           <td className="py-2.5 px-3 md:py-3 md:px-5 text-right border-b border-slate-700/50">
