@@ -604,19 +604,15 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                 }
 
                 // Sticky cell backgrounds matching highlight state
-                const stickyBg = isOpponentTeam
-                  ? 'bg-blue-950/95 text-blue-200'
-                  : isSourceTeam
-                  ? 'bg-slate-700/95'
-                  : 'bg-slate-800 group-hover:bg-slate-700';
+                const stickyBg = (isOpponentTeam || isSourceTeam)
+                  ? 'bg-slate-700/95 text-white'
+                  : 'bg-slate-800 group-hover:bg-slate-700 text-slate-200';
 
-                const rowHighlightClass = isOpponentTeam
-                  ? 'bg-blue-950/60 ring-1 ring-inset ring-blue-500/60 transition-colors shadow-inner'
-                  : isSourceTeam
+                const rowHighlightClass = (isOpponentTeam || isSourceTeam)
                   ? 'bg-slate-700/40 transition-colors'
                   : 'hover:bg-slate-700/30 transition-colors group';
 
-                const cellBgClass = isOpponentTeam ? 'bg-blue-950/30' : '';
+                const cellBgClass = isOpponentTeam ? 'bg-slate-700/30' : '';
 
                 return (
                   <tr
@@ -625,9 +621,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                   >
                     {/* Rank (#) - Sticky Left with Flashscore Zone Accent */}
                     <td
-                      className={`py-2.5 px-1 sm:px-2 text-center sticky left-0 z-20 transition-colors border-b border-slate-700/50 border-r border-slate-700 ${stickyBg} ${
-                        isOpponentTeam ? 'border-l-[3px] !border-l-blue-400 font-bold' : zoneBorder
-                      }`}
+                      className={`py-2.5 px-1 sm:px-2 text-center sticky left-0 z-20 transition-colors border-b border-slate-700/50 border-r border-slate-700 ${stickyBg} ${zoneBorder}`}
                     >
                       <span className="font-mono font-bold text-xs md:text-sm">
                         {pos}
@@ -645,7 +639,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
 
                         {/* Opponent highlight indicator pill */}
                         {isOpponentTeam && (
-                          <span className="ml-1 px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-blue-500/30 text-blue-200 border border-blue-400/50 animate-pulse shrink-0">
+                          <span className="ml-1.5 px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-600/80 shrink-0">
                             {lang === 'sk' ? 'SÚPER' : 'OPPONENT'}
                           </span>
                         )}
@@ -693,7 +687,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
 
                     {/* Points */}
                     <td className={`py-2.5 px-2 text-center border-b border-slate-700/50 font-mono font-black text-white text-xs md:text-base ${
-                      isOpponentTeam ? 'bg-blue-900/40 text-blue-100' : 'bg-slate-900/30'
+                      isOpponentTeam ? 'bg-slate-700/50' : 'bg-slate-900/30'
                     }`}>
                       {row.pts}
                     </td>
