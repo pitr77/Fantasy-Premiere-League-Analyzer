@@ -1,25 +1,32 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Trophy, TrendingUp, Activity, Check, X, Minus, ShieldCheck } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Trophy, TrendingUp, Sparkles, Home, Plane } from 'lucide-react';
 import { FPLTeam, FPLFixture } from '../types';
 import { track } from '@/lib/ga';
+import { TeamIcon } from './TeamIcon';
+import { useLanguage, Language } from '../lib/language';
 
 interface LeagueTableProps {
   teams: FPLTeam[];
   fixtures: FPLFixture[];
 }
 
-type TableMode = 'basic' | 'adv' | 'form';
+type LocationFilter = 'all' | 'home' | 'away';
+type ViewMode = 'full' | 'compact';
 type FormResult = 'W' | 'D' | 'L';
 
 interface FormMatch {
   result: FormResult;
   opponent: number;
   score: string;
+  isHome: boolean;
   date?: string | null;
+  event?: number;
 }
 
-interface TeamStats {
+interface TeamStatsRecord {
   id: number;
+  name: string;
+  short_name: string;
   played: number;
   win: number;
   draw: number;
@@ -30,434 +37,845 @@ interface TeamStats {
   form: FormMatch[];
 }
 
-type SelectedForm = { teamId: number; idx: number; match: FormMatch };
+// Tooltip metric descriptions and tactical interpretation tips
+const leagueMetricDescriptions: Record<string, {
+  label: (lang: Language) => string;
+  abbr: string;
+  description: (lang: Language) => string;
+  tip?: (lang: Language) => string;
+}> = {
+  pos: {
+    label: (lang) => lang === 'sk' ? 'Ligová pozícia' : 'League Position',
+    abbr: '#',
+    description: (lang) => lang === 'sk'
+      ? 'Aktuálne umiestnenie tímu v tabuľke Premier League (podľa bodov, gólového rozdielu a strelených gólov).'
+      : 'Current standings rank in Premier League based on points, GD and goals scored.',
+    tip: (lang) => lang === 'sk'
+      ? 'Top 4 zaisťuje Ligu majstrov (modrý pásik), 5. Európsku ligu (oranžový), 6.-7. Konferenčnú ligu (zelený) a posledné 3 miesta znamenajú zostup (červený).'
+      : 'Top 4 qualifies for Champions League (blue), 5th for Europa League, 6-7th Conference League, bottom 3 relegation.'
+  },
+  team: {
+    label: (lang) => lang === 'sk' ? 'Klub Premier League' : 'Club',
+    abbr: 'TEAM',
+    description: (lang) => lang === 'sk'
+      ? 'Oficiálny erb a názov klubu Premier League.'
+      : 'Official Premier League club crest and name.'
+  },
+  played: {
+    label: (lang) => lang === 'sk' ? 'Odohrané zápasy' : 'Matches Played',
+    abbr: 'MP',
+    description: (lang) => lang === 'sk'
+      ? 'Celkový počet skutočne odohraných ligových stretnutí vo vybranom filtri (celkovo, doma alebo vonku).'
+      : 'Total matches played in the selected scope (all, home, or away).'
+  },
+  win: {
+    label: (lang) => lang === 'sk' ? 'Víťazstvá' : 'Wins',
+    abbr: 'W',
+    description: (lang) => lang === 'sk'
+      ? 'Počet vyhratých zápasov tímu (za každú výhru tím získava 3 body do tabuľky).'
+      : 'Number of wins (3 points each).'
+  },
+  draw: {
+    label: (lang) => lang === 'sk' ? 'Remízy' : 'Draws',
+    abbr: 'D',
+    description: (lang) => lang === 'sk'
+      ? 'Počet nerozhodných výsledkov (za každú remízu tím získava 1 bod do tabuľky).'
+      : 'Number of draws (1 point each).'
+  },
+  loss: {
+    label: (lang) => lang === 'sk' ? 'Prehry' : 'Losses',
+    abbr: 'L',
+    description: (lang) => lang === 'sk'
+      ? 'Počet prehratých zápasov tímu (0 bodov).'
+      : 'Number of defeats (0 points).'
+  },
+  gf: {
+    label: (lang) => lang === 'sk' ? 'Strelené góly' : 'Goals For',
+    abbr: 'GF',
+    description: (lang) => lang === 'sk'
+      ? 'Celkový počet gólov strelených tímom v sledovanom filtri zápasov.'
+      : 'Total goals scored by the team.'
+  },
+  ga: {
+    label: (lang) => lang === 'sk' ? 'Inkasované góly' : 'Goals Against',
+    abbr: 'GA',
+    description: (lang) => lang === 'sk'
+      ? 'Celkový počet gólov inkasovaných tímom v sledovanom filtri zápasov.'
+      : 'Total goals conceded by the team.'
+  },
+  score: {
+    label: (lang) => lang === 'sk' ? 'Skóre (Strelené : Inkasované)' : 'Score (GF:GA)',
+    abbr: 'GF:GA',
+    description: (lang) => lang === 'sk'
+      ? 'Pomer strelených a inkasovaných gólov tímu v súťaži.'
+      : 'Goals scored vs goals conceded ratio.'
+  },
+  gd: {
+    label: (lang) => lang === 'sk' ? 'Gólový rozdiel' : 'Goal Difference',
+    abbr: 'GD',
+    description: (lang) => lang === 'sk'
+      ? 'Rozdiel medzi strelenými a inkasovanými gólmi (GF - GA).'
+      : 'Goal difference across finished matches (GF - GA).',
+    tip: (lang) => lang === 'sk'
+      ? 'Ako chápať: Pri rovnosti bodov je GD prvým rozhodujúcim kritériom pre poradie v tabuľke.'
+      : 'How to read: Primary tie-breaker when teams are level on points.'
+  },
+  pts: {
+    label: (lang) => lang === 'sk' ? 'Body' : 'Points',
+    abbr: 'PTS',
+    description: (lang) => lang === 'sk'
+      ? 'Celkový počet získaných bodov tímu v tabuľke Premier League.'
+      : 'Total accumulated league points.',
+    tip: (lang) => lang === 'sk'
+      ? 'Ako chápať: Hlavné hodnotiace kritérium úspešnosti a postavenia tímu v ligovej sezóne.'
+      : 'Primary ranking metric in the Premier League.'
+  },
+  form: {
+    label: (lang) => lang === 'sk' ? 'Forma (Posledných 5 zápasov)' : 'Recent Form (Last 5)',
+    abbr: 'FORM',
+    description: (lang) => lang === 'sk'
+      ? 'Výsledky posledných 5 odohraných ligových zápasov (Zelená = Výhra, Sivá = Remíza, Červená = Prehra). Zobrazuje sa zľava doprava (najstarší → najnovší).'
+      : 'Results of the last 5 league matches (Green = Win, Grey = Draw, Red = Loss) from left to right.',
+    tip: (lang) => lang === 'sk'
+      ? 'Ako chápať: Prejdite myšou nad pilulku a okamžite uvidíte skóre a meno súpera.'
+      : 'How to read: Hover any pill to reveal match score and opponent details.'
+  },
+  next: {
+    label: (lang) => lang === 'sk' ? 'Najbližší zápas' : 'Next Fixture',
+    abbr: 'NEXT',
+    description: (lang) => lang === 'sk'
+      ? 'Najbližší nadchádzajúci súper tímu v Premier League vrátane informácie (D) doma / (V) vonku a obťažnosti FDR.'
+      : 'Next scheduled Premier League fixture with Home/Away indicator and FDR difficulty rating.',
+    tip: (lang) => lang === 'sk'
+      ? 'Ako chápať: Zelená značí priaznivý zápas (FDR 2), sivá vyrovnaný (FDR 3) a červená náročný duel (FDR 4-5).'
+      : 'Green denotes favorable fixture (FDR 2), grey balanced (FDR 3), and red tough test (FDR 4-5).'
+  }
+};
 
-function useIsDesktop(breakpointPx = 768) {
-  const [isDesktop, setIsDesktop] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia(`(min-width:${breakpointPx}px)`);
-    const onChange = () => setIsDesktop(mq.matches);
-    onChange();
-    mq.addEventListener?.('change', onChange);
-    return () => mq.removeEventListener?.('change', onChange);
-  }, [breakpointPx]);
-
-  return isDesktop;
-}
+const getFdrColorClasses = (difficulty: number) => {
+  switch (difficulty) {
+    case 1:
+    case 2:
+      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30';
+    case 3:
+      return 'bg-slate-600/30 text-slate-200 border-slate-500/40 hover:bg-slate-600/40';
+    case 4:
+      return 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30';
+    case 5:
+      return 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30';
+    default:
+      return 'bg-slate-700/30 text-slate-300 border-slate-600';
+  }
+};
 
 const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
-  const isDesktop = useIsDesktop(768);
+  const [lang] = useLanguage();
+  const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('full');
 
-  const [activeHighlight, setActiveHighlight] = useState<{ source: number; target: number } | null>(null);
-  const [mode, setMode] = useState<TableMode>('basic');
-  const [selectedForm, setSelectedForm] = useState<SelectedForm | null>(null);
+  // Interactive header tooltip state
+  const [hoveredMetric, setHoveredMetric] = useState<{
+    label: string;
+    abbr: string;
+    description: string;
+    tip?: string;
+    rect: DOMRect;
+  } | null>(null);
 
-  // Sticky columns logic for mobile
-  const stickyLeft = !isDesktop && mode !== 'basic';
+  // Floating hover state for individual form pill
+  const [hoveredForm, setHoveredForm] = useState<{
+    teamName: string;
+    opponentName: string;
+    score: string;
+    result: FormResult;
+    isHome: boolean;
+    date?: string | null;
+    event?: number;
+    rect: DOMRect;
+  } | null>(null);
 
-  const tableData = useMemo<TeamStats[]>(() => {
-    const stats: Record<number, TeamStats> = {};
+  // 1. Calculate Next Fixture for each team
+  const nextFixtureMap = useMemo(() => {
+    const map: Record<number, {
+      opponentId: number;
+      opponentName: string;
+      opponentShort: string;
+      isHome: boolean;
+      difficulty: number;
+      event?: number;
+      kickoff?: string;
+    } | null> = {};
+
+    const upcoming = fixtures
+      .filter((f) => !f.finished && f.team_h_score === null && Boolean(f.kickoff_time))
+      .sort((a, b) => new Date(a.kickoff_time).getTime() - new Date(b.kickoff_time).getTime());
+
+    teams.forEach((t) => {
+      const nextF = upcoming.find((f) => f.team_h === t.id || f.team_a === t.id);
+      if (!nextF) {
+        map[t.id] = null;
+        return;
+      }
+      const isHome = nextF.team_h === t.id;
+      const oppId = isHome ? nextF.team_a : nextF.team_h;
+      const oppTeam = teams.find((team) => team.id === oppId);
+      const difficulty = isHome ? nextF.team_h_difficulty : nextF.team_a_difficulty;
+
+      map[t.id] = {
+        opponentId: oppId,
+        opponentName: oppTeam?.name || 'TBD',
+        opponentShort: oppTeam?.short_name || 'TBD',
+        isHome,
+        difficulty,
+        event: nextF.event,
+        kickoff: nextF.kickoff_time
+      };
+    });
+
+    return map;
+  }, [teams, fixtures]);
+
+  // 2. Calculate Table Standings with Home / Away / All Scope
+  const tableData = useMemo<TeamStatsRecord[]>(() => {
+    const stats: Record<number, {
+      id: number;
+      name: string;
+      short_name: string;
+      home: { played: number; win: number; draw: number; loss: number; gf: number; ga: number; pts: number };
+      away: { played: number; win: number; draw: number; loss: number; gf: number; ga: number; pts: number };
+      allForm: FormMatch[];
+      homeForm: FormMatch[];
+      awayForm: FormMatch[];
+    }> = {};
+
     teams.forEach((t) => {
       stats[t.id] = {
         id: t.id,
-        played: 0,
-        win: 0,
-        draw: 0,
-        loss: 0,
-        gf: 0,
-        ga: 0,
-        pts: 0,
-        form: [],
+        name: t.name,
+        short_name: t.short_name,
+        home: { played: 0, win: 0, draw: 0, loss: 0, gf: 0, ga: 0, pts: 0 },
+        away: { played: 0, win: 0, draw: 0, loss: 0, gf: 0, ga: 0, pts: 0 },
+        allForm: [],
+        homeForm: [],
+        awayForm: []
       };
     });
 
     const finishedFixtures = fixtures
-      .filter((f) => f.finished && f.team_h_score != null && f.team_a_score != null)
+      .filter((f) => {
+        const hasKickoff = Boolean(f.kickoff_time);
+        const hasScore =
+          f.team_h_score !== null && f.team_h_score !== undefined &&
+          f.team_a_score !== null && f.team_a_score !== undefined;
+        return hasKickoff && (f.finished === true || hasScore);
+      })
       .sort((a, b) => new Date(a.kickoff_time).getTime() - new Date(b.kickoff_time).getTime());
 
     finishedFixtures.forEach((f) => {
-      const home = stats[f.team_h];
-      const away = stats[f.team_a];
-      if (!home || !away) return;
+      const hTeam = stats[f.team_h];
+      const aTeam = stats[f.team_a];
+      if (!hTeam || !aTeam) return;
 
-      const hScore = f.team_h_score!;
-      const aScore = f.team_a_score!;
+      const hScore = f.team_h_score ?? 0;
+      const aScore = f.team_a_score ?? 0;
 
-      home.played++;
-      away.played++;
+      hTeam.home.played++;
+      aTeam.away.played++;
 
-      home.gf += hScore;
-      home.ga += aScore;
+      hTeam.home.gf += hScore;
+      hTeam.home.ga += aScore;
 
-      away.gf += aScore;
-      away.ga += hScore;
+      aTeam.away.gf += aScore;
+      aTeam.away.ga += hScore;
+
+      let hRes: FormResult = 'D';
+      let aRes: FormResult = 'D';
 
       if (hScore > aScore) {
-        home.win++;
-        away.loss++;
-        home.pts += 3;
-        home.form.push({ result: 'W', opponent: f.team_a, score: `${hScore}-${aScore}`, date: f.kickoff_time });
-        away.form.push({ result: 'L', opponent: f.team_h, score: `${aScore}-${hScore}`, date: f.kickoff_time });
+        hRes = 'W';
+        aRes = 'L';
+        hTeam.home.win++;
+        aTeam.away.loss++;
+        hTeam.home.pts += 3;
       } else if (hScore < aScore) {
-        away.win++;
-        home.loss++;
-        away.pts += 3;
-        home.form.push({ result: 'L', opponent: f.team_a, score: `${hScore}-${aScore}`, date: f.kickoff_time });
-        away.form.push({ result: 'W', opponent: f.team_h, score: `${aScore}-${hScore}`, date: f.kickoff_time });
+        hRes = 'L';
+        aRes = 'W';
+        aTeam.away.win++;
+        hTeam.home.loss++;
+        aTeam.away.pts += 3;
       } else {
-        home.draw++;
-        away.draw++;
-        home.pts += 1;
-        away.pts += 1;
-        home.form.push({ result: 'D', opponent: f.team_a, score: `${hScore}-${aScore}`, date: f.kickoff_time });
-        away.form.push({ result: 'D', opponent: f.team_h, score: `${aScore}-${hScore}`, date: f.kickoff_time });
+        hTeam.home.draw++;
+        aTeam.away.draw++;
+        hTeam.home.pts += 1;
+        aTeam.away.pts += 1;
+      }
+
+      const hMatch: FormMatch = {
+        result: hRes,
+        opponent: f.team_a,
+        score: `${hScore}-${aScore}`,
+        isHome: true,
+        date: f.kickoff_time,
+        event: f.event
+      };
+
+      const aMatch: FormMatch = {
+        result: aRes,
+        opponent: f.team_h,
+        score: `${aScore}-${hScore}`,
+        isHome: false,
+        date: f.kickoff_time,
+        event: f.event
+      };
+
+      hTeam.allForm.push(hMatch);
+      hTeam.homeForm.push(hMatch);
+
+      aTeam.allForm.push(aMatch);
+      aTeam.awayForm.push(aMatch);
+    });
+
+    const records: TeamStatsRecord[] = Object.values(stats).map((t) => {
+      if (locationFilter === 'home') {
+        return {
+          id: t.id,
+          name: t.name,
+          short_name: t.short_name,
+          played: t.home.played,
+          win: t.home.win,
+          draw: t.home.draw,
+          loss: t.home.loss,
+          gf: t.home.gf,
+          ga: t.home.ga,
+          pts: t.home.pts,
+          form: t.homeForm
+        };
+      } else if (locationFilter === 'away') {
+        return {
+          id: t.id,
+          name: t.name,
+          short_name: t.short_name,
+          played: t.away.played,
+          win: t.away.win,
+          draw: t.away.draw,
+          loss: t.away.loss,
+          gf: t.away.gf,
+          ga: t.away.ga,
+          pts: t.away.pts,
+          form: t.awayForm
+        };
+      } else {
+        return {
+          id: t.id,
+          name: t.name,
+          short_name: t.short_name,
+          played: t.home.played + t.away.played,
+          win: t.home.win + t.away.win,
+          draw: t.home.draw + t.away.draw,
+          loss: t.home.loss + t.away.loss,
+          gf: t.home.gf + t.away.gf,
+          ga: t.home.ga + t.away.ga,
+          pts: t.home.pts + t.away.pts,
+          form: t.allForm
+        };
       }
     });
 
-    return Object.values(stats).sort((a, b) => {
+    // Sort by: PTS desc, GD desc, GF desc, Name asc
+    return records.sort((a, b) => {
       if (b.pts !== a.pts) return b.pts - a.pts;
       const gdA = a.gf - a.ga;
       const gdB = b.gf - b.ga;
       if (gdB !== gdA) return gdB - gdA;
-      return b.gf - a.gf;
+      if (b.gf !== a.gf) return b.gf - a.gf;
+      return a.name.localeCompare(b.name);
     });
-  }, [teams, fixtures]);
+  }, [teams, fixtures, locationFilter]);
 
-  const getTeamName = (id: number) => teams.find((t) => t.id === id);
+  const getTeamObj = (id: number) => teams.find((t) => t.id === id);
 
-  const formatDate = (dateStr?: string | null) => {
-    if (!dateStr) return 'N/A';
-    const dt = new Date(dateStr);
-    if (Number.isNaN(dt.getTime())) return 'N/A';
-    return dt.toLocaleDateString('en-GB');
-  };
+  const renderTh = (
+    key: string,
+    displayLabel: string,
+    alignClass: string = 'text-center',
+    extraClass: string = ''
+  ) => {
+    const metric = leagueMetricDescriptions[key];
 
-  const ModePill = ({ value, label, icon: Icon }: { value: TableMode; label: string; icon: any }) => {
-    const isActive = mode === value;
     return (
-      <button
-        type="button"
-        onClick={() => {
-          setMode(value);
-          if (value !== 'form') setSelectedForm(null);
-          track("league_table_interaction", { action: "sort", sort_by: value });
+      <th
+        key={key}
+        onMouseEnter={(e) => {
+          if (!metric) return;
+          const rect = e.currentTarget.getBoundingClientRect();
+          setHoveredMetric({
+            label: metric.label(lang),
+            abbr: metric.abbr,
+            description: metric.description(lang),
+            tip: metric.tip?.(lang),
+            rect
+          });
         }}
-        className={[
-          'px-4 py-2 rounded-lg text-xs font-bold tracking-wide transition-all duration-200 flex items-center gap-2',
-          isActive
-            ? 'bg-white text-slate-900 shadow-[0_0_0_1px_rgba(255,255,255,0.25)]'
-            : 'bg-slate-900/30 text-slate-200 border border-slate-700/60 hover:bg-slate-800/40',
-        ].join(' ')}
+        onMouseLeave={() => setHoveredMetric(null)}
+        className={`py-3 px-2 md:px-3 font-bold cursor-default transition-colors select-none border-b border-slate-700 ${alignClass} ${extraClass}`}
       >
-        <Icon size={14} />
-        {label}
-      </button>
+        <span className="border-b border-dotted border-slate-600/70 hover:border-blue-400 transition-colors">
+          {displayLabel}
+        </span>
+      </th>
     );
   };
 
-  const selectedTeam = selectedForm ? getTeamName(selectedForm.teamId) : null;
-  const selectedOpp = selectedForm ? getTeamName(selectedForm.match.opponent) : null;
-
-  const topCut = 5;
-  const bottomCut = 3;
-  const showSeparators = mode === 'basic';
-
-  const colSpan = useMemo(() => {
-    let count = 3; // #, Team, Pts
-    if (mode === 'basic') count += 1; // GD
-    else if (mode === 'form') count += 2; // GD + Form
-    else if (mode === 'adv') count += 7; // MP, W, D, L, GF, GA, GD
-    return count;
-  }, [mode]);
+  const finishedCount = useMemo(() => {
+    return fixtures.filter(
+      (f) => f.finished || (f.team_h_score !== null && f.team_a_score !== null)
+    ).length;
+  }, [fixtures]);
 
   return (
-    <div className="bg-slate-900/40 rounded-2xl border border-slate-700/40 shadow-xl p-5">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <Trophy className="w-6 h-6 text-yellow-400 flex-shrink-0" />
-          <h2 className="text-xl sm:text-2xl font-bold text-white leading-tight break-words min-w-0">
-            Premier League Table
-          </h2>
-        </div>
+    <div className="space-y-4 animate-in fade-in duration-500">
+      {/* Header & Controls Toolbar */}
+      <div className="bg-slate-800 p-5 md:p-6 rounded-xl border border-slate-700 shadow-lg">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+              <Trophy className="w-5 h-5 text-amber-400" />
+            </div>
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-white leading-tight">
+                {lang === 'sk' ? 'Tabuľka Premier League' : 'Premier League Table'}
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {lang === 'sk'
+                  ? `Odohraných ${finishedCount} ligových zápasov • Sezóna 2024/25`
+                  : `${finishedCount} matches finished • Season 2024/25`}
+              </p>
+            </div>
+          </div>
 
-        <div className="flex flex-wrap gap-2">
-          <ModePill value="basic" label="BASIC" icon={TrendingUp} />
-          <ModePill value="adv" label="ADV" icon={Activity} />
-          <ModePill value="form" label="FORM" icon={ShieldCheck} />
+          <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+            {/* Scope Filter: Celkovo / Doma / Vonku */}
+            <div className="bg-slate-900 p-1 rounded-xl border border-slate-700 flex items-center shadow-sm">
+              <button
+                type="button"
+                onClick={() => {
+                  setLocationFilter('all');
+                  track('league_table_scope', { scope: 'all' });
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  locationFilter === 'all'
+                    ? 'bg-slate-600/50 text-slate-100 border border-slate-500/60 shadow-sm'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>{lang === 'sk' ? 'Celkovo' : 'Overall'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setLocationFilter('home');
+                  track('league_table_scope', { scope: 'home' });
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  locationFilter === 'home'
+                    ? 'bg-slate-600/50 text-slate-100 border border-slate-500/60 shadow-sm'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Home size={13} className={locationFilter === 'home' ? 'text-amber-400' : 'text-slate-500'} />
+                <span>{lang === 'sk' ? 'Doma' : 'Home'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setLocationFilter('away');
+                  track('league_table_scope', { scope: 'away' });
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  locationFilter === 'away'
+                    ? 'bg-slate-600/50 text-slate-100 border border-slate-500/60 shadow-sm'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Plane size={13} className={locationFilter === 'away' ? 'text-cyan-400' : 'text-slate-500'} />
+                <span>{lang === 'sk' ? 'Vonku' : 'Away'}</span>
+              </button>
+            </div>
+
+            {/* View Mode Toggle: Kompletná / Kompaktná */}
+            <div className="bg-slate-900 p-1 rounded-xl border border-slate-700 flex items-center shadow-sm">
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode('full');
+                  track('league_table_view', { view: 'full' });
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  viewMode === 'full'
+                    ? 'bg-slate-600/50 text-slate-100 border border-slate-500/60 shadow-sm'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>{lang === 'sk' ? 'Kompletná' : 'Detailed'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode('compact');
+                  track('league_table_view', { view: 'compact' });
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  viewMode === 'compact'
+                    ? 'bg-slate-600/50 text-slate-100 border border-slate-500/60 shadow-sm'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>{lang === 'sk' ? 'Kompaktná' : 'Compact'}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="mt-6 overflow-x-auto max-h-[70vh] isolate rounded-lg border border-slate-700/60 bg-slate-950/20 custom-scrollbar">
-        <table className="w-full text-left border-collapse table-auto">
-          <thead>
-            <tr className="bg-slate-900 text-slate-400 text-[10px] md:text-xs uppercase tracking-wider border-b border-slate-700 sticky top-0 z-40">
-              <th
-                className={[
-                  'py-2 text-center bg-slate-900',
-                  stickyLeft ? 'sticky left-0 z-50' : 'border-r border-slate-700/50',
-                ].join(' ')}
-                style={stickyLeft ? { width: '32px', minWidth: '32px' } : { width: '40px' }}
-              >
-                #
-              </th>
-              <th
-                className={[
-                  'py-2 px-2 bg-slate-900 text-left',
-                  stickyLeft ? 'sticky z-40 shadow-[2px_0_5px_rgba(0,0,0,0.3)]' : 'border-r border-slate-700/50',
-                ].join(' ')}
-                style={stickyLeft ? { left: '32px', width: '80px', minWidth: '80px' } : undefined}
-              >
-                Team
-              </th>
-              <th className="py-2 text-center border-r border-slate-700/50 bg-slate-900">Pts</th>
+      {/* Main Standings Table Container */}
+      <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-lg overflow-hidden">
+        <div className="w-full overflow-x-auto custom-scrollbar">
+          <table className="w-full text-left border-separate border-spacing-0 md:table-auto">
+            <thead>
+              <tr className="bg-slate-900 text-slate-400 text-[10px] md:text-xs uppercase tracking-wider font-bold">
+                {/* 1. Pos - Sticky */}
+                {renderTh('pos', '#', 'text-center', 'w-10 sm:w-12 sticky left-0 z-30 bg-slate-900 border-r border-slate-700')}
 
-              {mode === 'adv' && (
-                <>
-                  <th className="px-1 py-2 text-center text-xs md:text-sm text-slate-400 bg-slate-900">MP</th>
-                  <th className="px-1 py-2 text-center text-xs md:text-sm text-green-400 bg-slate-900">W</th>
-                  <th className="px-1 py-2 text-center text-xs md:text-sm text-slate-400 bg-slate-900">D</th>
-                  <th className="px-1 py-2 text-center text-xs md:text-sm text-red-400 bg-slate-900">L</th>
-                  <th className="px-1 py-2 text-center text-xs md:text-sm text-slate-400 bg-slate-900">GF</th>
-                  <th className="px-1 py-2 text-center text-xs md:text-sm text-slate-400 bg-slate-900">GA</th>
-                  <th className="px-1 py-2 text-center text-xs md:text-sm text-slate-400 bg-slate-900">GD</th>
-                </>
-              )}
+                {/* 2. Team - Sticky */}
+                {renderTh('team', lang === 'sk' ? 'Klub' : 'Club', 'text-left', 'w-32 sm:w-44 md:w-56 sticky left-10 sm:left-12 z-30 bg-slate-900 border-r border-slate-700 shadow-[2px_0_6px_rgba(0,0,0,0.35)]')}
 
-              {(mode === 'basic' || mode === 'form') && (
-                <th className="px-2 py-2 text-center bg-slate-900">GD</th>
-              )}
+                {/* 3. Matches Played */}
+                {renderTh('played', lang === 'sk' ? 'Z' : 'MP', 'text-center', 'w-10 sm:w-12')}
 
-              {mode === 'form' && (
-                <th className="px-2 md:px-4 py-2 text-center text-xs md:text-sm text-slate-400 bg-slate-900">Form</th>
-              )}
-            </tr>
-          </thead>
+                {/* Full View Detailed Stats */}
+                {viewMode === 'full' && (
+                  <>
+                    {renderTh('win', lang === 'sk' ? 'V' : 'W', 'text-center text-emerald-400', 'w-10 sm:w-12')}
+                    {renderTh('draw', lang === 'sk' ? 'R' : 'D', 'text-center text-slate-400', 'w-10 sm:w-12')}
+                    {renderTh('loss', lang === 'sk' ? 'P' : 'L', 'text-center text-rose-400', 'w-10 sm:w-12')}
+                    {renderTh('score', lang === 'sk' ? 'Skóre' : 'GF:GA', 'text-center font-mono', 'w-16 sm:w-20 hidden sm:table-cell')}
+                  </>
+                )}
 
-          <tbody className="divide-y divide-slate-700/50 text-sm">
-            {tableData.flatMap((row, index) => {
-              const nodes: React.ReactNode[] = [];
-              const pos = index + 1;
+                {/* Goal Difference */}
+                {renderTh('gd', lang === 'sk' ? 'GD' : 'GD', 'text-center font-mono', 'w-12 sm:w-16')}
 
-              if (showSeparators && index === topCut) {
-                nodes.push(
-                  <tr key="sep-top5">
-                    <td
-                      colSpan={colSpan}
-                      className="px-3 py-2 bg-slate-900/50 text-[10px] md:text-xs uppercase tracking-wider text-emerald-300 border-y border-emerald-500/25"
-                    >
-                      Top 5 (UCL / Europe)
-                    </td>
-                  </tr>
-                );
-              }
+                {/* Points */}
+                {renderTh('pts', lang === 'sk' ? 'Body' : 'PTS', 'text-center text-white font-bold', 'w-14 sm:w-16 bg-slate-900/90')}
 
-              if (showSeparators && index === tableData.length - bottomCut) {
-                nodes.push(
-                  <tr key="sep-relegation">
-                    <td
-                      colSpan={colSpan}
-                      className="px-3 py-2 bg-slate-900/50 text-[10px] md:text-xs uppercase tracking-wider text-red-300 border-y border-red-500/25"
-                    >
-                      Relegation zone
-                    </td>
-                  </tr>
-                );
-              }
+                {/* Form (Last 5) */}
+                {renderTh('form', lang === 'sk' ? 'Forma (5)' : 'Form (5)', 'text-center', 'w-36 sm:w-44')}
 
-              const team = getTeamName(row.id);
-              const last5 = row.form.slice(-5);
+                {/* Next Match */}
+                {renderTh('next', lang === 'sk' ? 'Najbližší zápas' : 'Next Match', 'text-center', 'w-28 sm:w-36')}
+              </tr>
+            </thead>
 
-              const isHighlighted = activeHighlight?.source === row.id || activeHighlight?.target === row.id;
-              const isSelectedTeam = selectedForm?.teamId === row.id;
-              const isTargetTeam = selectedForm ? selectedForm.match.opponent === row.id : false;
+            <tbody className="divide-y divide-slate-700/50 text-[11px] md:text-sm">
+              {tableData.map((row, idx) => {
+                const pos = idx + 1;
+                const nextMatch = nextFixtureMap[row.id];
+                const last5 = row.form.slice(-5);
 
-              const isRowActive = isHighlighted || isSelectedTeam || isTargetTeam;
-              const isTop5 = pos <= topCut;
-              const isRelegation = pos > tableData.length - bottomCut;
+                // Flashscore Qualification Zone left borders (applied in overall mode)
+                let zoneBorder = 'border-l-[3px] border-l-transparent';
+                if (locationFilter === 'all') {
+                  if (pos <= 4) {
+                    zoneBorder = 'border-l-[3px] border-l-blue-500'; // Champions League
+                  } else if (pos === 5) {
+                    zoneBorder = 'border-l-[3px] border-l-amber-500'; // Europa League
+                  } else if (pos === 6 || pos === 7) {
+                    zoneBorder = 'border-l-[3px] border-l-emerald-500'; // Conference League
+                  } else if (pos >= 18) {
+                    zoneBorder = 'border-l-[3px] border-l-rose-500'; // Relegation
+                  }
+                }
 
-              const rowBg = isRowActive ? 'bg-purple-950/60' : 'bg-slate-800 group-hover:bg-slate-700';
-              const rowClass = isRowActive
-                ? 'bg-purple-900/40 border-l-2 border-l-purple-400'
-                : isTop5
-                  ? 'hover:bg-slate-700/30 border-l-2 border-l-emerald-400/60'
-                  : isRelegation
-                    ? 'hover:bg-slate-700/30 border-l-2 border-l-red-400/60'
-                    : 'hover:bg-slate-700/30 border-l-2 border-l-transparent';
-
-              nodes.push(
-                <tr key={row.id} className={['group transition-all duration-200', rowClass].join(' ')}>
-                  <td
-                    className={[
-                      'py-2 px-1 text-center text-slate-400 font-mono text-[10px] md:text-sm',
-                      rowBg,
-                      stickyLeft ? 'sticky left-0 z-30' : 'border-r border-slate-700/50',
-                    ].join(' ')}
-                    style={stickyLeft ? { width: '32px', minWidth: '32px' } : undefined}
+                return (
+                  <tr
+                    key={row.id}
+                    className="hover:bg-slate-700/30 transition-colors group"
                   >
-                    {pos}
-                  </td>
-                  <td
-                    className={[
-                      'py-2 px-2 font-semibold text-white text-left',
-                      rowBg,
-                      stickyLeft ? 'sticky z-20 shadow-[2px_0_5px_rgba(0,0,0,0.3)]' : 'border-r border-slate-700/50',
-                    ].join(' ')}
-                    style={stickyLeft ? { left: '32px', width: '80px', minWidth: '80px' } : undefined}
-                  >
-                    <span className="md:hidden truncate block text-[11px]">{team?.short_name || 'N/A'}</span>
-                    <span className="hidden md:block truncate">{team?.name || 'N/A'}</span>
-                  </td>
-                  <td className={['py-2 text-center font-bold text-white border-r border-slate-700/50', rowBg].join(' ')}>
-                    {row.pts}
-                  </td>
+                    {/* Rank (#) - Sticky Left with Flashscore Zone Accent */}
+                    <td
+                      className={`py-2.5 px-1 sm:px-2 text-center sticky left-0 z-20 bg-slate-800 transition-colors group-hover:bg-slate-700 border-b border-slate-700/50 border-r border-slate-700 ${zoneBorder}`}
+                    >
+                      <span className="font-mono font-bold text-slate-300 text-xs md:text-sm">
+                        {pos}
+                      </span>
+                    </td>
 
-                  {mode === 'adv' && (
-                    <>
-                      <td className="px-2 md:px-4 py-2 text-center text-slate-200">{row.played}</td>
-                      <td className="px-2 md:px-4 py-2 text-center text-green-400 font-semibold">{row.win}</td>
-                      <td className="px-2 md:px-4 py-2 text-center text-slate-400">{row.draw}</td>
-                      <td className="px-2 md:px-4 py-2 text-center text-red-400">{row.loss}</td>
-                      <td className="px-2 md:px-4 py-2 text-center text-slate-200">{row.gf}</td>
-                      <td className="px-2 md:px-4 py-2 text-center text-slate-200">{row.ga}</td>
-                      <td className="px-2 md:px-4 py-2 text-center">
-                        <span className={row.gf - row.ga >= 0 ? 'text-green-300' : 'text-red-300'}>
-                          {row.gf - row.ga >= 0 ? '+' : ''}
-                          {row.gf - row.ga}
-                        </span>
-                      </td>
-                    </>
-                  )}
+                    {/* Team Name & Crest - Sticky Left */}
+                    <td
+                      className="py-2.5 px-2.5 sm:px-3 font-bold text-white sticky left-10 sm:left-12 z-20 bg-slate-800 transition-colors group-hover:bg-slate-700 border-b border-slate-700/50 border-r border-slate-700 shadow-[2px_0_6px_rgba(0,0,0,0.25)] truncate"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <TeamIcon code={row.short_name} alt={row.name} size={20} />
+                        <span className="hidden sm:inline truncate">{row.name}</span>
+                        <span className="sm:hidden truncate">{row.short_name}</span>
+                      </div>
+                    </td>
 
-                  {(mode === 'basic' || mode === 'form') && (
-                    <td className="px-2 py-2 text-center">
-                      <span className={row.gf - row.ga >= 0 ? 'text-green-300' : 'text-red-300'}>
-                        {row.gf - row.ga >= 0 ? '+' : ''}
+                    {/* Matches Played */}
+                    <td className="py-2.5 px-2 text-center text-slate-300 border-b border-slate-700/50 font-mono">
+                      {row.played}
+                    </td>
+
+                    {/* Full View Columns */}
+                    {viewMode === 'full' && (
+                      <>
+                        <td className="py-2.5 px-2 text-center text-emerald-400 border-b border-slate-700/50 font-mono font-semibold">
+                          {row.win}
+                        </td>
+                        <td className="py-2.5 px-2 text-center text-slate-400 border-b border-slate-700/50 font-mono">
+                          {row.draw}
+                        </td>
+                        <td className="py-2.5 px-2 text-center text-rose-400 border-b border-slate-700/50 font-mono">
+                          {row.loss}
+                        </td>
+                        <td className="py-2.5 px-2 text-center text-slate-300 border-b border-slate-700/50 font-mono hidden sm:table-cell">
+                          {row.gf}:{row.ga}
+                        </td>
+                      </>
+                    )}
+
+                    {/* Goal Difference */}
+                    <td className="py-2.5 px-2 text-center border-b border-slate-700/50 font-mono">
+                      <span
+                        className={`font-semibold ${
+                          row.gf - row.ga > 0
+                            ? 'text-emerald-400'
+                            : row.gf - row.ga < 0
+                            ? 'text-rose-400'
+                            : 'text-slate-400'
+                        }`}
+                      >
+                        {row.gf - row.ga > 0 ? '+' : ''}
                         {row.gf - row.ga}
                       </span>
                     </td>
-                  )}
 
-                  {mode === 'form' && (
-                    <td className="px-2 md:px-4 py-2">
-                      <div className="flex items-center justify-center gap-1 md:gap-1.5">
-                        {last5.length === 0 && <span className="text-slate-500 text-xs">—</span>}
-                        {[...last5].reverse().map((match, i) => {
-                          const Icon = match.result === 'W' ? Check : match.result === 'L' ? X : Minus;
-                          const colorClass =
-                            match.result === 'W'
-                              ? 'bg-green-500/90 border-green-400/50'
-                              : match.result === 'L'
-                                ? 'bg-red-500/90 border-red-400/50'
-                                : 'bg-slate-600/90 border-slate-500/50';
+                    {/* Points */}
+                    <td className="py-2.5 px-2 text-center border-b border-slate-700/50 font-mono font-black text-white text-xs md:text-base bg-slate-900/30">
+                      {row.pts}
+                    </td>
 
-                          const isSelectedPill = selectedForm?.teamId === row.id && selectedForm?.idx === i;
+                    {/* Form Pills (Flashscore Style) */}
+                    <td className="py-2.5 px-2 md:px-3 text-center border-b border-slate-700/50">
+                      <div className="flex items-center justify-center gap-1">
+                        {last5.length === 0 ? (
+                          <span className="text-slate-500 text-xs font-mono">—</span>
+                        ) : (
+                          last5.map((match, mIdx) => {
+                            const oppTeam = getTeamObj(match.opponent);
+                            const oppName = oppTeam?.name || 'Opponent';
 
-                          return (
-                            <button
-                              key={i}
-                              type="button"
-                              className={[
-                                'relative flex items-center justify-center rounded-md text-[10px] md:text-xs font-semibold',
-                                'px-1.5 md:px-2.5 py-0.5 border cursor-pointer transition-all',
-                                'hover:scale-105 active:scale-95',
-                                colorClass,
-                                match.result === 'W' ? 'hover:bg-green-400' : match.result === 'L' ? 'hover:bg-red-400' : 'hover:bg-slate-500',
-                                isSelectedPill
-                                  ? 'ring-1 ring-slate-100/70 ring-offset-[1px] ring-offset-slate-900 z-10 shadow-lg scale-105'
-                                  : 'border-transparent',
-                              ].join(' ')}
-                              onMouseEnter={() => setActiveHighlight({ source: row.id, target: match.opponent })}
-                              onMouseLeave={() => setActiveHighlight(null)}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedForm({ teamId: row.id, idx: i, match });
-                              }}
-                              title={`vs ${getTeamName(match.opponent)?.name || 'Opponent'}`}
-                            >
-                              <Icon className="w-2.5 h-2.5 md:w-3 md:h-3 text-white" />
-                            </button>
-                          );
-                        })}
+                            let pillColor = 'bg-slate-600 text-slate-100 border-slate-500';
+                            let pillLabel = lang === 'sk' ? 'R' : 'D';
+
+                            if (match.result === 'W') {
+                              pillColor = 'bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-500';
+                              pillLabel = lang === 'sk' ? 'V' : 'W';
+                            } else if (match.result === 'L') {
+                              pillColor = 'bg-rose-600 text-white border-rose-500 hover:bg-rose-500';
+                              pillLabel = lang === 'sk' ? 'P' : 'L';
+                            }
+
+                            return (
+                              <button
+                                key={mIdx}
+                                type="button"
+                                onMouseEnter={(e) => {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setHoveredForm({
+                                    teamName: row.name,
+                                    opponentName: oppName,
+                                    score: match.score,
+                                    result: match.result,
+                                    isHome: match.isHome,
+                                    date: match.date,
+                                    event: match.event,
+                                    rect
+                                  });
+                                }}
+                                onMouseLeave={() => setHoveredForm(null)}
+                                className={`w-5 h-5 sm:w-6 sm:h-6 rounded flex items-center justify-center text-[10px] sm:text-xs font-bold border shadow-xs transition-transform hover:scale-110 active:scale-95 cursor-default ${pillColor}`}
+                              >
+                                {pillLabel}
+                              </button>
+                            );
+                          })
+                        )}
                       </div>
                     </td>
-                  )}
-                </tr>
-              );
-              return nodes;
-            })}
-          </tbody>
-        </table>
-      </div>
 
-      {mode === 'form' && selectedForm && (
-        <div className="mt-4 rounded-lg border border-slate-700/60 bg-slate-950/30 p-3 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="text-slate-200 font-semibold text-base">
-                {selectedTeam?.name || 'N/A'} vs {selectedOpp?.name || 'N/A'}
-              </div>
-              <div className="text-slate-400 text-sm">{formatDate(selectedForm.match.date)}</div>
-              <div
-                className={[
-                  'text-sm font-bold mt-1',
-                  selectedForm.match.result === 'W'
-                    ? 'text-green-400'
-                    : selectedForm.match.result === 'L'
-                      ? 'text-red-400'
-                      : 'text-slate-200',
-                ].join(' ')}
-              >
-                Result: {selectedForm.match.score}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="text-xs px-3 py-1 rounded-md border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"
-              onClick={() => setSelectedForm(null)}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-6 gap-4 px-2">
-        <div className="flex flex-col">
-          <p className="text-slate-400 text-sm font-medium">
-            {fixtures.filter((f) => f.finished).length} games played
-          </p>
-          {mode === 'form' && (
-            <p className="mt-1 text-xs text-slate-400/80 italic">
-              Tip: Click a form pill to see the match details.
-            </p>
-          )}
+                    {/* Next Match Fixture Badge */}
+                    <td className="py-2.5 px-2 text-center border-b border-slate-700/50">
+                      {nextMatch ? (
+                        <div
+                          title={`GW${nextMatch.event || ''} vs ${nextMatch.opponentName} (${nextMatch.isHome ? 'H' : 'A'})`}
+                          className="inline-flex items-center justify-center"
+                        >
+                          <span
+                            className={`px-2 py-0.5 rounded font-mono text-[10px] sm:text-xs font-bold border transition-colors ${getFdrColorClasses(
+                              nextMatch.difficulty
+                            )}`}
+                          >
+                            {nextMatch.opponentShort} ({nextMatch.isHome ? (lang === 'sk' ? 'D' : 'H') : (lang === 'sk' ? 'V' : 'A')})
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-500 text-xs font-mono">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
 
-        {mode === 'form' && (
-          <div className="flex items-center gap-4 text-[10px] md:text-sm">
-            <div className="flex items-center gap-1.5 grayscale-[0.3]">
-              <div className="flex items-center justify-center rounded-md bg-green-500/90 w-5 h-5 md:w-7 md:h-6 text-white shadow-sm">
-                <Check size={14} />
+        {/* Flashscore Zone Legend at bottom */}
+        {locationFilter === 'all' && (
+          <div className="bg-slate-900/70 p-3.5 border-t border-slate-700/80 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-400">
+            <div className="flex flex-wrap items-center gap-3.5">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-xs bg-blue-500 inline-block shadow-sm" />
+                <span>{lang === 'sk' ? 'Liga majstrov (1. – 4.)' : 'Champions League (1-4)'}</span>
               </div>
-              <span className="text-slate-400 font-bold uppercase tracking-wider">Win</span>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-xs bg-amber-500 inline-block shadow-sm" />
+                <span>{lang === 'sk' ? 'Európska liga (5.)' : 'Europa League (5)'}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500 inline-block shadow-sm" />
+                <span>{lang === 'sk' ? 'Konferenčná liga (6. – 7.)' : 'Conference League (6-7)'}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-xs bg-rose-500 inline-block shadow-sm" />
+                <span>{lang === 'sk' ? 'Zostup (18. – 20.)' : 'Relegation (18-20)'}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 grayscale-[0.3]">
-              <div className="flex items-center justify-center rounded-md bg-slate-600/90 w-5 h-5 md:w-7 md:h-6 text-white shadow-sm">
-                <Minus size={14} />
-              </div>
-              <span className="text-slate-400 font-bold uppercase tracking-wider">Draw</span>
-            </div>
-            <div className="flex items-center gap-1.5 grayscale-[0.3]">
-              <div className="flex items-center justify-center rounded-md bg-red-500/90 w-5 h-5 md:w-7 md:h-6 text-white shadow-sm">
-                <X size={14} />
-              </div>
-              <span className="text-slate-400 font-bold uppercase tracking-wider">Loss</span>
+
+            <div className="text-slate-500 text-[10px] font-mono">
+              {lang === 'sk' ? 'Forma: V = Výhra • R = Remíza • P = Prehra' : 'Form: W = Win • D = Draw • L = Loss'}
             </div>
           </div>
         )}
       </div>
+
+      {/* Floating Header Metric Explainer Tooltip */}
+      {hoveredMetric && (() => {
+        const isNearTop = hoveredMetric.rect.top < 240;
+        const leftPos = Math.max(
+          160,
+          Math.min(
+            (typeof window !== 'undefined' ? window.innerWidth : 1000) - 160,
+            hoveredMetric.rect.left + hoveredMetric.rect.width / 2
+          )
+        );
+
+        return (
+          <div
+            style={{
+              position: 'fixed',
+              left: leftPos,
+              top: isNearTop ? hoveredMetric.rect.bottom + 10 : hoveredMetric.rect.top - 10,
+              transform: isNearTop ? 'translate(-50%, 0)' : 'translate(-50%, -100%)'
+            }}
+            className="z-[9999] pointer-events-none w-72 sm:w-80 p-3.5 bg-slate-900/98 backdrop-blur-md text-slate-200 text-xs rounded-xl shadow-2xl border border-slate-700 text-left normal-case font-normal select-none transition-all duration-150 animate-in fade-in"
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
+              <span className="font-bold text-white text-xs">{hoveredMetric.label}</span>
+              <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                {hoveredMetric.abbr}
+              </span>
+            </div>
+            <p className="text-[11px] leading-relaxed text-slate-300 whitespace-normal">
+              {hoveredMetric.description}
+            </p>
+            {hoveredMetric.tip && (
+              <div className="mt-2.5 pt-2 border-t border-slate-800/80 bg-slate-950/50 -mx-1 p-2 rounded-lg border border-slate-800/60">
+                <div className="flex items-start gap-1.5 text-[10.5px] leading-snug text-amber-200/90 font-medium">
+                  <Sparkles size={12} className="text-amber-400 shrink-0 mt-0.5" />
+                  <span>{hoveredMetric.tip}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Floating Form Match Details Tooltip */}
+      {hoveredForm && (() => {
+        const isNearTop = hoveredForm.rect.top < 160;
+        const leftPos = Math.max(
+          140,
+          Math.min(
+            (typeof window !== 'undefined' ? window.innerWidth : 1000) - 140,
+            hoveredForm.rect.left + hoveredForm.rect.width / 2
+          )
+        );
+
+        const outcomeText =
+          hoveredForm.result === 'W'
+            ? lang === 'sk' ? 'Výhra' : 'Win'
+            : hoveredForm.result === 'L'
+            ? lang === 'sk' ? 'Prehra' : 'Loss'
+            : lang === 'sk' ? 'Remíza' : 'Draw';
+
+        const venueText = hoveredForm.isHome
+          ? lang === 'sk' ? 'Doma' : 'Home'
+          : lang === 'sk' ? 'Vonku' : 'Away';
+
+        return (
+          <div
+            style={{
+              position: 'fixed',
+              left: leftPos,
+              top: isNearTop ? hoveredForm.rect.bottom + 8 : hoveredForm.rect.top - 8,
+              transform: isNearTop ? 'translate(-50%, 0)' : 'translate(-50%, -100%)'
+            }}
+            className="z-[9999] pointer-events-none w-56 p-2.5 bg-slate-900/98 backdrop-blur-md text-slate-200 text-xs rounded-xl shadow-2xl border border-slate-700 text-left select-none animate-in fade-in duration-150"
+          >
+            <div className="flex items-center justify-between text-[11px] font-bold text-white mb-1">
+              <span className="truncate max-w-[120px]">{hoveredForm.teamName}</span>
+              <span className="text-slate-400 font-mono text-[10px]">
+                {hoveredForm.event ? `GW${hoveredForm.event}` : ''}
+              </span>
+            </div>
+            <div className="text-[11px] text-slate-300 flex items-center justify-between py-1 border-y border-slate-800 my-1">
+              <span>vs {hoveredForm.opponentName}</span>
+              <span className="font-mono font-black text-white px-1.5 py-0.2 bg-slate-800 rounded">
+                {hoveredForm.score}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
+              <span
+                className={`font-bold ${
+                  hoveredForm.result === 'W'
+                    ? 'text-emerald-400'
+                    : hoveredForm.result === 'L'
+                    ? 'text-rose-400'
+                    : 'text-slate-400'
+                }`}
+              >
+                {outcomeText} ({venueText})
+              </span>
+              {hoveredForm.date && (
+                <span>{new Date(hoveredForm.date).toLocaleDateString([], { day: '2-digit', month: '2-digit' })}</span>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
