@@ -134,8 +134,8 @@ const leagueMetricDescriptions: Record<string, {
     label: (lang) => lang === 'sk' ? 'Forma (Posledných 5 zápasov)' : 'Recent Form (Last 5)',
     abbr: 'FORM',
     description: (lang) => lang === 'sk'
-      ? 'Výsledky posledných 5 odohraných ligových zápasov (Zelená = Výhra, Sivá = Remíza, Červená = Prehra). Zobrazuje sa zľava doprava (najstarší → najnovší).'
-      : 'Results of the last 5 league matches (Green = Win, Grey = Draw, Red = Loss) from left to right.',
+      ? 'Výsledky posledných 5 odohraných ligových zápasov (Zelená = Výhra, Sivá = Remíza, Červená = Prehra). Zobrazuje sa zľava doprava (najnovší zápas je vľavo).'
+      : 'Results of the last 5 league matches (Green = Win, Grey = Draw, Red = Loss) from left to right (newest on the left).',
     tip: (lang) => lang === 'sk'
       ? 'Ako chápať: Prejdite myšou nad pilulku a okamžite uvidíte skóre a meno súpera.'
       : 'How to read: Hover any pill to reveal match score and opponent details.'
@@ -582,7 +582,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
               {tableData.map((row, idx) => {
                 const pos = idx + 1;
                 const nextMatch = nextFixtureMap[row.id];
-                const last5 = row.form.slice(-5);
+                const last5 = row.form.slice(-5).reverse();
 
                 // Flashscore Qualification Zone left borders (applied in overall mode)
                 let zoneBorder = 'border-l-[3px] border-l-transparent';
@@ -765,7 +765,9 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
             </div>
 
             <div className="text-slate-500 text-[10px] font-mono">
-              {lang === 'sk' ? 'Forma: V = Výhra • R = Remíza • P = Prehra' : 'Form: W = Win • D = Draw • L = Loss'}
+              {lang === 'sk'
+                ? 'Forma (zľava najnovší zápas): V = Výhra • R = Remíza • P = Prehra'
+                : 'Form (newest on left): W = Win • D = Draw • L = Loss'}
             </div>
           </div>
         )}
