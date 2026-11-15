@@ -636,93 +636,6 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
             </div>
           )}
 
-          {/* Fortuna Odds Breakdown for GKP, DEF, MID, FWD (Live Fortuna only) */}
-          {oddsData && player && (() => {
-            const nextEventId = upcomingFixtures[0]?.event || 1;
-            const oddsRes = getGoalscorerOdds(player, teams, fixtures, nextEventId, oddsData);
-            if (!oddsRes) return null;
-
-            const hasLiveCS = (player.element_type === 1 || player.element_type === 2) && oddsRes.cleanSheet?.source === 'fortuna_live';
-            const hasLiveGoal = player.element_type !== 1 && oddsRes.goal.source === 'fortuna_live';
-            const hasLiveAssist = player.element_type !== 1 && oddsRes.assist.source === 'fortuna_live';
-            const hasLiveGA = player.element_type !== 1 && oddsRes.goalOrAssist.source === 'fortuna_live';
-
-            if (!hasLiveCS && !hasLiveGoal && !hasLiveAssist && !hasLiveGA) return null;
-
-            return (
-              <div className="mt-3 bg-amber-500/10 border border-amber-500/25 p-3 rounded-xl shadow-inner">
-                <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                    <Coins size={12} />
-                    {lang === 'sk'
-                      ? `Reálne kurzy Fortuna`
-                      : `Fortuna Live Odds`}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {/* Clean Sheet for GKP & DEF */}
-                  {(player.element_type === 1 || player.element_type === 2) && (
-                    <div className="bg-slate-900/80 p-2.5 rounded-lg border border-cyan-500/20 flex flex-col items-center text-center">
-                      <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Čisté konto' : 'Clean Sheet'}</span>
-                      {hasLiveCS && oddsRes.cleanSheet ? (
-                        <>
-                          <span className="text-white font-mono font-bold text-sm mt-0.5">{oddsRes.cleanSheet.odds.toFixed(2)}</span>
-                          <span className="text-xs text-cyan-300 font-bold">{Math.round(oddsRes.cleanSheet.prob * 100)}%</span>
-                          <span className="text-[8px] text-slate-500 mt-0.5">vs {oddsRes.cleanSheet.opponentShort || oddsRes.opponentShort}</span>
-                        </>
-                      ) : (
-                        <span className="text-slate-600 font-mono text-xs mt-2">-</span>
-                      )}
-                    </div>
-                  )}
-                  {player.element_type !== 1 && (
-                    <>
-                      {/* Goal */}
-                      <div className="bg-slate-900/80 p-2.5 rounded-lg border border-amber-500/20 flex flex-col items-center text-center">
-                        <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Gól' : 'Goal'}</span>
-                        {hasLiveGoal ? (
-                          <>
-                            <span className="text-white font-mono font-bold text-sm mt-0.5">{oddsRes.goal.odds.toFixed(2)}</span>
-                            <span className="text-xs text-amber-300 font-bold">{Math.round(oddsRes.goal.prob * 100)}%</span>
-                            <span className="text-[8px] text-slate-500 mt-0.5">vs {oddsRes.goal.opponentShort || oddsRes.opponentShort}</span>
-                          </>
-                        ) : (
-                          <span className="text-slate-600 font-mono text-xs mt-2">-</span>
-                        )}
-                      </div>
-                      {/* Assist */}
-                      <div className="bg-slate-900/80 p-2.5 rounded-lg border border-blue-500/20 flex flex-col items-center text-center">
-                        <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Asistencia' : 'Assist'}</span>
-                        {hasLiveAssist ? (
-                          <>
-                            <span className="text-white font-mono font-bold text-sm mt-0.5">{oddsRes.assist.odds.toFixed(2)}</span>
-                            <span className="text-xs text-blue-300 font-bold">{Math.round(oddsRes.assist.prob * 100)}%</span>
-                            <span className="text-[8px] text-slate-500 mt-0.5">vs {oddsRes.assist.opponentShort || oddsRes.opponentShort}</span>
-                          </>
-                        ) : (
-                          <span className="text-slate-600 font-mono text-xs mt-2">-</span>
-                        )}
-                      </div>
-                      {/* G+A */}
-                      <div className="bg-slate-900/80 p-2.5 rounded-lg border border-emerald-500/20 flex flex-col items-center text-center">
-                        <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Gól + Asist.' : 'G+A'}</span>
-                        {hasLiveGA ? (
-                          <>
-                            <span className="text-white font-mono font-bold text-sm mt-0.5">{oddsRes.goalOrAssist.odds.toFixed(2)}</span>
-                            <span className="text-xs text-emerald-300 font-bold">{Math.round(oddsRes.goalOrAssist.prob * 100)}%</span>
-                            <span className="text-[8px] text-slate-500 mt-0.5">vs {oddsRes.goalOrAssist.opponentShort || oddsRes.opponentShort}</span>
-                          </>
-                        ) : (
-                          <span className="text-slate-600 font-mono text-xs mt-2">-</span>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-
         </div>
 
         {/* Modal Body / Scrollable Content */}
@@ -743,6 +656,92 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
 
           {!loading && (
             <div className="space-y-6">
+              {/* Fortuna Odds Breakdown for GKP, DEF, MID, FWD (Live Fortuna only, scrolls with content) */}
+              {oddsData && player && (() => {
+                const nextEventId = upcomingFixtures[0]?.event || 1;
+                const oddsRes = getGoalscorerOdds(player, teams, fixtures, nextEventId, oddsData);
+                if (!oddsRes) return null;
+
+                const hasLiveCS = (player.element_type === 1 || player.element_type === 2) && oddsRes.cleanSheet?.source === 'fortuna_live';
+                const hasLiveGoal = player.element_type !== 1 && oddsRes.goal.source === 'fortuna_live';
+                const hasLiveAssist = player.element_type !== 1 && oddsRes.assist.source === 'fortuna_live';
+                const hasLiveGA = player.element_type !== 1 && oddsRes.goalOrAssist.source === 'fortuna_live';
+
+                if (!hasLiveCS && !hasLiveGoal && !hasLiveAssist && !hasLiveGA) return null;
+
+                return (
+                  <div className="bg-amber-500/10 border border-amber-500/25 p-3.5 rounded-xl shadow-inner">
+                    <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                        <Coins size={12} />
+                        {lang === 'sk'
+                          ? `Reálne kurzy Fortuna (Najbližší zápas · GW${nextEventId})`
+                          : `Fortuna Live Odds (Next Match · GW${nextEventId})`}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {/* Clean Sheet for GKP & DEF */}
+                      {(player.element_type === 1 || player.element_type === 2) && (
+                        <div className="bg-slate-900/80 p-2.5 rounded-lg border border-cyan-500/20 flex flex-col items-center text-center">
+                          <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Čisté konto' : 'Clean Sheet'}</span>
+                          {hasLiveCS && oddsRes.cleanSheet ? (
+                            <>
+                              <span className="text-white font-mono font-bold text-sm mt-0.5">{oddsRes.cleanSheet.odds.toFixed(2)}</span>
+                              <span className="text-xs text-cyan-300 font-bold">{Math.round(oddsRes.cleanSheet.prob * 100)}%</span>
+                              <span className="text-[8px] text-slate-500 mt-0.5">vs {oddsRes.cleanSheet.opponentShort || oddsRes.opponentShort}</span>
+                            </>
+                          ) : (
+                            <span className="text-slate-600 font-mono text-xs mt-2">-</span>
+                          )}
+                        </div>
+                      )}
+                      {player.element_type !== 1 && (
+                        <>
+                          {/* Goal */}
+                          <div className="bg-slate-900/80 p-2.5 rounded-lg border border-amber-500/20 flex flex-col items-center text-center">
+                            <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Gól' : 'Goal'}</span>
+                            {hasLiveGoal ? (
+                              <>
+                                <span className="text-white font-mono font-bold text-sm mt-0.5">{oddsRes.goal.odds.toFixed(2)}</span>
+                                <span className="text-xs text-amber-300 font-bold">{Math.round(oddsRes.goal.prob * 100)}%</span>
+                                <span className="text-[8px] text-slate-500 mt-0.5">vs {oddsRes.goal.opponentShort || oddsRes.opponentShort}</span>
+                              </>
+                            ) : (
+                              <span className="text-slate-600 font-mono text-xs mt-2">-</span>
+                            )}
+                          </div>
+                          {/* Assist */}
+                          <div className="bg-slate-900/80 p-2.5 rounded-lg border border-blue-500/20 flex flex-col items-center text-center">
+                            <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Asistencia' : 'Assist'}</span>
+                            {hasLiveAssist ? (
+                              <>
+                                <span className="text-white font-mono font-bold text-sm mt-0.5">{oddsRes.assist.odds.toFixed(2)}</span>
+                                <span className="text-xs text-blue-300 font-bold">{Math.round(oddsRes.assist.prob * 100)}%</span>
+                                <span className="text-[8px] text-slate-500 mt-0.5">vs {oddsRes.assist.opponentShort || oddsRes.opponentShort}</span>
+                              </>
+                            ) : (
+                              <span className="text-slate-600 font-mono text-xs mt-2">-</span>
+                            )}
+                          </div>
+                          {/* G+A */}
+                          <div className="bg-slate-900/80 p-2.5 rounded-lg border border-emerald-500/20 flex flex-col items-center text-center">
+                            <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Gól + Asist.' : 'G+A'}</span>
+                            {hasLiveGA ? (
+                              <>
+                                <span className="text-white font-mono font-bold text-sm mt-0.5">{oddsRes.goalOrAssist.odds.toFixed(2)}</span>
+                                <span className="text-xs text-emerald-300 font-bold">{Math.round(oddsRes.goalOrAssist.prob * 100)}%</span>
+                                <span className="text-[8px] text-slate-500 mt-0.5">vs {oddsRes.goalOrAssist.opponentShort || oddsRes.opponentShort}</span>
+                              </>
+                            ) : (
+                              <span className="text-slate-600 font-mono text-xs mt-2">-</span>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
               {/* Gameweek Sparkline / Bar Chart */}
               {pointsHistory.length > 0 && (
                 <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
