@@ -3,16 +3,9 @@ import { FPLTeam, FPLFixture } from '../types';
 import {
   TrendingUp,
   Shield,
-  Info,
-  ChevronDown,
-  ChevronUp,
   Flame,
   Target,
-  Sparkles,
-  Award,
-  Zap,
-  BarChart3,
-  Calendar
+  Sparkles
 } from 'lucide-react';
 import TwoPanelTable from './TwoPanelTable';
 import ResultChip from './ResultChip';
@@ -155,7 +148,6 @@ const TeamAnalysis: React.FC<TeamAnalysisProps> = ({ teams, fixtures }) => {
   const [activeTab, setActiveTab] = useState<'ATTACK' | 'DEFENSE'>('ATTACK');
   const [matchCount, setMatchCount] = useState<3 | 5 | 8>(5);
   const [mobileView, setMobileView] = useState<'STATS' | 'FORM'>('STATS');
-  const [infoExpanded, setInfoExpanded] = useState(false);
   const [hoveredMetric, setHoveredMetric] = useState<{
     label: string;
     abbr: string;
@@ -405,50 +397,6 @@ const TeamAnalysis: React.FC<TeamAnalysisProps> = ({ teams, fixtures }) => {
               </button>
             </div>
           </div>
-        </div>
-
-        {/* Collapsible Info Guide */}
-        <div className="mt-4 pt-3 border-t border-slate-700/60">
-          <button
-            onClick={() => setInfoExpanded(!infoExpanded)}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-xs font-semibold group"
-          >
-            <Info size={14} className="text-blue-400" />
-            <span>{lang === 'sk' ? 'Ako čítať tímové metriky a FPL tipy' : 'About these metrics & FPL insights'}</span>
-            {infoExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-          </button>
-
-          {infoExpanded && (
-            <div className="mt-3 bg-slate-900/90 border border-slate-700/80 p-3.5 rounded-xl text-xs text-slate-300 animate-in slide-in-from-top-2 duration-200 grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="flex items-start gap-2.5">
-                <Flame className="text-emerald-400 shrink-0 mt-0.5" size={16} />
-                <div>
-                  <strong className="text-white block mb-0.5">
-                    {lang === 'sk' ? 'Útočný potenciál (GS/G & FTS)' : 'Attacking Firepower (GS/G & FTS)'}
-                  </strong>
-                  <p className="text-slate-400 leading-relaxed text-[11px]">
-                    {lang === 'sk'
-                      ? 'Zelené čísla (2.0+ gólu na zápas) značia elitnú ofenzívu. Sledujte aj FTS (Failed to score) – tímy s 0 FTS takmer garantujú body útočníkov v každom kole.'
-                      : 'Green numbers (2.0+ goals per game) indicate elite attacking form. Teams with 0 FTS consistently return points in every gameweek.'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2.5">
-                <Target className="text-amber-400 shrink-0 mt-0.5" size={16} />
-                <div>
-                  <strong className="text-white block mb-0.5">
-                    {lang === 'sk' ? 'Kapitánske terče a obrana (GC/G & CS)' : 'Defensive Solidity & Captain Targets'}
-                  </strong>
-                  <p className="text-slate-400 leading-relaxed text-[11px]">
-                    {lang === 'sk'
-                      ? 'Tímy s GC/G pod 0.8 sú ideálne pre čisté kontá obrancov. Naopak tímy s GC/G nad 1.8 inkasujú najviac a slúžia ako ideálny terč pre vášho kapitána!'
-                      : 'Teams conceding under 0.8 are prime clean sheet sources. Teams conceding 1.8+ represent prime targets to captain against.'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
