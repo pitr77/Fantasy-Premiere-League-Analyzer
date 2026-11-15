@@ -349,8 +349,8 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
 
                 {/* Template Tier Badge */}
                 {templateTier && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded font-mono bg-purple-500/20 text-purple-300 border border-purple-500/40">
-                    <Sparkles size={11} /> {templateTier.tier}
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.15)]">
+                    <Sparkles size={11} className="text-amber-400" /> {templateTier.tier}
                   </span>
                 )}
               </div>
