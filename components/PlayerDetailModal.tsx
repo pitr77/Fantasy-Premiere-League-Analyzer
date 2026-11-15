@@ -28,7 +28,7 @@ import {
   Info,
   ArrowLeftRight
 } from 'lucide-react';
-import { useLanguage } from '../lib/language';
+import { useLanguage, Language } from '../lib/language';
 import { FortunaMatch } from '../services/oddsSnapshotService';
 import { getGoalscorerOdds } from '../lib/goalscorerModel';
 
@@ -50,6 +50,164 @@ const POSITION_NAMES: Record<number, { short: string; full: string; color: strin
   4: { short: 'FWD', full: 'Forward', color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/30' },
 };
 
+// Tooltip metric descriptions for match log and history table headers
+const matchLogMetricDescriptions: Record<string, { label: (lang: Language) => string; abbr: string; description: (lang: Language) => string }> = {
+  gw: {
+    label: (lang) => lang === 'sk' ? 'Kolo' : 'Gameweek',
+    abbr: 'GW',
+    description: (lang) => lang === 'sk'
+      ? 'Číslo herného kola Premier League (Gameweek).'
+      : 'Premier League Gameweek round number.'
+  },
+  opponent: {
+    label: (lang) => lang === 'sk' ? 'Súper & FDR' : 'Opponent & FDR',
+    abbr: 'OPP',
+    description: (lang) => lang === 'sk'
+      ? 'Súper v danom zápase, informácia o domácom (Doma) alebo vonkajšom (Vonku) prostredí a FDR náročnosť zápasu.'
+      : 'Opponent team, venue (Home/Away), and FDR (Fixture Difficulty Rating).'
+  },
+  result: {
+    label: (lang) => lang === 'sk' ? 'Výsledok' : 'Result',
+    abbr: 'RES',
+    description: (lang) => lang === 'sk'
+      ? 'Konečný výsledok zápasu: Výhra (W), Remíza (D) alebo Prehra (L).'
+      : 'Final match score and outcome: Win (W), Draw (D), or Loss (L).'
+  },
+  mins: {
+    label: (lang) => lang === 'sk' ? 'Minúty' : 'Minutes',
+    abbr: 'MINS',
+    description: (lang) => lang === 'sk'
+      ? 'Počet odohraných minút v zápase (60+ minút garantuje 2 body pre obrancov a brankárov za čisté konto).'
+      : 'Minutes played in the match (60+ mins required for clean sheet eligibility).'
+  },
+  pts: {
+    label: (lang) => lang === 'sk' ? 'FPL Body' : 'Points',
+    abbr: 'PTS',
+    description: (lang) => lang === 'sk'
+      ? 'Celkový počet Fantasy bodov získaných hráčom v danom zápase.'
+      : 'Total Fantasy Premier League points scored by the player in this match.'
+  },
+  g: {
+    label: (lang) => lang === 'sk' ? 'Góly' : 'Goals',
+    abbr: 'G',
+    description: (lang) => lang === 'sk'
+      ? 'Počet strelených gólov v zápase (Útočník: 4b, Záložník: 5b, Obranca/GKP: 6b).'
+      : 'Goals scored in the match (FWD: 4 pts, MID: 5 pts, DEF/GKP: 6 pts).'
+  },
+  a: {
+    label: (lang) => lang === 'sk' ? 'Asistencie' : 'Assists',
+    abbr: 'A',
+    description: (lang) => lang === 'sk'
+      ? 'Počet gólových asistencií v zápase (3 body za asistenciu).'
+      : 'Goal assists awarded in this match (3 pts each).'
+  },
+  cs: {
+    label: (lang) => lang === 'sk' ? 'Čisté konto' : 'Clean Sheet',
+    abbr: 'CS',
+    description: (lang) => lang === 'sk'
+      ? 'Čisté konto tímu počas pobytu hráča na ihrisku (min. 60 minút: Obranca/GKP: 4b, Záložník: 1b).'
+      : 'Clean sheet awarded if player was on pitch 60+ mins without conceding (DEF/GKP: 4 pts, MID: 1 pt).'
+  },
+  bonus: {
+    label: (lang) => lang === 'sk' ? 'Bonusové body' : 'Bonus Points',
+    abbr: 'BONUS',
+    description: (lang) => lang === 'sk'
+      ? 'Oficiálne bonusové body udelené 3 najlepším hráčom zápasu podľa BPS (1, 2 alebo 3 body).'
+      : 'Official FPL bonus points awarded to top performers based on BPS (1, 2, or 3 points).'
+  },
+  bps: {
+    label: (lang) => 'Bonus Points System',
+    abbr: 'BPS',
+    description: (lang) => lang === 'sk'
+      ? 'Systém bodovania výkonu hráčov v zápase (prihrávky, zákroky, vyhraté súboje), ktorý rozhoduje o udelení bonusových bodov.'
+      : 'Bonus Points System score based on comprehensive underlying match metrics determining bonus points.'
+  },
+  xg: {
+    label: (lang) => 'Expected Goals',
+    abbr: 'xG',
+    description: (lang) => lang === 'sk'
+      ? 'Očakávané góly: Štatistická pravdepodobnosť, že strelecké pokusy hráča skončia gólom na základe kvality šancí.'
+      : 'Expected Goals: Measure of the probability of a shot resulting in a goal based on historical data.'
+  },
+  xa: {
+    label: (lang) => 'Expected Assists',
+    abbr: 'xA',
+    description: (lang) => lang === 'sk'
+      ? 'Očakávané asistencie: Meria kvalitu finálnych prihrávok, ktoré viedli k strelám spoluhráčov.'
+      : 'Expected Assists: Quality of passes leading to a teammate shot attempt.'
+  },
+  xgi: {
+    label: (lang) => 'Expected Goal Involvement',
+    abbr: 'xGI',
+    description: (lang) => lang === 'sk'
+      ? 'Kombinované očakávané góly a asistencie (xG + xA). Kľúčový ukazovateľ celkového ofenzívneho potenciálu hráča.'
+      : 'Expected Goal Involvement: Combined xG + xA, reflecting overall attacking threat and production.'
+  },
+  ict: {
+    label: (lang) => 'ICT Index',
+    abbr: 'ICT',
+    description: (lang) => lang === 'sk'
+      ? 'Kompozitný index FPL skladajúci sa z Vplyvu (Influence), Kreativity (Creativity) a Hrozby (Threat).'
+      : 'Composite FPL index combining Influence, Creativity, and Threat into an overall score.'
+  },
+  threat: {
+    label: (lang) => lang === 'sk' ? 'Threat (Hrozba)' : 'Threat',
+    abbr: 'THREAT',
+    description: (lang) => lang === 'sk'
+      ? 'Schopnosť hráča dostať sa do gólovej príležitosti (strely, dotyky v pokutovom území súpera).'
+      : 'Threat: Measure of player goal-threat capacity based on shots and dangerous touches inside the box.'
+  },
+  creat: {
+    label: (lang) => lang === 'sk' ? 'Creativity (Kreativita)' : 'Creativity',
+    abbr: 'CREAT',
+    description: (lang) => lang === 'sk'
+      ? 'Schopnosť pripravovať šance spoluhráčom (kľúčové prihrávky, centry, predfinálne pasy).'
+      : 'Creativity: Measure of ability to produce goal-scoring chances for teammates via key passes and crosses.'
+  },
+  gc: {
+    label: (lang) => lang === 'sk' ? 'Inkasované góly' : 'Goals Conceded',
+    abbr: 'GC',
+    description: (lang) => lang === 'sk'
+      ? 'Počet gólov inkasovaných tímom v čase, keď bol hráč na ihrisku (Obrancovia/GKP: -1 bod za každé 2 inkasované góly).'
+      : 'Goals conceded by the team while player was on the pitch (DEF/GKP lose 1 pt per 2 goals conceded).'
+  },
+  saves: {
+    label: (lang) => lang === 'sk' ? 'Zákroky brankára' : 'Saves',
+    abbr: 'SAVES',
+    description: (lang) => lang === 'sk'
+      ? 'Počet úspešných zákrokov brankára v zápase (1 bod za každé 3 zákroky).'
+      : 'Goalkeeper saves made in the match (1 pt awarded per every 3 saves).'
+  },
+  price: {
+    label: (lang) => lang === 'sk' ? 'Cena hráča' : 'Price',
+    abbr: 'PRICE',
+    description: (lang) => lang === 'sk'
+      ? 'Trhová hodnota hráča v oficiálnej hre Fantasy Premier League v danom kole.'
+      : 'Official Fantasy Premier League market price of the player in that gameweek.'
+  },
+  season: {
+    label: (lang) => lang === 'sk' ? 'Sezóna' : 'Season',
+    abbr: 'SEASON',
+    description: (lang) => lang === 'sk'
+      ? 'Ročník Premier League.'
+      : 'Premier League season.'
+  },
+  startCost: {
+    label: (lang) => lang === 'sk' ? 'Počiatočná cena' : 'Start Cost',
+    abbr: 'START',
+    description: (lang) => lang === 'sk'
+      ? 'Cena hráča na začiatku daného ročníka Premier League.'
+      : 'Player cost at the beginning of that Premier League season.'
+  },
+  endCost: {
+    label: (lang) => lang === 'sk' ? 'Konečná cena' : 'End Cost',
+    abbr: 'END',
+    description: (lang) => lang === 'sk'
+      ? 'Cena hráča na konci daného ročníka Premier League po všetkých cenových pohyboch.'
+      : 'Player cost at the conclusion of that Premier League season after all price changes.'
+  }
+};
+
 // In-memory summary cache for instant re-opening
 const summaryCache = new Map<number, FPLElementSummary>();
 
@@ -69,6 +227,51 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imgError, setImgError] = useState(false);
+  const [hoveredMetric, setHoveredMetric] = useState<{
+    key: string;
+    label: string;
+    abbr: string;
+    description: string;
+    rect: DOMRect;
+  } | null>(null);
+
+  useEffect(() => {
+    setHoveredMetric(null);
+  }, [activeSubTab, isOpen]);
+
+  const renderTh = (
+    metricKey: string,
+    displayLabel?: React.ReactNode,
+    extraClass: string = 'text-center'
+  ) => {
+    const metric = matchLogMetricDescriptions[metricKey];
+    if (!metric) return null;
+    const label = metric.label(lang);
+    const description = metric.description(lang);
+    const shown = displayLabel ?? metric.abbr;
+
+    return (
+      <th
+        key={metricKey}
+        onMouseEnter={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          setHoveredMetric({
+            key: metricKey,
+            label,
+            abbr: metric.abbr,
+            description,
+            rect
+          });
+        }}
+        onMouseLeave={() => setHoveredMetric(null)}
+        className={`py-2.5 px-2 font-bold cursor-help transition-colors select-none ${extraClass}`}
+      >
+        <span className="border-b border-dotted border-slate-600/70 hover:border-blue-400 transition-colors">
+          {shown}
+        </span>
+      </th>
+    );
+  };
 
   // Close on Escape key
   useEffect(() => {
@@ -664,38 +867,38 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr className="bg-slate-900/60 text-slate-400 uppercase font-semibold text-[10px] border-b border-slate-700/60 select-none">
-                          <th className="py-2.5 px-3">Sezóna</th>
-                          <th className="py-2.5 px-3 text-right">Minúty</th>
-                          <th className="py-2.5 px-3 text-right font-bold text-white">Celk. Body</th>
-                          <th className="py-2.5 px-3 text-center" title="Góly">Góly</th>
-                          <th className="py-2.5 px-3 text-center" title="Asistencie">Asistencie</th>
-                          <th className="py-2.5 px-3 text-center" title="Čisté kontá">Čisté kontá</th>
-                          <th className="py-2.5 px-3 text-center" title="Bonusové body">Bonusy</th>
-                          <th className="py-2.5 px-3 text-right">Poč. Cena</th>
-                          <th className="py-2.5 px-3 text-right">Konc. Cena</th>
+                          {renderTh('season', lang === 'sk' ? 'Sezóna' : 'Season', 'py-2.5 px-3 text-left')}
+                          {renderTh('mins', lang === 'sk' ? 'Minúty' : 'Minutes', 'py-2.5 px-2.5 text-center')}
+                          {renderTh('pts', lang === 'sk' ? 'Celk. Body' : 'Total Pts', 'py-2.5 px-2.5 text-center font-bold text-white')}
+                          {renderTh('g', lang === 'sk' ? 'Góly' : 'Goals', 'py-2.5 px-2.5 text-center')}
+                          {renderTh('a', lang === 'sk' ? 'Asistencie' : 'Assists', 'py-2.5 px-2.5 text-center')}
+                          {renderTh('cs', lang === 'sk' ? 'Čisté kontá' : 'Clean Sheets', 'py-2.5 px-2.5 text-center')}
+                          {renderTh('bonus', lang === 'sk' ? 'Bonusy' : 'Bonus', 'py-2.5 px-2.5 text-center')}
+                          {renderTh('startCost', lang === 'sk' ? 'Poč. Cena' : 'Start Price', 'py-2.5 px-2.5 text-center')}
+                          {renderTh('endCost', lang === 'sk' ? 'Konc. Cena' : 'End Price', 'py-2.5 px-2.5 text-center')}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-700/40 font-mono">
                         {pastSeasons.length === 0 ? (
                           <tr>
                             <td colSpan={9} className="py-8 text-center text-slate-400 font-sans text-xs">
-                              Žiadne predchádzajúce sezóny v databáze (nováčik v Premier League).
+                              {lang === 'sk' ? 'Žiadne predchádzajúce sezóny v databáze (nováčik v Premier League).' : 'No past seasons in database (Premier League newcomer).'}
                             </td>
                           </tr>
                         ) : (
                           [...pastSeasons].reverse().map((s) => (
                             <tr key={s.season_name} className="hover:bg-slate-800/60 transition-colors">
                               <td className="py-2.5 px-3 font-bold text-white font-sans">{s.season_name}</td>
-                              <td className="py-2.5 px-3 text-right text-slate-300">{s.minutes}'</td>
-                              <td className="py-2.5 px-3 text-right font-black text-emerald-400 text-sm">
+                              <td className="py-2.5 px-2.5 text-center text-slate-300">{s.minutes}'</td>
+                              <td className="py-2.5 px-2.5 text-center font-black text-emerald-400 text-sm">
                                 {s.total_points}
                               </td>
-                              <td className="py-2.5 px-3 text-center text-slate-200">{s.goals_scored}</td>
-                              <td className="py-2.5 px-3 text-center text-slate-200">{s.assists}</td>
-                              <td className="py-2.5 px-3 text-center text-slate-200">{s.clean_sheets}</td>
-                              <td className="py-2.5 px-3 text-center text-amber-400">{s.bonus}</td>
-                              <td className="py-2.5 px-3 text-right text-slate-400">£{(s.start_cost / 10).toFixed(1)}</td>
-                              <td className="py-2.5 px-3 text-right text-blue-300">£{(s.end_cost / 10).toFixed(1)}</td>
+                              <td className="py-2.5 px-2.5 text-center text-slate-200">{s.goals_scored}</td>
+                              <td className="py-2.5 px-2.5 text-center text-slate-200">{s.assists}</td>
+                              <td className="py-2.5 px-2.5 text-center text-slate-200">{s.clean_sheets}</td>
+                              <td className="py-2.5 px-2.5 text-center text-amber-400">{s.bonus}</td>
+                              <td className="py-2.5 px-2.5 text-center text-slate-400">£{(s.start_cost / 10).toFixed(1)}</td>
+                              <td className="py-2.5 px-2.5 text-center text-blue-300">£{(s.end_cost / 10).toFixed(1)}</td>
                             </tr>
                           ))
                         )}
@@ -707,38 +910,38 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="bg-slate-900/80 text-slate-400 uppercase font-bold text-[10px] border-b border-slate-700/60 select-none">
-                        <th className="py-2.5 px-2.5 w-12 text-center">{lang === 'sk' ? 'Kolo' : 'GW'}</th>
-                        <th className="py-2.5 px-3 min-w-[120px]">{lang === 'sk' ? 'Súper' : 'Opponent'}</th>
-                        <th className="py-2.5 px-2.5 text-center w-20">{lang === 'sk' ? 'Výsledok' : 'Result'}</th>
+                        {renderTh('gw', lang === 'sk' ? 'Kolo' : 'GW', 'py-2.5 px-2.5 w-12 text-center')}
+                        {renderTh('opponent', lang === 'sk' ? 'Súper' : 'Opponent', 'py-2.5 px-3 min-w-[120px] text-left')}
+                        {renderTh('result', lang === 'sk' ? 'Výsledok' : 'Result', 'py-2.5 px-2.5 text-center w-20')}
 
                         {activeSubTab === 'overview' && (
                           <>
-                            <th className="py-2.5 px-2 text-right" title="Odohrané minúty">{lang === 'sk' ? 'Min' : 'Mins'}</th>
-                            <th className="py-2.5 px-2 text-right text-white" title="FPL Body">{lang === 'sk' ? 'Body' : 'Pts'}</th>
-                            <th className="py-2.5 px-2 text-center" title="Strelené góly">G</th>
-                            <th className="py-2.5 px-2 text-center" title="Asistencie">A</th>
-                            <th className="py-2.5 px-2 text-center" title="Čisté konto">CS</th>
-                            <th className="py-2.5 px-2 text-center" title="Bonusové body">Bonus</th>
-                            <th className="py-2.5 px-2.5 text-right" title="Bonus Points System">BPS</th>
-                            <th className="py-2.5 px-2.5 text-right" title="Expected Goals">xG</th>
-                            <th className="py-2.5 px-2.5 text-right" title="Expected Assists">xA</th>
-                            <th className="py-2.5 px-2.5 text-right">{lang === 'sk' ? 'Cena' : 'Price'}</th>
+                            {renderTh('mins', lang === 'sk' ? 'Min' : 'Mins', 'py-2.5 px-2 text-center')}
+                            {renderTh('pts', lang === 'sk' ? 'Body' : 'Pts', 'py-2.5 px-2 text-center text-white')}
+                            {renderTh('g', 'G', 'py-2.5 px-2 text-center')}
+                            {renderTh('a', 'A', 'py-2.5 px-2 text-center')}
+                            {renderTh('cs', 'CS', 'py-2.5 px-2 text-center')}
+                            {renderTh('bonus', 'Bonus', 'py-2.5 px-2 text-center')}
+                            {renderTh('bps', 'BPS', 'py-2.5 px-2 text-center')}
+                            {renderTh('xg', 'xG', 'py-2.5 px-2 text-center')}
+                            {renderTh('xa', 'xA', 'py-2.5 px-2 text-center')}
+                            {renderTh('price', lang === 'sk' ? 'Cena' : 'Price', 'py-2.5 px-2 text-center')}
                           </>
                         )}
 
                         {activeSubTab === 'advanced' && (
                           <>
-                            <th className="py-2.5 px-2 text-right" title="Odohrané minúty">{lang === 'sk' ? 'Min' : 'Mins'}</th>
-                            <th className="py-2.5 px-2 text-right text-white" title="FPL Body">{lang === 'sk' ? 'Body' : 'Pts'}</th>
-                            <th className="py-2.5 px-2.5 text-right" title="Expected Goals">xG</th>
-                            <th className="py-2.5 px-2.5 text-right" title="Expected Assists">xA</th>
-                            <th className="py-2.5 px-2.5 text-right text-emerald-300" title="Expected Goal Involvement">xGI</th>
-                            <th className="py-2.5 px-2.5 text-right text-amber-300" title="ICT Index">ICT</th>
-                            <th className="py-2.5 px-2.5 text-right" title="Threat (Hrozba)">Threat</th>
-                            <th className="py-2.5 px-2.5 text-right" title="Creativity (Kreativita)">Creat</th>
-                            <th className="py-2.5 px-2 text-center" title="Inkasované góly (Goals Conceded)">GC</th>
-                            <th className="py-2.5 px-2 text-center" title="Zákroky brankára (Saves)">Saves</th>
-                            <th className="py-2.5 px-2.5 text-right" title="Bonus Points System">BPS</th>
+                            {renderTh('mins', lang === 'sk' ? 'Min' : 'Mins', 'py-2.5 px-2 text-center')}
+                            {renderTh('pts', lang === 'sk' ? 'Body' : 'Pts', 'py-2.5 px-2 text-center text-white')}
+                            {renderTh('xg', 'xG', 'py-2.5 px-2 text-center')}
+                            {renderTh('xa', 'xA', 'py-2.5 px-2 text-center')}
+                            {renderTh('xgi', 'xGI', 'py-2.5 px-2 text-center text-emerald-300')}
+                            {renderTh('ict', 'ICT', 'py-2.5 px-2 text-center text-amber-300')}
+                            {renderTh('threat', 'Threat', 'py-2.5 px-2 text-center')}
+                            {renderTh('creat', 'Creat', 'py-2.5 px-2 text-center')}
+                            {renderTh('gc', 'GC', 'py-2.5 px-2 text-center')}
+                            {renderTh('saves', 'Saves', 'py-2.5 px-2 text-center')}
+                            {renderTh('bps', 'BPS', 'py-2.5 px-2 text-center')}
                           </>
                         )}
                       </tr>
@@ -765,10 +968,10 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                           return (
                             <tr key={h.round} className="hover:bg-slate-800/60 transition-colors">
                               {/* Fixed: Round */}
-                              <td className="py-2 px-2.5 font-bold text-white">GW{h.round}</td>
+                              <td className="py-2 px-2.5 text-center font-bold text-white">GW{h.round}</td>
 
                               {/* Fixed: Opponent */}
-                              <td className="py-2 px-3">
+                              <td className="py-2 px-3 text-left">
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <span className="font-semibold text-slate-200">{opp}</span>
                                   <span className="text-[10px] text-slate-500 font-sans">
@@ -796,8 +999,8 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                               {/* DYNAMIC TAB 1: OVERVIEW */}
                               {activeSubTab === 'overview' && (
                                 <>
-                                  <td className="py-2 px-2 text-right text-slate-300">{h.minutes}'</td>
-                                  <td className="py-2 px-2 text-right">
+                                  <td className="py-2 px-2 text-center text-slate-300">{h.minutes}'</td>
+                                  <td className="py-2 px-2 text-center">
                                     <span className={`inline-block px-1.5 py-0.5 rounded border text-xs ${getPointsBadgeClass(h.total_points)}`}>
                                       {h.total_points}
                                     </span>
@@ -814,38 +1017,38 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                                   <td className={`py-2 px-2 text-center ${h.bonus > 0 ? 'text-amber-400 font-black' : 'text-slate-500'}`}>
                                     {h.bonus > 0 ? `+${h.bonus}` : '-'}
                                   </td>
-                                  <td className="py-2 px-2.5 text-right text-slate-400">{h.bps}</td>
-                                  <td className="py-2 px-2.5 text-right text-slate-400 font-sans text-[11px]">{h.expected_goals || '0.00'}</td>
-                                  <td className="py-2 px-2.5 text-right text-slate-400 font-sans text-[11px]">{h.expected_assists || '0.00'}</td>
-                                  <td className="py-2 px-2.5 text-right text-blue-300">£{(h.value / 10).toFixed(1)}m</td>
+                                  <td className="py-2 px-2 text-center text-slate-400">{h.bps}</td>
+                                  <td className="py-2 px-2 text-center text-slate-400 font-sans text-[11px]">{h.expected_goals || '0.00'}</td>
+                                  <td className="py-2 px-2 text-center text-slate-400 font-sans text-[11px]">{h.expected_assists || '0.00'}</td>
+                                  <td className="py-2 px-2 text-center text-blue-300">£{(h.value / 10).toFixed(1)}m</td>
                                 </>
                               )}
 
                               {/* DYNAMIC TAB 2: ADVANCED */}
                               {activeSubTab === 'advanced' && (
                                 <>
-                                  <td className="py-2 px-2 text-right text-slate-300">{h.minutes}'</td>
-                                  <td className="py-2 px-2 text-right">
+                                  <td className="py-2 px-2 text-center text-slate-300">{h.minutes}'</td>
+                                  <td className="py-2 px-2 text-center">
                                     <span className={`inline-block px-1.5 py-0.5 rounded border text-xs ${getPointsBadgeClass(h.total_points)}`}>
                                       {h.total_points}
                                     </span>
                                   </td>
-                                  <td className="py-2 px-2.5 text-right text-emerald-300 font-sans text-[11px] font-semibold">
+                                  <td className="py-2 px-2 text-center text-emerald-300 font-sans text-[11px] font-semibold">
                                     {h.expected_goals || '0.00'}
                                   </td>
-                                  <td className="py-2 px-2.5 text-right text-blue-300 font-sans text-[11px] font-semibold">
+                                  <td className="py-2 px-2 text-center text-blue-300 font-sans text-[11px] font-semibold">
                                     {h.expected_assists || '0.00'}
                                   </td>
-                                  <td className="py-2 px-2.5 text-right text-emerald-400 font-sans text-[11px] font-bold">
+                                  <td className="py-2 px-2 text-center text-emerald-400 font-sans text-[11px] font-bold">
                                     {xgiVal}
                                   </td>
-                                  <td className="py-2 px-2.5 text-right text-amber-300 font-bold">
+                                  <td className="py-2 px-2 text-center text-amber-300 font-bold">
                                     {Number(h.ict_index || 0).toFixed(1)}
                                   </td>
-                                  <td className="py-2 px-2.5 text-right text-slate-300">
+                                  <td className="py-2 px-2 text-center text-slate-300">
                                     {Number(h.threat || 0).toFixed(0)}
                                   </td>
-                                  <td className="py-2 px-2.5 text-right text-slate-300">
+                                  <td className="py-2 px-2 text-center text-slate-300">
                                     {Number(h.creativity || 0).toFixed(0)}
                                   </td>
                                   <td className="py-2 px-2 text-center text-slate-400">
@@ -854,7 +1057,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                                   <td className={`py-2 px-2 text-center ${h.saves > 0 ? 'text-amber-300 font-bold' : 'text-slate-500'}`}>
                                     {h.saves || '-'}
                                   </td>
-                                  <td className="py-2 px-2.5 text-right text-slate-300 font-bold">
+                                  <td className="py-2 px-2 text-center text-slate-300 font-bold">
                                     {h.bps}
                                   </td>
                                 </>
@@ -886,6 +1089,46 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Column Explanation Tooltip (Identical to PlayerStats.tsx) */}
+      {hoveredMetric && (() => {
+        const isNearTop = hoveredMetric.rect.top < 220;
+        const leftPos = Math.max(
+          150,
+          Math.min(
+            (typeof window !== 'undefined' ? window.innerWidth : 1000) - 150,
+            hoveredMetric.rect.left + hoveredMetric.rect.width / 2
+          )
+        );
+
+        return (
+          <div
+            style={{
+              position: 'fixed',
+              left: leftPos,
+              top: isNearTop ? hoveredMetric.rect.bottom + 10 : hoveredMetric.rect.top - 10,
+              transform: isNearTop ? 'translate(-50%, 0)' : 'translate(-50%, -100%)'
+            }}
+            className="z-[9999] pointer-events-none w-64 sm:w-72 p-3 bg-slate-900/98 backdrop-blur-md text-slate-200 text-xs rounded-xl shadow-2xl border border-slate-700 text-left normal-case font-normal select-none transition-all duration-150 animate-in fade-in"
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-1.5">
+              <span className="font-bold text-white text-xs">{hoveredMetric.label}</span>
+              <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                {hoveredMetric.abbr}
+              </span>
+            </div>
+            <p className="text-[11px] leading-relaxed text-slate-300 whitespace-normal">
+              {hoveredMetric.description}
+            </p>
+            {/* Arrow pointing to the column header */}
+            <div
+              className={`absolute left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-slate-900 border-slate-700 rotate-45 ${
+                isNearTop ? '-top-1.5 border-t border-l' : '-bottom-1.5 border-b border-r'
+              }`}
+            />
+          </div>
+        );
+      })()}
     </div>
   );
 };
