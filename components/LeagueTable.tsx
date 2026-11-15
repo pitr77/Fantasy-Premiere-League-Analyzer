@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Trophy, TrendingUp, Sparkles, Home, Plane } from 'lucide-react';
+import { Trophy, TrendingUp, Sparkles } from 'lucide-react';
 import { FPLTeam, FPLFixture } from '../types';
 import { track } from '@/lib/ga';
 import { TeamIcon } from './TeamIcon';
@@ -10,7 +10,6 @@ interface LeagueTableProps {
   fixtures: FPLFixture[];
 }
 
-type LocationFilter = 'all' | 'home' | 'away';
 type ViewMode = 'full' | 'compact';
 type FormResult = 'W' | 'D' | 'L';
 
@@ -170,7 +169,6 @@ const getFdrColorClasses = (difficulty: number) => {
 
 const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
   const [lang] = useLanguage();
-  const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('full');
 
   // Interactive header tooltip state
@@ -237,29 +235,23 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
     return map;
   }, [teams, fixtures]);
 
-  // 2. Calculate Table Standings with Home / Away / All Scope
+  // 2. Calculate Table Standings
   const tableData = useMemo<TeamStatsRecord[]>(() => {
-    const stats: Record<number, {
-      id: number;
-      name: string;
-      short_name: string;
-      home: { played: number; win: number; draw: number; loss: number; gf: number; ga: number; pts: number };
-      away: { played: number; win: number; draw: number; loss: number; gf: number; ga: number; pts: number };
-      allForm: FormMatch[];
-      homeForm: FormMatch[];
-      awayForm: FormMatch[];
-    }> = {};
+    const stats: Record<number, TeamStatsRecord> = {};
 
     teams.forEach((t) => {
       stats[t.id] = {
         id: t.id,
         name: t.name,
         short_name: t.short_name,
-        home: { played: 0, win: 0, draw: 0, loss: 0, gf: 0, ga: 0, pts: 0 },
-        away: { played: 0, win: 0, draw: 0, loss: 0, gf: 0, ga: 0, pts: 0 },
-        allForm: [],
-        homeForm: [],
-        awayForm: []
+        played: 0,
+        win: 0,
+        draw: 0,
+        loss: 0,
+        gf: 0,
+        ga: 0,
+        pts: 0,
+        form: []
       };
     });
 
@@ -281,14 +273,14 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
       const hScore = f.team_h_score ?? 0;
       const aScore = f.team_a_score ?? 0;
 
-      hTeam.home.played++;
-      aTeam.away.played++;
+      hTeam.played++;
+      aTeam.played++;
 
-      hTeam.home.gf += hScore;
-      hTeam.home.ga += aScore;
+      hTeam.gf += hScore;
+      hTeam.ga += aScore;
 
-      aTeam.away.gf += aScore;
-      aTeam.away.ga += hScore;
+      aTeam.gf += aScore;
+      aTeam.ga += hScore;
 
       let hRes: FormResult = 'D';
       let aRes: FormResult = 'D';
@@ -296,95 +288,43 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
       if (hScore > aScore) {
         hRes = 'W';
         aRes = 'L';
-        hTeam.home.win++;
-        aTeam.away.loss++;
-        hTeam.home.pts += 3;
+        hTeam.win++;
+        aTeam.loss++;
+        hTeam.pts += 3;
       } else if (hScore < aScore) {
         hRes = 'L';
         aRes = 'W';
-        aTeam.away.win++;
-        hTeam.home.loss++;
-        aTeam.away.pts += 3;
+        aTeam.win++;
+        hTeam.loss++;
+        aTeam.pts += 3;
       } else {
-        hTeam.home.draw++;
-        aTeam.away.draw++;
-        hTeam.home.pts += 1;
-        aTeam.away.pts += 1;
+        hTeam.draw++;
+        aTeam.draw++;
+        hTeam.pts += 1;
+        aTeam.pts += 1;
       }
 
-      const hMatch: FormMatch = {
+      hTeam.form.push({
         result: hRes,
         opponent: f.team_a,
         score: `${hScore}-${aScore}`,
         isHome: true,
         date: f.kickoff_time,
         event: f.event
-      };
+      });
 
-      const aMatch: FormMatch = {
+      aTeam.form.push({
         result: aRes,
         opponent: f.team_h,
         score: `${aScore}-${hScore}`,
         isHome: false,
         date: f.kickoff_time,
         event: f.event
-      };
-
-      hTeam.allForm.push(hMatch);
-      hTeam.homeForm.push(hMatch);
-
-      aTeam.allForm.push(aMatch);
-      aTeam.awayForm.push(aMatch);
-    });
-
-    const records: TeamStatsRecord[] = Object.values(stats).map((t) => {
-      if (locationFilter === 'home') {
-        return {
-          id: t.id,
-          name: t.name,
-          short_name: t.short_name,
-          played: t.home.played,
-          win: t.home.win,
-          draw: t.home.draw,
-          loss: t.home.loss,
-          gf: t.home.gf,
-          ga: t.home.ga,
-          pts: t.home.pts,
-          form: t.homeForm
-        };
-      } else if (locationFilter === 'away') {
-        return {
-          id: t.id,
-          name: t.name,
-          short_name: t.short_name,
-          played: t.away.played,
-          win: t.away.win,
-          draw: t.away.draw,
-          loss: t.away.loss,
-          gf: t.away.gf,
-          ga: t.away.ga,
-          pts: t.away.pts,
-          form: t.awayForm
-        };
-      } else {
-        return {
-          id: t.id,
-          name: t.name,
-          short_name: t.short_name,
-          played: t.home.played + t.away.played,
-          win: t.home.win + t.away.win,
-          draw: t.home.draw + t.away.draw,
-          loss: t.home.loss + t.away.loss,
-          gf: t.home.gf + t.away.gf,
-          ga: t.home.ga + t.away.ga,
-          pts: t.home.pts + t.away.pts,
-          form: t.allForm
-        };
-      }
+      });
     });
 
     // Sort by: PTS desc, GD desc, GF desc, Name asc
-    return records.sort((a, b) => {
+    return Object.values(stats).sort((a, b) => {
       if (b.pts !== a.pts) return b.pts - a.pts;
       const gdA = a.gf - a.ga;
       const gdB = b.gf - b.ga;
@@ -392,7 +332,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
       if (b.gf !== a.gf) return b.gf - a.gf;
       return a.name.localeCompare(b.name);
     });
-  }, [teams, fixtures, locationFilter]);
+  }, [teams, fixtures]);
 
   const getTeamObj = (id: number) => teams.find((t) => t.id === id);
 
@@ -455,57 +395,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
-            {/* Scope Filter: Celkovo / Doma / Vonku */}
-            <div className="bg-slate-900 p-1 rounded-xl border border-slate-700 flex items-center shadow-sm">
-              <button
-                type="button"
-                onClick={() => {
-                  setLocationFilter('all');
-                  track('league_table_scope', { scope: 'all' });
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                  locationFilter === 'all'
-                    ? 'bg-slate-600/50 text-slate-100 border border-slate-500/60 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>{lang === 'sk' ? 'Celkovo' : 'Overall'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setLocationFilter('home');
-                  track('league_table_scope', { scope: 'home' });
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                  locationFilter === 'home'
-                    ? 'bg-slate-600/50 text-slate-100 border border-slate-500/60 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Home size={13} className={locationFilter === 'home' ? 'text-amber-400' : 'text-slate-500'} />
-                <span>{lang === 'sk' ? 'Doma' : 'Home'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setLocationFilter('away');
-                  track('league_table_scope', { scope: 'away' });
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                  locationFilter === 'away'
-                    ? 'bg-slate-600/50 text-slate-100 border border-slate-500/60 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Plane size={13} className={locationFilter === 'away' ? 'text-cyan-400' : 'text-slate-500'} />
-                <span>{lang === 'sk' ? 'Vonku' : 'Away'}</span>
-              </button>
-            </div>
-
+          <div className="flex items-center gap-2.5 w-full lg:w-auto justify-end">
             {/* View Mode Toggle: Kompletná / Kompaktná */}
             <div className="bg-slate-900 p-1 rounded-xl border border-slate-700 flex items-center shadow-sm">
               <button
@@ -589,18 +479,16 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                 const isSourceTeam = hoveredForm?.teamId === row.id;
                 const isOpponentTeam = hoveredForm?.opponentId === row.id;
 
-                // Flashscore Qualification Zone left borders (applied in overall mode)
+                // Flashscore Qualification Zone left borders
                 let zoneBorder = 'border-l-[3px] border-l-transparent';
-                if (locationFilter === 'all') {
-                  if (pos <= 4) {
-                    zoneBorder = 'border-l-[3px] border-l-blue-500'; // Champions League
-                  } else if (pos === 5) {
-                    zoneBorder = 'border-l-[3px] border-l-amber-500'; // Europa League
-                  } else if (pos === 6 || pos === 7) {
-                    zoneBorder = 'border-l-[3px] border-l-emerald-500'; // Conference League
-                  } else if (pos >= 18) {
-                    zoneBorder = 'border-l-[3px] border-l-rose-500'; // Relegation
-                  }
+                if (pos <= 4) {
+                  zoneBorder = 'border-l-[3px] border-l-blue-500'; // Champions League
+                } else if (pos === 5) {
+                  zoneBorder = 'border-l-[3px] border-l-amber-500'; // Europa League
+                } else if (pos === 6 || pos === 7) {
+                  zoneBorder = 'border-l-[3px] border-l-emerald-500'; // Conference League
+                } else if (pos >= 18) {
+                  zoneBorder = 'border-l-[3px] border-l-rose-500'; // Relegation
                 }
 
                 // Sticky cell backgrounds matching highlight state
@@ -770,34 +658,32 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
         </div>
 
         {/* Flashscore Zone Legend at bottom */}
-        {locationFilter === 'all' && (
-          <div className="bg-slate-900/70 p-3.5 border-t border-slate-700/80 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-400">
-            <div className="flex flex-wrap items-center gap-3.5">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-blue-500 inline-block shadow-sm" />
-                <span>{lang === 'sk' ? 'Liga majstrov (1. – 4.)' : 'Champions League (1-4)'}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-amber-500 inline-block shadow-sm" />
-                <span>{lang === 'sk' ? 'Európska liga (5.)' : 'Europa League (5)'}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500 inline-block shadow-sm" />
-                <span>{lang === 'sk' ? 'Konferenčná liga (6. – 7.)' : 'Conference League (6-7)'}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-rose-500 inline-block shadow-sm" />
-                <span>{lang === 'sk' ? 'Zostup (18. – 20.)' : 'Relegation (18-20)'}</span>
-              </div>
+        <div className="bg-slate-900/70 p-3.5 border-t border-slate-700/80 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-400">
+          <div className="flex flex-wrap items-center gap-3.5">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-xs bg-blue-500 inline-block shadow-sm" />
+              <span>{lang === 'sk' ? 'Liga majstrov (1. – 4.)' : 'Champions League (1-4)'}</span>
             </div>
-
-            <div className="text-slate-500 text-[10px] font-mono">
-              {lang === 'sk'
-                ? 'Forma (zľava najnovší zápas): V = Výhra • R = Remíza • P = Prehra'
-                : 'Form (newest on left): W = Win • D = Draw • L = Loss'}
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-xs bg-amber-500 inline-block shadow-sm" />
+              <span>{lang === 'sk' ? 'Európska liga (5.)' : 'Europa League (5)'}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500 inline-block shadow-sm" />
+              <span>{lang === 'sk' ? 'Konferenčná liga (6. – 7.)' : 'Conference League (6-7)'}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-xs bg-rose-500 inline-block shadow-sm" />
+              <span>{lang === 'sk' ? 'Zostup (18. – 20.)' : 'Relegation (18-20)'}</span>
             </div>
           </div>
-        )}
+
+          <div className="text-slate-500 text-[10px] font-mono">
+            {lang === 'sk'
+              ? 'Forma (zľava najnovší zápas): V = Výhra • R = Remíza • P = Prehra'
+              : 'Form (newest on left): W = Win • D = Draw • L = Loss'}
+          </div>
+        </div>
       </div>
 
       {/* Floating Header Metric Explainer Tooltip */}
