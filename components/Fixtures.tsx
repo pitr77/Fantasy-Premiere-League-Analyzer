@@ -578,11 +578,11 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                         const over25Odds = fixtureOdds?.overUnder25?.over;
                         const topScorer = topScorersByFixture.get(fixture.id);
 
-                        let cardBorderAccent = "border-slate-700 hover:border-slate-500";
+                        let cardBorderAccent = "border-slate-700";
                         if (showOdds && (homeWinProb >= 0.60 || homeCsProb >= 0.38)) {
-                            cardBorderAccent = "border-slate-700 hover:border-slate-500 border-l-4 border-l-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.08)]";
+                            cardBorderAccent = "border-slate-700 border-l-4 border-l-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.08)]";
                         } else if (showOdds && (awayWinProb >= 0.60 || awayCsProb >= 0.38)) {
-                            cardBorderAccent = "border-slate-700 hover:border-slate-500 border-r-4 border-r-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.08)]";
+                            cardBorderAccent = "border-slate-700 border-r-4 border-r-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.08)]";
                         }
 
                         return (
