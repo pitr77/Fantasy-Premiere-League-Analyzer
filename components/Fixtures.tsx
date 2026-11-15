@@ -1084,16 +1084,16 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                             <button
                                 onClick={handlePrevGw}
                                 disabled={selectedEvent <= 1}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-700/50 disabled:opacity-30 transition-colors"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 disabled:opacity-30 transition-colors"
                             >
                                 <ChevronLeft size={14} />
                             </button>
 
-                            <div className="relative">
+                            <div className="relative bg-slate-600/50 border border-slate-500/60 shadow-sm rounded-lg flex items-center px-1">
                                 <select
                                     value={selectedEvent}
                                     onChange={(e) => handleGwChange(Number(e.target.value))}
-                                    className="appearance-none bg-transparent text-slate-100 text-xs font-bold px-3 py-1 pr-6 outline-none text-center cursor-pointer"
+                                    className="appearance-none bg-transparent text-slate-100 text-xs font-bold px-2 py-1 pr-5 outline-none text-center cursor-pointer"
                                 >
                                     {events.map(e => (
                                         <option key={e.id} value={e.id} className="bg-slate-800 text-slate-100">
@@ -1101,13 +1101,13 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                                         </option>
                                     ))}
                                 </select>
-                                <ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+                                <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
                             </div>
 
                             <button
                                 onClick={handleNextGw}
                                 disabled={selectedEvent >= 38}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-700/50 disabled:opacity-30 transition-colors"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 disabled:opacity-30 transition-colors"
                             >
                                 <ChevronRight size={14} />
                             </button>
@@ -1133,7 +1133,7 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                             <button
                                 onClick={handleRefreshOdds}
                                 disabled={isRefreshingOdds}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-700/50 transition-colors disabled:opacity-50"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors disabled:opacity-50"
                                 title={
                                     oddsLastUpdated
                                         ? `Naposledy aktualizované: ${formatLastUpdated(oddsLastUpdated)}. Kliknutím stiahnete najčerstvejšie kurzy z Fortuna.sk`
