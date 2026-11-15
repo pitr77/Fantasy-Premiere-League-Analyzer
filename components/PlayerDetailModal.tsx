@@ -264,7 +264,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
           });
         }}
         onMouseLeave={() => setHoveredMetric(null)}
-        className={`py-2.5 px-2 font-bold cursor-help transition-colors select-none ${extraClass}`}
+        className={`py-2.5 px-2 font-bold cursor-default transition-colors select-none ${extraClass}`}
       >
         <span className="border-b border-dotted border-slate-600/70 hover:border-blue-400 transition-colors">
           {shown}

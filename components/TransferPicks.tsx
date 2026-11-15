@@ -1172,7 +1172,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                         });
                                     }}
                                     onMouseLeave={() => setHoveredCol(null)}
-                                    className="py-3 px-2 w-10 text-center text-xs cursor-help select-none"
+                                    className="py-3 px-2 w-10 text-center text-xs cursor-default select-none"
                                 >
                                     <span className="border-b border-dotted border-slate-600/70 hover:border-blue-400 transition-colors">#</span>
                                 </th>

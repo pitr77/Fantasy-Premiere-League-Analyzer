@@ -312,7 +312,7 @@ const TeamAnalysis: React.FC<TeamAnalysisProps> = ({ teams, fixtures }) => {
           });
         }}
         onMouseLeave={() => setHoveredMetric(null)}
-        className={`py-3 px-3 md:px-5 font-bold cursor-help transition-colors select-none border-b border-slate-700 ${alignClass} ${extraClass}`}
+        className={`py-3 px-3 md:px-5 font-bold cursor-default transition-colors select-none border-b border-slate-700 ${alignClass} ${extraClass}`}
       >
         <span className="border-b border-dotted border-slate-600/70 hover:border-blue-400 transition-colors">
           {displayLabel}
