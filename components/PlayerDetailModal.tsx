@@ -171,6 +171,13 @@ const matchLogMetricDescriptions: Record<string, { label: (lang: Language) => st
       ? 'Počet gólov inkasovaných tímom v čase, keď bol hráč na ihrisku (Obrancovia/GKP: -1 bod za každé 2 inkasované góly).'
       : 'Goals conceded by the team while player was on the pitch (DEF/GKP lose 1 pt per 2 goals conceded).'
   },
+  dc: {
+    label: (lang) => lang === 'sk' ? 'Defenzívny prínos' : 'Defensive Contribution',
+    abbr: 'DC',
+    description: (lang) => lang === 'sk'
+      ? 'Defensive Contributions: Súčet odkopov, blokov, zachytení a odobratí lopty (CBI + tackles).'
+      : 'Defensive Contributions: Combined clearances, blocks, interceptions, and tackles.'
+  },
   saves: {
     label: (lang) => lang === 'sk' ? 'Zákroky brankára' : 'Saves',
     abbr: 'SAVES',

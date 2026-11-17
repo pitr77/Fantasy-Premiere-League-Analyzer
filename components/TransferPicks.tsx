@@ -59,16 +59,6 @@ const transferMetricDescriptions: Record<string, {
             ? 'Hráči na čele rebríčka predstavujú najefektívnejšiu kombináciu formy, priaznivého kalendára a trhových kurzov.'
             : 'Top-ranked players represent the optimal blend of form, favorable fixtures, and market odds.'
     },
-    web_name: {
-        label: (lang) => lang === 'sk' ? 'Hráč & Klub' : 'Player & Club',
-        abbr: 'PLAYER',
-        description: (lang) => lang === 'sk'
-            ? 'Meno hráča, klub a pozícia (GKP, DEF, MID, FWD). Odznak Top 100 zobrazuje percento vlastníctva medzi elitou sveta a čisté zmeny v kádroch (+/-) za aktuálne kolo.'
-            : 'Player name, club, and position. Top 100 badge displays ownership % among the world elite managers and net transfers (+/-).',
-        tip: (lang) => lang === 'sk'
-            ? 'Kliknutím na meno hráča kdekoľvek v tabuľke otvoríte podrobný profil s kompletnou históriou, grafom vývoja bodov a stávkovými kurzami.'
-            : 'Click any player name to open the detailed modal with points evolution, full match log, and betting odds.'
-    },
     transferIndex: {
         label: (lang) => lang === 'sk' ? 'Index prestupu (Algoritmus)' : 'Transfer Index',
         abbr: 'INDEX',
@@ -119,16 +109,6 @@ const transferMetricDescriptions: Record<string, {
             ? 'Ako chápať: 100% = plná pripravenosť, 75% = otáznik alebo drobné zranenie, 50% a menej = vysoké riziko neúčasti alebo lavičky.'
             : 'How to read: 100% = fully fit, 75% = doubt/knock, 50% or less = high bench or absence risk.'
     },
-    goalProb: {
-        label: (lang) => lang === 'sk' ? 'Stávkové kurzy Fortuna' : 'Fortuna Live Odds',
-        abbr: 'ODDS',
-        description: (lang) => lang === 'sk'
-            ? 'Reálne stávkové kurzy z Fortuna.sk prepočítané na percentuálnu pravdepodobnosť na najbližšie ligové kolo (Čisté konto pre DEF/GKP, Gól/Asistencia pre MID/FWD).'
-            : 'Real betting odds from Fortuna.sk converted into win/clean sheet/goal probability for the next gameweek.',
-        tip: (lang) => lang === 'sk'
-            ? 'Ako chápať: Objektívne ocenenie trhu stávkových kancelárií. Šanca nad 35% na čisté konto alebo nad 45% na gól/asistenciu signalizuje vysoko priaznivý zápas.'
-            : 'How to read: Market-based valuation. Clean sheet chance >35% or G+A >45% indicates prime point potential.'
-    },
     upcomingGw: {
         label: (lang) => lang === 'sk' ? 'Ligové kolo a súper' : 'Gameweek Fixture',
         abbr: 'FIXTURE',
@@ -168,76 +148,6 @@ const transferMetricDescriptions: Record<string, {
         tip: (lang) => lang === 'sk'
             ? 'Ako chápať: Kladné číslo (napr. +8) značí masívny záujem elity ešte pred rastom celosvetovej ceny. Záporné číslo varuje pred výpredajom.'
             : 'How to read: Positive values (e.g. +8) indicate heavy elite buying before global price rises. Negative values warn of sell-offs.'
-    },
-    horizon_next: {
-        label: (lang) => lang === 'sk' ? 'Horizont: Najbližšie kolo' : 'Horizon: Next GW',
-        abbr: 'NEXT GW',
-        description: (lang) => lang === 'sk'
-            ? 'Prepne prestupový algoritmus na okamžitý transfer pre najbližšie jedno herné kolo (bodová projekcia xP pre daný zápas).'
-            : 'Switches transfer algorithm to immediate single-match horizon (xP projection for the upcoming fixture).',
-        tip: (lang) => lang === 'sk'
-            ? 'Ako chápať: Vhodné pri použití Free Hit čipu, alebo ak potrebujete vyriešiť akútny problém a získať maximum bodov ihneď v tomto kole.'
-            : 'How to read: Ideal for Free Hit chip or when targeting a short-term 1-week captain/punt.'
-    },
-    horizon_next5: {
-        label: (lang) => lang === 'sk' ? 'Horizont: Najbližších 5 kôl' : 'Horizon: Next 5 GWs',
-        abbr: 'NEXT 5 GWs',
-        description: (lang) => lang === 'sk'
-            ? 'Strednodobý plánovací horizont. Algoritmus hodnotí sériu 5 zápasov (FDR obtiažnosť), udržateľnosť formy a prestupové trendy elity Top 100.'
-            : 'Medium-term planning horizon evaluating 5-fixture FDR run, underlying form sustainability, and Top 100 elite transfers.',
-        tip: (lang) => lang === 'sk'
-            ? 'Ako chápať: Najlepšia voľba pre štandardné ligové prestupy. Zabezpečí, že hráča nekúpite len na jeden zápas, ale na stabilné bodovanie v ďalších týždňoch.'
-            : 'How to read: Best choice for regular league transfers to ensure sustained points over the coming weeks.'
-    },
-    odds_cs: {
-        label: (lang) => lang === 'sk' ? 'Kurzy na čisté konto' : 'Clean Sheet Odds',
-        abbr: 'CLEAN SHEET',
-        description: (lang) => lang === 'sk'
-            ? 'Zobrazuje reálne stávkové kurzy a prepočítanú pravdepodobnosť, že tím v najbližšom kole neinkasuje gól (kľúčové pre DEF a GKP).'
-            : 'Displays betting odds and probability of keeping a clean sheet in the upcoming match (essential for DEF and GKP).',
-        tip: (lang) => lang === 'sk'
-            ? 'Ako chápať: Čisté konto prináša brankárom a obrancom až 4 body (záložníkom 1 bod). Šanca nad 35% signalizuje špičkový defenzívny transfer.'
-            : 'How to read: Clean sheets award 4 pts to defenders and goalkeepers. 35%+ probability represents prime defensive potential.'
-    },
-    odds_goal: {
-        label: (lang) => lang === 'sk' ? 'Kurzy na strelenie gólu' : 'Anytime Goalscorer Odds',
-        abbr: 'GOAL ODDS',
-        description: (lang) => lang === 'sk'
-            ? 'Pravdepodobnosť a kurz, že hráč strelí gól v najbližšom zápase podľa stávkovej ponuky Fortuna.sk.'
-            : 'Probability and odds of player scoring a goal in the upcoming match according to Fortuna.sk.',
-        tip: (lang) => lang === 'sk'
-            ? 'Ako chápať: Útočníci (FWD) získavajú za gól 4 body, záložníci (MID) 5 bodov. Pravdepodobnosť nad 40% značí elitného kanoniera s vysokým bodovým stropom.'
-            : 'How to read: FWDs earn 4 pts per goal, MIDs earn 5 pts. 40%+ probability indicates a premium goal-threat captain candidate.'
-    },
-    odds_assist: {
-        label: (lang) => lang === 'sk' ? 'Kurzy na asistenciu' : 'Assist Odds',
-        abbr: 'ASSIST ODDS',
-        description: (lang) => lang === 'sk'
-            ? 'Pravdepodobnosť, že hráč zaznamená gólovú asistenciu v najbližšom ligovom zápase.'
-            : 'Probability of player registering a goal assist in the upcoming match.',
-        tip: (lang) => lang === 'sk'
-            ? 'Ako chápať: Každá asistencia v FPL prináša 3 body. Vynikajú v nej tvorcovia hry (kreatívni záložníci a ofenzívni krajní obrancovia zahrávajúci štandardky).'
-            : 'How to read: Each assist awards 3 pts. Creative playmakers and set-piece taking wing-backs excel in this metric.'
-    },
-    odds_ga: {
-        label: (lang) => lang === 'sk' ? 'Kurzy na gól alebo asistenciu' : 'Goal or Assist (G+A) Odds',
-        abbr: 'G+A ODDS',
-        description: (lang) => lang === 'sk'
-            ? 'Kombinovaná pravdepodobnosť priamej gólovej účasti (Goal Involvement) hráča v najbližšom ligovom kole.'
-            : 'Combined probability of direct Goal Involvement (Goal or Assist) in the upcoming match.',
-        tip: (lang) => lang === 'sk'
-            ? 'Ako chápať: Najkomplexnejší ofenzívny ukazovateľ. Hráč so šancou 50%+ má viac než polovičnú pravdepodobnosť priviezť útočné body v danom kole.'
-            : 'How to read: The most complete attacking metric. Players with 50%+ odds have a better-than-even chance of returning attacking points.'
-    },
-    refresh_odds: {
-        label: (lang) => lang === 'sk' ? 'Aktualizácia kurzov Fortuna' : 'Refresh Fortuna Odds',
-        abbr: 'FORTUNA SYNC',
-        description: (lang) => lang === 'sk'
-            ? 'Stiahne a prepočíta najčerstvejšie stávkové kurzy a pravdepodobnosti priamo z ponuky Fortuna.sk.'
-            : 'Fetches and recalculates the freshest betting odds and probabilities directly from Fortuna.sk.',
-        tip: (lang) => lang === 'sk'
-            ? 'Ako chápať: Kurzy sa na trhu menia podľa zranení hráčov a potvrdených zostáv. Kliknutím získate najaktuálnejšie matematické ocenenie zápasov.'
-            : 'How to read: Market odds shift based on team news and betting action. Click to update all probabilities.'
     }
 };
 
@@ -320,23 +230,6 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
         } finally {
             setIsRefreshingOdds(false);
         }
-    };
-
-    const handleButtonMouseEnter = (key: string) => (e: React.MouseEvent<HTMLElement>) => {
-        const info = transferMetricDescriptions[key];
-        if (!info) return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        let desc = info.description(lang);
-        if (key === 'refresh_odds' && oddsLastUpdated) {
-            desc += ` (${lang === 'sk' ? 'Naposledy: ' : 'Last: '}${formatLastUpdated(oddsLastUpdated)})`;
-        }
-        setHoveredCol({
-            label: info.label(lang),
-            abbr: info.abbr,
-            description: desc,
-            tip: info.tip?.(lang),
-            rect
-        });
     };
 
     const nextEvent = events.find(e => e.is_next) || events.find(e => e.is_current) || events[0];
@@ -489,7 +382,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                 {align === "center" ? (
                     <div className="w-full flex items-center justify-center">
                         <div className="relative inline-flex items-center justify-center">
-                            <span className="border-b border-dotted border-slate-600/70 group-hover:border-blue-400 transition-colors">
+                            <span className={metricInfo ? "border-b border-dotted border-slate-600/70 group-hover:border-blue-400 transition-colors" : ""}>
                                 {label}
                             </span>
                             <span className="absolute left-full ml-1 flex items-center">
@@ -503,7 +396,7 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                     </div>
                 ) : (
                     <div className={`flex items-center gap-1 ${align === "right" ? "justify-end" : "justify-start"}`}>
-                        <span className="border-b border-dotted border-slate-600/70 group-hover:border-blue-400 transition-colors">
+                        <span className={metricInfo ? "border-b border-dotted border-slate-600/70 group-hover:border-blue-400 transition-colors" : ""}>
                             {label}
                         </span>
                         {isActive ? (
@@ -681,16 +574,12 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                     <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1">
                         <button
                             onClick={() => setHorizon('next')}
-                            onMouseEnter={handleButtonMouseEnter('horizon_next')}
-                            onMouseLeave={() => setHoveredCol(null)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${horizon === 'next' ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
                         >
                             {t('tp_horizon_next', lang)}
                         </button>
                         <button
                             onClick={() => setHorizon('next5')}
-                            onMouseEnter={handleButtonMouseEnter('horizon_next5')}
-                            onMouseLeave={() => setHoveredCol(null)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${horizon === 'next5' ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
                         >
                             {t('tp_horizon_next5', lang)}
@@ -706,8 +595,6 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                     {(activePos === 'all' || activePos === 1 || activePos === 2) && (
                                         <button
                                             onClick={() => setOddsMetric('cs')}
-                                            onMouseEnter={handleButtonMouseEnter('odds_cs')}
-                                            onMouseLeave={() => setHoveredCol(null)}
                                             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
                                                 effectiveOddsMetric === 'cs'
                                                     ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
@@ -721,8 +608,6 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                         <>
                                             <button
                                                 onClick={() => setOddsMetric('goal')}
-                                                onMouseEnter={handleButtonMouseEnter('odds_goal')}
-                                                onMouseLeave={() => setHoveredCol(null)}
                                                 className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
                                                     effectiveOddsMetric === 'goal'
                                                         ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
@@ -733,8 +618,6 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                             </button>
                                             <button
                                                 onClick={() => setOddsMetric('assist')}
-                                                onMouseEnter={handleButtonMouseEnter('odds_assist')}
-                                                onMouseLeave={() => setHoveredCol(null)}
                                                 className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
                                                     effectiveOddsMetric === 'assist'
                                                         ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
@@ -745,8 +628,6 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                             </button>
                                             <button
                                                 onClick={() => setOddsMetric('ga')}
-                                                onMouseEnter={handleButtonMouseEnter('odds_ga')}
-                                                onMouseLeave={() => setHoveredCol(null)}
                                                 className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
                                                     effectiveOddsMetric === 'ga'
                                                         ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
@@ -763,8 +644,6 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                             <button
                                 onClick={handleRefreshOdds}
                                 disabled={isRefreshingOdds}
-                                onMouseEnter={handleButtonMouseEnter('refresh_odds')}
-                                onMouseLeave={() => setHoveredCol(null)}
                                 className="p-2 bg-slate-800/90 border border-slate-700 hover:border-slate-600 rounded-xl text-slate-300 hover:text-white transition-all disabled:opacity-50"
                                 aria-label={oddsLastUpdated ? `Aktualizovať kurzy (naposledy: ${formatLastUpdated(oddsLastUpdated)})` : 'Aktualizovať kurzy z Fortuny'}
                             >
@@ -826,23 +705,11 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                     {/* Sticky Player Header */}
                                     <th
                                         onClick={() => handleSort('web_name')}
-                                        onMouseEnter={(e) => {
-                                            const info = transferMetricDescriptions.web_name;
-                                            const rect = e.currentTarget.getBoundingClientRect();
-                                            setHoveredCol({
-                                                label: info.label(lang),
-                                                abbr: info.abbr,
-                                                description: info.description(lang),
-                                                tip: info.tip?.(lang),
-                                                rect
-                                            });
-                                        }}
-                                        onMouseLeave={() => setHoveredCol(null)}
                                         className="sticky left-0 z-20 bg-slate-900 py-2.5 px-2.5 min-w-[142px] max-w-[155px] border-r border-slate-700/80 shadow-[4px_0_8px_rgba(0,0,0,0.25)] cursor-pointer select-none group"
                                     >
                                         <div className="flex items-center gap-1">
                                             <span className="text-slate-500 font-mono mr-1">#</span>
-                                            <span className="border-b border-dotted border-slate-600/70 group-hover:border-blue-400 transition-colors">{t('tp_th_player', lang)}</span>
+                                            <span>{t('tp_th_player', lang)}</span>
                                             {sortConfig.key === 'web_name' && (
                                                 sortConfig.direction === 'asc'
                                                     ? <ChevronUp size={12} className="text-blue-400 shrink-0" />

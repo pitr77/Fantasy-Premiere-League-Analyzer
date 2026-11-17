@@ -135,12 +135,22 @@ export const getTeamEntry = async (teamId: number): Promise<any> => {
 };
 
 
-export const getPlayerSummary = async (playerId: number): Promise<FPLElementSummary> => {
-  try {
-    return await fetchFromBackend(`/api/fpl/element-summary/${playerId}`);
-  } catch {
-    return fetchViaProxy(`${BASE_URL}/element-summary/${playerId}/`);
-  }
+const playerSummaryCache = new Map<number, Promise<FPLElementSummary>>();
+
+export const getPlayerSummary = (playerId: number): Promise<FPLElementSummary> => {
+  const cached = playerSummaryCache.get(playerId);
+  if (cached) return cached;
+
+  const promise = (async () => {
+    try {
+      return await fetchFromBackend(`/api/fpl/element-summary/${playerId}`);
+    } catch {
+      return fetchViaProxy(`${BASE_URL}/element-summary/${playerId}/`);
+    }
+  })();
+
+  playerSummaryCache.set(playerId, promise);
+  return promise;
 };
 
 export const getPlayerImageUrl = (photoCode?: string) => {

@@ -282,11 +282,10 @@ function App() {
         <button
           type="button"
           onClick={() => setLang('sk')}
-          className={`px-2 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 ${
-            lang === 'sk'
+          className={`px-2 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 ${lang === 'sk'
               ? 'bg-purple-600 text-white shadow-sm'
               : 'text-slate-400 hover:text-white'
-          }`}
+            }`}
           title="Slovenčina"
         >
           <span className="text-[11px]">🇸🇰</span>
@@ -295,11 +294,10 @@ function App() {
         <button
           type="button"
           onClick={() => setLang('en')}
-          className={`px-2 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 ${
-            lang === 'en'
+          className={`px-2 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 ${lang === 'en'
               ? 'bg-purple-600 text-white shadow-sm'
               : 'text-slate-400 hover:text-white'
-          }`}
+            }`}
           title="English"
         >
           <span className="text-[11px]">🇬🇧</span>

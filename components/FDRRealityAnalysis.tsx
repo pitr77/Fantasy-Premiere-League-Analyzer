@@ -90,17 +90,17 @@ const FDRRealityAnalysis: React.FC<FDRRealityAnalysisProps> = ({
   const [selectedPlayerForModal, setSelectedPlayerForModal] = useState<FPLPlayer | null>(null);
   const [inspectedProfile, setInspectedProfile] = useState<PlayerFDRProfile | null>(null);
 
-  // Auto-load top players on mount (or top 55 players)
+  // Auto-load top players on mount (Top 100 active players)
   useEffect(() => {
     if (hasLoadedProfiles || loadingProfiles || players.length === 0) return;
 
     const loadTopPlayers = async () => {
       setLoadingProfiles(true);
-      // Pick top 60 players across all positions (by total points + ownership)
+      // Pick top 100 active players across all positions (filter out 0-point / 0-minute players)
       const sortedPool = [...players]
-        .filter(p => p.total_points > 15)
+        .filter(p => p.total_points > 0 && p.minutes > 0)
         .sort((a, b) => b.total_points - a.total_points)
-        .slice(0, 55);
+        .slice(0, 100);
 
       try {
         const loaded = await loadBatchPlayerFDRProfiles(
@@ -127,10 +127,35 @@ const FDRRealityAnalysis: React.FC<FDRRealityAnalysisProps> = ({
     return computePositionalImpacts(profiles);
   }, [profiles]);
 
-  // All players breakdown
+  // Combined FDR 4+5 stats for clean comparison
+  const fdr45CleanSheetPct = useMemo(() => {
+    const s4 = globalStats.statsByFdr[4];
+    const s5 = globalStats.statsByFdr[5];
+    const m = (s4?.matchesCount || 0) + (s5?.matchesCount || 0) || 1;
+    const cs = (s4?.cleanSheets || 0) + (s5?.cleanSheets || 0);
+    return Math.round((cs / m) * 100);
+  }, [globalStats]);
+
+  const fdr45AvgGoals = useMemo(() => {
+    const s4 = globalStats.statsByFdr[4];
+    const s5 = globalStats.statsByFdr[5];
+    const m = (s4?.matchesCount || 0) + (s5?.matchesCount || 0) || 1;
+    const gf = (s4?.goalsScored || 0) + (s5?.goalsScored || 0);
+    return Number((gf / m).toFixed(2));
+  }, [globalStats]);
+
+  // Top 100 active players (excluding players with 0 points/minutes who distort statistics)
+  const top100Players = useMemo(() => {
+    return [...players]
+      .filter(p => p.total_points > 0 && p.minutes > 0)
+      .sort((a, b) => b.total_points - a.total_points)
+      .slice(0, 100);
+  }, [players]);
+
+  // Top 100 players points breakdown
   const allBreakdowns: PlayerPointsBreakdown[] = useMemo(() => {
-    return computeAllPlayersPointsBreakdown(players, teams);
-  }, [players, teams]);
+    return computeAllPlayersPointsBreakdown(top100Players, teams);
+  }, [top100Players, teams]);
 
   // Macro positional points distribution across whole league
   const leaguePositionalBreakdown = useMemo(() => {
@@ -327,13 +352,8 @@ const FDRRealityAnalysis: React.FC<FDRRealityAnalysisProps> = ({
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 -mb-16 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-bold uppercase tracking-wider">
-              <Sparkles size={14} className="text-indigo-400" />
-              <span>Dátový Verdikt &bull; Skutočná úspešnosť FDR</span>
-            </div>
-
+        <div className="relative z-10 flex flex-col items-start gap-3">
+          <div className="space-y-2 max-w-4xl">
             <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight">
               Má zmysel sledovať zápasy a FDR?{' '}
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
@@ -343,75 +363,151 @@ const FDRRealityAnalysis: React.FC<FDRRealityAnalysisProps> = ({
 
             <p className="text-sm md:text-base text-slate-300 leading-relaxed">
               Analýza všetkých <strong>{globalStats.totalFinishedFixtures} odohraných zápasov</strong> tejto sezóny
-              preukazuje dramatické rozdiely: obrana stráca v ťažkých dueloch až{' '}
-              <strong className="text-rose-400">{Math.abs(globalStats.fdr2Vs45CleanSheetDiffPct)}% čistých kont</strong>, kým prémioví útočníci
-              dokážu bodovať aj proti najťažším súperom.
+              preukazuje, že žreb súperov dramaticky ovplyvňuje bodové zisky v FPL.
             </p>
-          </div>
 
-          {/* Quick Stat Pill in Hero */}
-          <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0 w-full sm:w-auto">
-            <div className="bg-slate-900/80 border border-emerald-500/30 rounded-xl p-3 px-4 shadow-lg flex items-center gap-3">
-              <div className="p-2.5 rounded-lg bg-emerald-500/20 text-emerald-400 font-black text-lg">
-                +{Math.abs(globalStats.fdr2Vs45GoalsDiffPct)}%
-              </div>
-              <div>
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gólová explózia</div>
-                <div className="text-xs font-semibold text-slate-200">Viac gólov v FDR 2 vs FDR 4/5</div>
-              </div>
-            </div>
-
-            <div className="bg-slate-900/80 border border-rose-500/30 rounded-xl p-3 px-4 shadow-lg flex items-center gap-3">
-              <div className="p-2.5 rounded-lg bg-rose-500/20 text-rose-400 font-black text-lg">
-                {globalStats.fdr2Vs45CleanSheetDiffPct}%
-              </div>
-              <div>
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Prepad obrany</div>
-                <div className="text-xs font-semibold text-slate-200">Menej čistých kont v FDR 4/5</div>
-              </div>
+            {/* Quick FDR legend bar so everyone understands FDR immediately */}
+            <div className="flex flex-wrap items-center gap-2 pt-2 text-xs text-slate-300">
+              <span className="text-slate-400 font-semibold text-[11px] uppercase tracking-wider mr-1">Vysvetlivka FDR:</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                FDR 2 = Ľahký súper
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-700/50 border border-slate-600/50 text-slate-300 font-bold">
+                <span className="w-2 h-2 rounded-full bg-slate-400" />
+                FDR 3 = Vyrovnaný súper
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 font-bold">
+                <span className="w-2 h-2 rounded-full bg-rose-400" />
+                FDR 4–5 = Náročný súper
+              </span>
             </div>
           </div>
         </div>
 
-        {/* 4 Macro Key Metrics Bar */}
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          {globalStats.keyConclusions.map((kc, idx) => {
-            const colorClasses = {
-              emerald: 'border-emerald-500/30 bg-emerald-950/20 text-emerald-400',
-              amber: 'border-amber-500/30 bg-amber-950/20 text-amber-400',
-              rose: 'border-rose-500/30 bg-rose-950/20 text-rose-400',
-              purple: 'border-purple-500/30 bg-purple-950/20 text-purple-400',
-              blue: 'border-blue-500/30 bg-blue-950/20 text-blue-400',
-            }[kc.color];
-
-            return (
-              <div
-                key={idx}
-                className={`p-4 rounded-xl border backdrop-blur-sm transition-all hover:scale-[1.02] flex flex-col justify-between ${colorClasses}`}
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
-                      Zistenie #{idx + 1}
-                    </span>
-                    <span className="text-xs font-black px-1.5 py-0.5 rounded bg-slate-900/80 border border-white/10">
-                      {kc.highlight}
-                    </span>
-                  </div>
-                  <h4 className="text-xs md:text-sm font-bold text-white mb-1.5 leading-snug">
-                    {kc.title}
-                  </h4>
-                  <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-3">
-                    {kc.body}
-                  </p>
+        {/* 4 Clean, Unified KPI Cards (One uniform color theme, no icons) */}
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 md:gap-4">
+          {/* Card 1: Obrana */}
+          <div className="p-4 md:p-5 rounded-xl border border-slate-700/80 bg-slate-800/40 backdrop-blur-sm flex flex-col justify-between hover:border-slate-600 hover:bg-slate-800/60 transition-all shadow-lg">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-slate-200 font-bold text-xs uppercase tracking-wider">
+                  1. Obrana & Čisté kontá
+                </span>
+                <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-slate-900/90 border border-slate-700 text-slate-300">
+                  {globalStats.fdr2Vs45CleanSheetDiffPct}% prepad
+                </span>
+              </div>
+              <div className="my-2">
+                <div className="text-2xl font-black font-mono text-white flex items-center gap-2">
+                  <span className="text-emerald-400">{globalStats.statsByFdr[2]?.cleanSheetPct}%</span>
+                  <span className="text-slate-500 text-base font-sans font-normal">➔</span>
+                  <span className="text-rose-400">{fdr45CleanSheetPct}%</span>
                 </div>
-                <div className="mt-3 pt-2 border-t border-white/5 flex items-center justify-between text-xs font-mono font-bold text-white">
-                  <span className="text-slate-400 text-[10px] font-sans">Hodnota:</span>
-                  <span>{kc.stat}</span>
+                <div className="text-[11px] text-slate-400 font-semibold mt-0.5">
+                  šanca na nulu: ľahký (FDR 2) vs ťažký (FDR 4/5)
                 </div>
               </div>
-            );
-          })}
+              <p className="text-xs text-slate-300 leading-relaxed mt-2.5">
+                V náročných dueloch (FDR 4/5) šanca obrancov na čisté konto prudko padá o viac ako polovicu.
+              </p>
+            </div>
+            <div className="mt-3.5 pt-2.5 border-t border-slate-700/60 text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+              <span>💡 Tip:</span>
+              <span className="text-white">Obrancov striktne rotovať podľa žrebu</span>
+            </div>
+          </div>
+
+          {/* Card 2: Útok */}
+          <div className="p-4 md:p-5 rounded-xl border border-slate-700/80 bg-slate-800/40 backdrop-blur-sm flex flex-col justify-between hover:border-slate-600 hover:bg-slate-800/60 transition-all shadow-lg">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-slate-200 font-bold text-xs uppercase tracking-wider">
+                  2. Útok & Góly
+                </span>
+                <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-slate-900/90 border border-slate-700 text-slate-300">
+                  +78% viac gólov
+                </span>
+              </div>
+              <div className="my-2">
+                <div className="text-2xl font-black font-mono text-white flex items-center gap-2">
+                  <span className="text-emerald-400">{globalStats.statsByFdr[2]?.avgGoalsScored}</span>
+                  <span className="text-slate-500 text-base font-sans font-normal">vs</span>
+                  <span className="text-slate-300">{fdr45AvgGoals}</span>
+                </div>
+                <div className="text-[11px] text-slate-400 font-semibold mt-0.5">
+                  priemer gólov na zápas (FDR 2 vs FDR 4/5)
+                </div>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed mt-2.5">
+                V ľahkých zápasoch strieľajú tímy takmer dvojnásobok gólov oproti duelom s top súpermi.
+              </p>
+            </div>
+            <div className="mt-3.5 pt-2.5 border-t border-slate-700/60 text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+              <span>💡 Tip:</span>
+              <span className="text-white">Kapitánsku pásku dávať do ľahkých duelov</span>
+            </div>
+          </div>
+
+          {/* Card 3: Favoriti */}
+          <div className="p-4 md:p-5 rounded-xl border border-slate-700/80 bg-slate-800/40 backdrop-blur-sm flex flex-col justify-between hover:border-slate-600 hover:bg-slate-800/60 transition-all shadow-lg">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-slate-200 font-bold text-xs uppercase tracking-wider">
+                  3. Výhry favoritov
+                </span>
+                <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-slate-900/90 border border-slate-700 text-slate-300">
+                  Iba {globalStats.statsByFdr[2]?.losses} prehier
+                </span>
+              </div>
+              <div className="my-2">
+                <div className="text-2xl font-black font-mono text-white">
+                  {globalStats.statsByFdr[2]?.winPct}%
+                </div>
+                <div className="text-[11px] text-slate-400 font-semibold mt-0.5">
+                  úspešnosť výhier favoritov v FDR 2 (z {globalStats.statsByFdr[2]?.matchesCount} zápasov)
+                </div>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed mt-2.5">
+                V zápasoch s priaznivým žrebom favorit zvíťazí vo väčšine prípadov. Prekvapenia sú zriedkavé.
+              </p>
+            </div>
+            <div className="mt-3.5 pt-2.5 border-t border-slate-700/60 text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+              <span>💡 Tip:</span>
+              <span className="text-white">Dôverovať prémiovým tímom v FDR 2</span>
+            </div>
+          </div>
+
+          {/* Card 4: Domáce prostredie */}
+          <div className="p-4 md:p-5 rounded-xl border border-slate-700/80 bg-slate-800/40 backdrop-blur-sm flex flex-col justify-between hover:border-slate-600 hover:bg-slate-800/60 transition-all shadow-lg">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-slate-200 font-bold text-xs uppercase tracking-wider">
+                  4. Domáce prostredie
+                </span>
+                <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-slate-900/90 border border-slate-700 text-slate-300">
+                  +{globalStats.homeWinPct - globalStats.awayWinPct}% nad hostí
+                </span>
+              </div>
+              <div className="my-2">
+                <div className="text-2xl font-black font-mono text-white flex items-center gap-2">
+                  <span className="text-emerald-400">{globalStats.homeWinPct}%</span>
+                  <span className="text-slate-500 text-base font-sans font-normal">vs</span>
+                  <span className="text-slate-300">{globalStats.awayWinPct}%</span>
+                </div>
+                <div className="text-[11px] text-slate-400 font-semibold mt-0.5">
+                  výhry domácich vs výhry hostí
+                </div>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed mt-2.5">
+                Domáce tímy vyhrávajú citeľne častejšie a udržia takmer dvojnásobok čistých kont.
+              </p>
+            </div>
+            <div className="mt-3.5 pt-2.5 border-t border-slate-700/60 text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+              <span>💡 Tip:</span>
+              <span className="text-white">V nerozhodnom prestupe voliť domáci duel</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -450,9 +546,9 @@ const FDRRealityAnalysis: React.FC<FDRRealityAnalysisProps> = ({
           }`}
         >
           <BarChart2 size={16} />
-          <span>Rozpad bodov hráčov (Všetci {players.length})</span>
+          <span>Rozpad bodov hráčov (Top 100)</span>
           <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500 text-white font-extrabold">
-            KOMPLET
+            TOP 100
           </span>
         </button>
 
@@ -771,10 +867,10 @@ const FDRRealityAnalysis: React.FC<FDRRealityAnalysisProps> = ({
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <BarChart2 size={18} className="text-purple-400" />
-                  Historický rozpad bodovania všetkých {players.length} hráčov
+                  Historický rozpad bodovania Top 100 hráčov ligy
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Zistite z čoho reálne pramenia body každého hráča: góly, asistencie, čisté kontá, bonusy, odohrané minúty a zákroky.
+                  Analýza stovky najproduktívnejších hráčov ligy (bez nehrajúcich náhradníkov s nulami). Zistite, z čoho pramenia ich body: góly, asistencie, čisté kontá, bonusy a zákroky.
                 </p>
               </div>
 

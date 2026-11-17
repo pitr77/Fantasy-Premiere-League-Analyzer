@@ -1,17 +1,19 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
-import { FPLPlayer, FPLTeam, FPLFixture } from '../types';
+import React, { useMemo, useState, useEffect } from 'react';
+import { FPLPlayer, FPLTeam, FPLFixture, FPLElementSummary } from '../types';
 import {
   Search,
   ChevronDown,
   ChevronUp,
   ArrowUpDown,
   X,
-  BarChart2
+  BarChart2,
+  Loader2
 } from 'lucide-react';
 import { PlayerDetailModal } from './PlayerDetailModal';
 import { useLanguage, Language } from '../lib/language';
+import { getPlayerSummary } from '../services/fplService';
 
 interface PlayerStatsProps {
   players: FPLPlayer[];
@@ -20,6 +22,7 @@ interface PlayerStatsProps {
 }
 
 export type StatsTab = 'overview' | 'advanced';
+export type MatchWindow = 'all' | 5 | 8;
 
 interface MetricColumn {
   key: string;
@@ -183,6 +186,17 @@ const TAB_COLUMNS: Record<StatsTab, MetricColumn[]> = {
       format: (val) => <span className={`font-mono font-bold ${Number(val) > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>{val}</span>
     },
     {
+      key: 'defensive_contribution',
+      label: () => 'DC',
+      abbr: 'DC',
+      description: (lang) => lang === 'sk'
+        ? 'Defensive Contributions (Defenzívny prínos): Súčet obranných akcií – odkopov, blokov, zachytení a odobratí lopty (CBI + tackles).'
+        : 'Defensive Contributions: Combined defensive actions (clearances, blocks, interceptions, tackles).',
+      align: 'center',
+      getValue: (p) => p.defensive_contribution ?? ((p.clearances_blocks_interceptions || 0) + (p.tackles || 0)),
+      format: (val) => <span className={`font-mono font-bold ${Number(val) > 0 ? 'text-teal-300' : 'text-slate-500'}`}>{val}</span>
+    },
+    {
       key: 'saves',
       label: (lang) => lang === 'sk' ? 'Zákroky' : 'Saves',
       abbr: 'S',
@@ -235,11 +249,93 @@ const TAB_CONFIG: {
   }
 ];
 
+function computeWindowedPlayer(
+  player: FPLPlayer,
+  summary: FPLElementSummary | undefined,
+  windowSize: 5 | 8
+): FPLPlayer {
+  if (!summary || !Array.isArray(summary.history) || summary.history.length === 0) {
+    return {
+      ...player,
+      goals_scored: 0,
+      assists: 0,
+      expected_goals: '0.00',
+      expected_assists: '0.00',
+      expected_goal_involvements: '0.00',
+      clean_sheets: 0,
+      defensive_contribution: 0,
+      saves: 0,
+      ict_index: '0.0',
+      bps: 0,
+      total_points: 0,
+      minutes: 0,
+      points_per_game: '0.0',
+    };
+  }
+
+  // Sort history ascending by round, then take last N matches
+  const sorted = [...summary.history].sort((a, b) => a.round - b.round);
+  const slice = sorted.slice(-windowSize);
+
+  let goals = 0;
+  let assists = 0;
+  let xG = 0;
+  let xA = 0;
+  let xGI = 0;
+  let cleanSheets = 0;
+  let dc = 0;
+  let saves = 0;
+  let ict = 0;
+  let bps = 0;
+  let points = 0;
+  let minutes = 0;
+  let gamesWithMinutes = 0;
+
+  slice.forEach((m) => {
+    goals += m.goals_scored || 0;
+    assists += m.assists || 0;
+    xG += parseFloat(m.expected_goals || '0') || 0;
+    xA += parseFloat(m.expected_assists || '0') || 0;
+    xGI += parseFloat(m.expected_goal_involvements || '0') || 0;
+    cleanSheets += m.clean_sheets || 0;
+    const matchDc = (m as any).defensive_contribution !== undefined
+      ? Number((m as any).defensive_contribution) || 0
+      : ((m as any).clearances_blocks_interceptions || 0) + ((m as any).tackles || 0);
+    dc += matchDc;
+    saves += m.saves || 0;
+    ict += parseFloat(m.ict_index || '0') || 0;
+    bps += m.bps || 0;
+    points += m.total_points || 0;
+    minutes += m.minutes || 0;
+    if (m.minutes > 0) gamesWithMinutes++;
+  });
+
+  const ppg = gamesWithMinutes > 0 ? (points / gamesWithMinutes).toFixed(1) : '0.0';
+
+  return {
+    ...player,
+    goals_scored: goals,
+    assists: assists,
+    expected_goals: xG.toFixed(2),
+    expected_assists: xA.toFixed(2),
+    expected_goal_involvements: xGI.toFixed(2),
+    clean_sheets: cleanSheets,
+    defensive_contribution: dc,
+    saves: saves,
+    ict_index: ict.toFixed(1),
+    bps: bps,
+    total_points: points,
+    minutes: minutes,
+    points_per_game: ppg,
+  };
+}
+
 export const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtures }) => {
   const [lang] = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [teamFilter, setTeamFilter] = useState<number | 'all'>('all');
   const [posFilter, setPosFilter] = useState<number | 'all'>('all');
+  const [matchWindow, setMatchWindow] = useState<MatchWindow>('all');
   const [activeTab, setActiveTab] = useState<StatsTab>('overview');
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
     key: 'total_points',
@@ -253,6 +349,85 @@ export const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtur
     description: string;
     rect: DOMRect;
   } | null>(null);
+
+  // Summaries cache for windowed matches calculation
+  const [playerSummaries, setPlayerSummaries] = useState<Map<number, FPLElementSummary>>(new Map());
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState<{ loaded: number; total: number } | null>(null);
+
+  // Background fetch of player summaries when a match window is selected
+  useEffect(() => {
+    if (matchWindow === 'all') return;
+
+    // Filter candidate players who have actually played (exclude inactive 0-point/0-min players)
+    const activeCandidates = players
+      .filter(p => {
+        if (posFilter !== 'all' && p.element_type !== posFilter) return false;
+        if (teamFilter !== 'all' && p.team !== teamFilter) return false;
+        return p.total_points > 0 || p.minutes > 0;
+      })
+      .sort((a, b) => b.total_points - a.total_points);
+
+    const missing = activeCandidates.filter(p => !playerSummaries.has(p.id));
+    if (missing.length === 0) return;
+
+    let isMounted = true;
+    setLoadingHistory(true);
+    setLoadingProgress({ loaded: 0, total: missing.length });
+
+    const loadMissing = async () => {
+      const BATCH_SIZE = 12;
+      let loaded = 0;
+      const newMap = new Map(playerSummaries);
+
+      for (let i = 0; i < missing.length; i += BATCH_SIZE) {
+        if (!isMounted) break;
+        const chunk = missing.slice(i, i + BATCH_SIZE);
+        const results = await Promise.all(
+          chunk.map(async p => {
+            try {
+              const summary = await getPlayerSummary(p.id);
+              return { id: p.id, summary };
+            } catch {
+              return null;
+            }
+          })
+        );
+
+        results.forEach(res => {
+          if (res && res.summary) {
+            newMap.set(res.id, res.summary);
+          }
+        });
+
+        loaded += chunk.length;
+        if (isMounted) {
+          setPlayerSummaries(new Map(newMap));
+          setLoadingProgress({ loaded, total: missing.length });
+        }
+      }
+
+      if (isMounted) {
+        setLoadingHistory(false);
+        setLoadingProgress(null);
+      }
+    };
+
+    loadMissing();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [matchWindow, posFilter, teamFilter, players]);
+
+  // Transform players based on the selected match window
+  const effectivePlayers = useMemo(() => {
+    if (matchWindow === 'all') return players;
+    return players.map(p => {
+      const summary = playerSummaries.get(p.id);
+      return computeWindowedPlayer(p, summary, matchWindow);
+    });
+  }, [players, matchWindow, playerSummaries]);
 
   const activeColumns = useMemo(() => TAB_COLUMNS[activeTab], [activeTab]);
 
@@ -269,7 +444,7 @@ export const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtur
   };
 
   const filteredAndSortedPlayers = useMemo(() => {
-    let result = players.filter(player => {
+    let result = effectivePlayers.filter(player => {
       if (searchTerm) {
         const query = searchTerm.toLowerCase();
         const fullName = `${player.first_name} ${player.second_name}`.toLowerCase();
@@ -303,7 +478,7 @@ export const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtur
     });
 
     return result;
-  }, [players, searchTerm, teamFilter, posFilter, sortConfig, activeColumns]);
+  }, [effectivePlayers, searchTerm, teamFilter, posFilter, sortConfig, activeColumns]);
 
   const handleSort = (key: string) => {
     setSortConfig(current => {
@@ -319,14 +494,24 @@ export const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtur
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
-        <h2 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
-          <BarChart2 className="text-blue-400 shrink-0" />
-          {lang === 'sk' ? 'Štatistiky Hráčov' : 'Player Statistics'}
-        </h2>
+      <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
+            <BarChart2 className="text-blue-400 shrink-0" />
+            {lang === 'sk' ? 'Štatistiky Hráčov' : 'Player Statistics'}
+          </h2>
+          {matchWindow !== 'all' && (
+            <p className="text-xs text-blue-400 font-semibold mt-1 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+              {lang === 'sk'
+                ? `Zobrazujú sa prepočítané štatistiky za posledných ${matchWindow} odohraných zápasov`
+                : `Showing recalculated stats over the last ${matchWindow} matches played`}
+            </p>
+          )}
+        </div>
       </div>
 
-      {/* Controls row: Positions filter on left, 2 Categories on right */}
+      {/* Controls row: Positions filter on left, Match window + Categories on right */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-1">
         {/* Position Filter */}
         <div className="grid grid-cols-5 md:flex gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700 self-start">
@@ -348,23 +533,60 @@ export const PlayerStats: React.FC<PlayerStatsProps> = ({ players, teams, fixtur
           ))}
         </div>
 
-        {/* 2 Categories Switcher (Overview vs Advanced) */}
-        <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1 self-start md:self-auto">
-          {TAB_CONFIG.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={`px-3 md:px-4 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                activeTab === tab.id
-                  ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              {tab.label(lang)}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 flex-wrap self-start md:self-auto">
+          {/* Matches Horizon Filter: All / 5 / 8 Matches */}
+          <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1">
+            <span className="text-[10px] uppercase font-bold text-slate-500 px-2 hidden sm:inline">
+              {lang === 'sk' ? 'Zápasy:' : 'Matches:'}
+            </span>
+            {(['all', 5, 8] as const).map((count) => (
+              <button
+                key={count}
+                type="button"
+                onClick={() => setMatchWindow(count)}
+                className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                  matchWindow === count
+                    ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {count === 'all'
+                  ? (lang === 'sk' ? 'Všetky' : 'All')
+                  : `${count} ${lang === 'sk' ? 'Z' : 'M'}`}
+              </button>
+            ))}
+          </div>
+
+          {/* 2 Categories Switcher (Overview vs Advanced) */}
+          <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1">
+            {TAB_CONFIG.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`px-3 md:px-4 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {tab.label(lang)}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+
+      {/* Loading indicator when computing match windows */}
+      {loadingHistory && loadingProgress && (
+        <div className="flex items-center gap-2.5 text-xs text-blue-300 bg-blue-950/40 border border-blue-800/50 px-3.5 py-2 rounded-xl animate-in fade-in duration-300">
+          <Loader2 size={15} className="animate-spin text-blue-400 shrink-0" />
+          <span className="font-medium">
+            {lang === 'sk'
+              ? `Prepočítavam štatistiky za posledných ${matchWindow} zápasov (${Math.min(loadingProgress.loaded, loadingProgress.total)} / ${loadingProgress.total} hráčov)...`
+              : `Recalculating stats for the last ${matchWindow} matches (${Math.min(loadingProgress.loaded, loadingProgress.total)} / ${loadingProgress.total} players)...`}
+          </span>
+        </div>
+      )}
 
       {/* Search & Club Filters */}
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">

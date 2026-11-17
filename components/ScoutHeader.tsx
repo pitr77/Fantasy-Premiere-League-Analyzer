@@ -33,11 +33,10 @@ export default function ScoutHeader() {
       <button
         type="button"
         onClick={() => setLang('sk')}
-        className={`px-2 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 ${
-          lang === 'sk'
+        className={`px-2 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 ${lang === 'sk'
             ? 'bg-purple-600 text-white shadow-sm'
             : 'text-slate-400 hover:text-white'
-        }`}
+          }`}
         title="Slovenčina"
       >
         <span className="text-[11px]">🇸🇰</span>
@@ -46,11 +45,10 @@ export default function ScoutHeader() {
       <button
         type="button"
         onClick={() => setLang('en')}
-        className={`px-2 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 ${
-          lang === 'en'
+        className={`px-2 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 ${lang === 'en'
             ? 'bg-purple-600 text-white shadow-sm'
             : 'text-slate-400 hover:text-white'
-        }`}
+          }`}
         title="English"
       >
         <span className="text-[11px]">🇬🇧</span>
@@ -123,9 +121,8 @@ export default function ScoutHeader() {
 
       {/* Mobile Backdrop */}
       <div
-        className={`fixed inset-0 z-40 md:hidden transition-opacity duration-300 ${
-          isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`fixed inset-0 z-40 md:hidden transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
         onClick={() => setIsSidebarOpen(false)}
       >
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -133,9 +130,8 @@ export default function ScoutHeader() {
 
       {/* Mobile Sidebar Drawer */}
       <aside
-        className={`fixed top-0 left-0 z-50 w-72 h-full bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 ease-in-out ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:hidden flex flex-col`}
+        className={`fixed top-0 left-0 z-50 w-72 h-full bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } md:hidden flex flex-col`}
       >
         <div className="p-6 border-b border-slate-800 shrink-0 flex items-center justify-between">
           <Link

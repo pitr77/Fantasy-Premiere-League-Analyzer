@@ -22,7 +22,7 @@ interface FixturesProps {
 
 const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players }) => {
     const [lang] = useLanguage();
-    const [activeTab, setActiveTab] = useState<'schedule' | 'planner' | 'reality'>('schedule');
+    const [activeTab, setActiveTab] = useState<'schedule' | 'planner' | 'reality'>('planner');
     const [showInfo, setShowInfo] = useState(false);
     const [plannerSortMode, setPlannerSortMode] = useState<'none' | 'asc' | 'desc'>('none');
     const [expandedTeamId, setExpandedTeamId] = useState<number | null>(null);
@@ -832,65 +832,91 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
         return (
             <div className="space-y-4">
                 {/* Desktop/Tablet Table (Hidden on small screens) */}
-                <div className="hidden md:block overflow-x-auto bg-slate-800 rounded-lg shadow-lg border border-slate-700 animate-in fade-in zoom-in duration-300 pb-20">
+                <div className="hidden md:block overflow-x-auto bg-slate-800 rounded-xl shadow-lg border border-slate-700 animate-in fade-in zoom-in duration-300">
                     <table className="w-full text-left border-collapse md:table-auto">
                         <thead>
-                            <tr className="bg-slate-900 text-slate-400 text-sm uppercase tracking-wider font-bold">
+                            <tr className="bg-slate-900 text-slate-400 text-[11px] uppercase tracking-wider font-bold border-b border-slate-700">
                                 <th
-                                    className="p-4 md:p-5 text-center w-20 sticky left-0 bg-slate-900 z-30 border-r border-slate-700 shadow-xl cursor-pointer hover:text-white transition-colors group"
+                                    className="py-1.5 px-2 text-center w-16 sticky left-0 bg-slate-900 z-30 border-r border-slate-700 shadow-md cursor-pointer hover:text-white transition-colors select-none group"
                                     onClick={togglePlannerSort}
+                                    title={lang === 'sk' ? 'Kliknutím zoradíte podľa náročnosti' : 'Click to sort by difficulty'}
                                 >
-                                    <div className="flex flex-col items-center justify-center">
-                                        <span className="leading-tight text-[10px]">AVG</span>
-                                        <span className="leading-tight text-[10px]">DIFF</span>
-                                        <span className="text-purple-400 text-xs mt-0.5">
-                                            {plannerSortMode === 'asc' ? '↑' : plannerSortMode === 'desc' ? '↓' : ''}
+                                    <div className="flex items-center justify-center gap-1">
+                                        <span className="text-[10px] font-black">FDR</span>
+                                        <span className="text-purple-400 text-xs">
+                                            {plannerSortMode === 'asc' ? '↑' : plannerSortMode === 'desc' ? '↓' : '↕'}
                                         </span>
                                     </div>
                                 </th>
-                                <th className="p-4 md:p-5 sticky left-[80px] bg-slate-900 z-20 border-r border-slate-700 shadow-xl text-sm w-64">Team</th>
+                                <th className="py-1.5 px-3 sticky left-16 bg-slate-900 z-20 border-r border-slate-700 shadow-md text-left w-52 sm:w-60">
+                                    {lang === 'sk' ? 'Klub' : 'Team'}
+                                </th>
                                 {planningGws.map(gw => (
-                                    <th key={gw} className="p-4 md:p-5 text-center w-28 border-r border-slate-800 whitespace-nowrap text-sm">GW {gw}</th>
+                                    <th key={gw} className="py-1.5 px-2 text-center w-28 border-r border-slate-800 whitespace-nowrap font-bold text-slate-300">
+                                        GW {gw}
+                                    </th>
                                 ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-700/50">
-                            {sortedTeams.map(team => {
+                        <tbody className="divide-y divide-slate-700/70">
+                            {sortedTeams.map((team, idx) => {
                                 const isExpanded = expandedTeamId === team.id;
                                 const playersForTeam = topPlayersByTeam.get(team.id) || [];
+                                const isEven = idx % 2 === 0;
+
+                                // Zebra striping for easy horizontal row tracking
+                                const rowBaseBg = isEven ? 'bg-slate-900/45' : 'bg-slate-800/40';
+                                const stickyBaseBg = isEven ? 'bg-slate-900' : 'bg-slate-800';
 
                                 return (
                                     <React.Fragment key={team.id}>
                                         <tr
-                                            className={`hover:bg-slate-700/30 transition-all cursor-pointer group/row ${isExpanded ? 'bg-slate-700/20' : ''}`}
+                                            className={`${rowBaseBg} hover:bg-slate-700/60 transition-colors cursor-pointer group/row border-b border-slate-700/70 ${isExpanded ? '!bg-purple-950/30' : ''}`}
                                             onClick={() => {
                                                 setExpandedTeamId(isExpanded ? null : team.id);
                                             }}
                                         >
-                                            <td className="p-4 md:p-5 text-center sticky left-0 bg-slate-800 z-10 border-r border-slate-700 shadow-xl w-20">
-                                                <span className={`text-xl font-black font-mono ${team.diffScore <= 10 ? 'text-green-400' :
-                                                    team.diffScore >= 18 ? 'text-red-400' :
-                                                        'text-slate-200'
-                                                    }`}>
+                                            {/* 1. FDR Score (Sticky Left) */}
+                                            <td className={`py-1.5 px-2 text-center sticky left-0 z-10 border-r border-slate-700 shadow-md w-16 transition-colors ${stickyBaseBg} group-hover/row:bg-slate-700/90 border-l-2 border-l-transparent group-hover/row:border-l-purple-400`}>
+                                                <span className={`inline-flex items-center justify-center min-w-[28px] px-1.5 py-0.5 rounded text-xs font-mono font-black shadow-xs ${
+                                                    team.diffScore <= 10
+                                                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                                        : team.diffScore >= 18
+                                                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                                        : 'bg-slate-700/70 text-slate-200 border border-slate-600/60'
+                                                }`}>
                                                     {team.diffScore}
                                                 </span>
                                             </td>
-                                            <td className="p-4 md:p-5 font-bold text-white sticky left-[80px] bg-slate-800 z-10 border-r border-slate-700 shadow-xl text-base whitespace-nowrap w-64">
+
+                                            {/* 2. Team Name & Crest (Sticky Left) */}
+                                            <td className={`py-1.5 px-3 font-semibold text-white sticky left-16 z-10 border-r border-slate-700 shadow-md text-xs whitespace-nowrap w-52 sm:w-60 transition-colors ${stickyBaseBg} group-hover/row:bg-slate-700/90`}>
                                                 <div className="flex items-center gap-2 overflow-hidden">
-                                                    <ChevronRight size={16} className={`shrink-0 text-slate-500 transition-transform duration-200 ${isExpanded ? 'rotate-90 text-purple-400' : ''}`} />
-                                                    <span className="truncate">{team.name}</span>
+                                                    <ChevronRight size={14} className={`shrink-0 text-slate-400 transition-transform duration-200 group-hover/row:text-purple-300 ${isExpanded ? 'rotate-90 text-purple-400' : ''}`} />
+                                                    <TeamIcon code={team.short_name} alt={team.name} size={18} />
+                                                    <span className="truncate text-xs font-bold text-white group-hover/row:text-purple-200 transition-colors">{team.name}</span>
                                                     {(team as any).hasEasyRun && (
-                                                        <span className="shrink-0 flex items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold text-[10px] px-2 py-0.5 whitespace-nowrap shadow-[0_0_8px_rgba(16,185,129,0.1)]">
+                                                        <span className="shrink-0 flex items-center justify-center rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold text-[9px] px-1.5 py-0.2 whitespace-nowrap shadow-[0_0_6px_rgba(16,185,129,0.2)]">
                                                             3× EASY
                                                         </span>
                                                     )}
                                                 </div>
                                             </td>
-                                            {planningGws.map((gw, index) => {
+
+                                            {/* 3. Fixtures (GW 11 - 15) */}
+                                            {planningGws.map((gw) => {
                                                 const gwFixtures = fixturesByEvent[gw] || [];
                                                 const match = gwFixtures.find(f => f.team_h === team.id || f.team_a === team.id);
 
-                                                if (!match) return <td key={gw} className="p-4 md:p-5 bg-slate-900/50 relative"></td>;
+                                                if (!match) {
+                                                    return (
+                                                        <td key={gw} className="py-1.5 px-2 border-r border-slate-800/60">
+                                                            <div className="w-full h-[26px] rounded-lg bg-slate-900/40 border border-slate-700/30 flex items-center justify-center text-slate-500 text-[10px] font-mono">
+                                                                —
+                                                            </div>
+                                                        </td>
+                                                    );
+                                                }
 
                                                 const isHome = match.team_h === team.id;
                                                 const isAway = !isHome;
@@ -899,16 +925,19 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                                                 const difficulty = getDifficulty(opponentId, isAway);
 
                                                 return (
-                                                    <td key={gw} className="p-2 md:p-3 border-r border-slate-700/50 relative group">
-                                                        <ResultChip
-                                                            label={`${opponentShort}${isHome ? 'H' : 'A'}`}
-                                                            value={String(difficulty.score)}
-                                                            bgClass={difficulty.bg}
-                                                            borderClass={`border-b-2 ${difficulty.border}`}
-                                                            textClass={difficulty.text}
+                                                    <td key={gw} className="py-1.5 px-2 border-r border-slate-800/60">
+                                                        <div
                                                             title={`${getTeamName(opponentId)} | FDR: ${difficulty.label} (${difficulty.score}/5)`}
-                                                            className="w-full hover:brightness-110 h-10"
-                                                        />
+                                                            className={`w-full h-[26px] rounded-lg flex items-center justify-between px-2 text-white shadow-xs border transition-all duration-150 group-hover/row:brightness-105 group-hover/row:shadow-md cursor-default select-none ${difficulty.bg} ${difficulty.border}`}
+                                                        >
+                                                            <div className="flex items-center gap-1 min-w-0">
+                                                                <span className="font-extrabold text-xs tracking-tight">{opponentShort}</span>
+                                                                <span className="text-[10px] font-semibold opacity-80">({isHome ? 'H' : 'A'})</span>
+                                                            </div>
+                                                            <span className="w-4.5 h-4.5 rounded-full bg-black/35 border border-white/10 flex items-center justify-center text-[10px] font-mono font-black shrink-0 shadow-inner">
+                                                                {difficulty.score}
+                                                            </span>
+                                                        </div>
                                                     </td>
                                                 );
                                             })}
@@ -956,48 +985,65 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                 {/* Mobile/Tablet 2-Panel Layout */}
                 <div className="md:hidden">
                     <TwoPanelTable
+                        rowHeightClass="h-[34px]"
+                        leftWidthClass="w-[110px] sm:w-[125px]"
                         leftHeader={
-                            <div className="flex items-center gap-2 cursor-pointer" onClick={togglePlannerSort}>
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[8px] font-black">FDR</span>
-                                    <span className="text-purple-400 text-[8px]">
-                                        {plannerSortMode === 'asc' ? '↑' : plannerSortMode === 'desc' ? '↓' : ''}
-                                    </span>
-                                </div>
-                                <span>Team</span>
+                            <div className="flex items-center gap-1.5 cursor-pointer select-none" onClick={togglePlannerSort}>
+                                <span className="text-[9px] font-black text-slate-300">FDR</span>
+                                <span className="text-purple-400 text-xs font-bold">
+                                    {plannerSortMode === 'asc' ? '↑' : plannerSortMode === 'desc' ? '↓' : '↕'}
+                                </span>
+                                <span className="text-slate-400 text-[9px] uppercase font-bold ml-0.5">{lang === 'sk' ? 'Klub' : 'Team'}</span>
                             </div>
                         }
-                        rightHeader="FDR Matrix (Next 5 GWs)"
-                        leftWidthClass="w-[100px] sm:w-[130px]"
+                        rightHeader={
+                            <div className="flex items-center gap-1.5 h-full">
+                                {planningGws.map((gw) => (
+                                    <div key={gw} className="w-[64px] text-center text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                                        GW {gw}
+                                    </div>
+                                ))}
+                            </div>
+                        }
                         rows={sortedTeams.map(team => ({
                             key: team.id,
                             left: (
-                                <div className="flex items-center gap-2 w-full min-w-0">
-                                    <span className={`text-[10px] font-black font-mono shrink-0 w-4 text-center ${team.diffScore <= 10 ? 'text-green-400' :
-                                        team.diffScore >= 18 ? 'text-red-400' :
-                                            'text-slate-200'
-                                        }`}>
+                                <div className="flex items-center gap-1.5 w-full min-w-0">
+                                    <span className={`inline-flex items-center justify-center min-w-[20px] px-1 py-0.2 rounded text-[9px] font-mono font-black shrink-0 ${
+                                        team.diffScore <= 10
+                                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                            : team.diffScore >= 18
+                                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                            : 'bg-slate-700/70 text-slate-200 border border-slate-600/60'
+                                    }`}>
                                         {team.diffScore}
                                     </span>
+                                    <TeamIcon code={team.short_name} alt={team.name} size={16} />
                                     <div className="flex flex-col min-w-0">
-                                        <span className="font-bold text-white text-[11px] truncate uppercase leading-tight">
+                                        <span className="font-bold text-white text-[11px] truncate leading-tight">
                                             {team.short_name}
                                         </span>
                                         {(team as any).hasEasyRun && (
-                                            <span className="text-[7px] text-emerald-400 font-black tracking-tighter uppercase leading-none mt-0.5">
-                                                3x Easy
+                                            <span className="text-[7px] text-emerald-400 font-black tracking-tight uppercase leading-none">
+                                                3× Easy
                                             </span>
                                         )}
                                     </div>
                                 </div>
                             ),
                             right: (
-                                <div className="flex items-center gap-1 h-full">
+                                <div className="flex items-center gap-1.5 h-full">
                                     {planningGws.map((gw) => {
                                         const gwFixtures = fixturesByEvent[gw] || [];
                                         const match = gwFixtures.find(f => f.team_h === team.id || f.team_a === team.id);
 
-                                        if (!match) return <div key={gw} className="w-11 h-9 bg-slate-900/40 rounded-md border border-slate-700/30"></div>;
+                                        if (!match) {
+                                            return (
+                                                <div key={gw} className="w-[64px] h-[24px] rounded bg-slate-900/40 border border-slate-700/30 flex items-center justify-center text-slate-500 text-[8.5px] font-mono">
+                                                    —
+                                                </div>
+                                            );
+                                        }
 
                                         const isHome = match.team_h === team.id;
                                         const isAway = !isHome;
@@ -1006,15 +1052,19 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                                         const difficulty = getDifficulty(opponentId, isAway);
 
                                         return (
-                                            <ResultChip
+                                            <div
                                                 key={gw}
-                                                label={opponentShort}
-                                                value={`${difficulty.score}${isHome ? 'H' : 'A'}`}
-                                                bgClass={difficulty.bg}
-                                                borderClass={`border-b-2 ${difficulty.border}`}
-                                                textClass={difficulty.text}
-                                                className="w-11"
-                                            />
+                                                title={`${getTeamName(opponentId)} | FDR: ${difficulty.label} (${difficulty.score}/5)`}
+                                                className={`w-[64px] h-[24px] rounded flex items-center justify-between px-1 text-white shadow-xs border transition-all ${difficulty.bg} ${difficulty.border}`}
+                                            >
+                                                <div className="flex items-center gap-0.5 min-w-0">
+                                                    <span className="font-extrabold text-[9.5px] tracking-tight">{opponentShort}</span>
+                                                    <span className="text-[8.5px] font-semibold opacity-75">{isHome ? 'H' : 'A'}</span>
+                                                </div>
+                                                <span className="w-3.5 h-3.5 rounded-full bg-black/35 border border-white/10 flex items-center justify-center text-[8.5px] font-mono font-black shrink-0 shadow-inner">
+                                                    {difficulty.score}
+                                                </span>
+                                            </div>
                                         );
                                     })}
                                 </div>
@@ -1045,16 +1095,6 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                 {/* Main Tab Switcher */}
                 <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1 w-full sm:w-auto self-start">
                     <button
-                        onClick={() => setActiveTab('schedule')}
-                        className={`flex-1 sm:flex-none px-3 md:px-5 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-2 ${
-                            activeTab === 'schedule'
-                                ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
-                                : 'border-transparent text-slate-400 hover:text-slate-200'
-                        }`}
-                    >
-                        <span>{lang === 'sk' ? 'Rozpis zápasov' : 'Schedule'}</span>
-                    </button>
-                    <button
                         onClick={() => setActiveTab('planner')}
                         className={`flex-1 sm:flex-none px-3 md:px-5 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-2 ${
                             activeTab === 'planner'
@@ -1063,6 +1103,16 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                         }`}
                     >
                         <span>{lang === 'sk' ? 'FDR Matica' : 'FDR Matrix'}</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('schedule')}
+                        className={`flex-1 sm:flex-none px-3 md:px-5 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-2 ${
+                            activeTab === 'schedule'
+                                ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
+                                : 'border-transparent text-slate-400 hover:text-slate-200'
+                        }`}
+                    >
+                        <span>{lang === 'sk' ? 'Rozpis zápasov' : 'Schedule'}</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('reality')}

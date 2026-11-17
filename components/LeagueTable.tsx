@@ -169,7 +169,7 @@ const getFdrColorClasses = (difficulty: number) => {
 
 const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
   const [lang] = useLanguage();
-  const [viewMode, setViewMode] = useState<ViewMode>('full');
+  const [viewMode, setViewMode] = useState<ViewMode>('compact');
 
   // Interactive header tooltip state
   const [hoveredMetric, setHoveredMetric] = useState<{
@@ -359,7 +359,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
           });
         }}
         onMouseLeave={() => setHoveredMetric(null)}
-        className={`py-3 px-2 md:px-3 font-bold cursor-default transition-colors select-none border-b border-slate-700 ${alignClass} ${extraClass}`}
+        className={`py-1.5 md:py-2 px-1.5 sm:px-2 font-bold cursor-default transition-colors select-none border-b border-slate-700 ${alignClass} ${extraClass}`}
       >
         <span className="border-b border-dotted border-slate-600/70 hover:border-blue-400 transition-colors">
           {displayLabel}
@@ -375,19 +375,19 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
   }, [fixtures]);
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-500">
+    <div className="space-y-2.5 animate-in fade-in duration-500">
       {/* Header & Controls Toolbar */}
-      <div className="bg-slate-800 p-5 md:p-6 rounded-xl border border-slate-700 shadow-lg">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
-              <Trophy className="w-5 h-5 text-amber-400" />
+      <div className="bg-slate-800 px-4 py-2.5 sm:py-3 rounded-xl border border-slate-700 shadow-md">
+        <div className="flex flex-row justify-between items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+              <Trophy className="w-4 h-4 text-amber-400" />
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl font-bold text-white leading-tight">
+              <h2 className="text-base sm:text-lg font-bold text-white leading-tight">
                 {lang === 'sk' ? 'Tabuľka Premier League' : 'Premier League Table'}
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-[11px] text-slate-400">
                 {lang === 'sk'
                   ? `Odohraných ${finishedCount} ligových zápasov • Sezóna 2024/25`
                   : `${finishedCount} matches finished • Season 2024/25`}
@@ -395,16 +395,16 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full lg:w-auto justify-end">
+          <div className="flex items-center gap-2 shrink-0">
             {/* View Mode Toggle: Kompletná / Kompaktná */}
-            <div className="bg-slate-900 p-1 rounded-xl border border-slate-700 flex items-center shadow-sm">
+            <div className="bg-slate-900 p-0.5 sm:p-1 rounded-lg border border-slate-700 flex items-center shadow-sm">
               <button
                 type="button"
                 onClick={() => {
                   setViewMode('full');
                   track('league_table_view', { view: 'full' });
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${
                   viewMode === 'full'
                     ? 'bg-slate-600/50 text-slate-100 border border-slate-500/60 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -418,7 +418,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                   setViewMode('compact');
                   track('league_table_view', { view: 'compact' });
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${
                   viewMode === 'compact'
                     ? 'bg-slate-600/50 text-slate-100 border border-slate-500/60 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -436,7 +436,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
         <div className="w-full overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-separate border-spacing-0 md:table-auto">
             <thead>
-              <tr className="bg-slate-900 text-slate-400 text-[10px] md:text-xs uppercase tracking-wider font-bold">
+              <tr className="bg-slate-900 text-slate-400 text-[10px] md:text-[11px] uppercase tracking-wider font-bold">
                 {/* 1. Pos - Sticky */}
                 {renderTh('pos', '#', 'text-center', 'w-10 sm:w-12 sticky left-0 z-30 bg-slate-900 border-r border-slate-700')}
 
@@ -470,7 +470,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-700/50 text-[11px] md:text-sm">
+            <tbody className="divide-y divide-slate-700/50 text-xs">
               {tableData.map((row, idx) => {
                 const pos = idx + 1;
                 const nextMatch = nextFixtureMap[row.id];
@@ -509,25 +509,25 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                   >
                     {/* Rank (#) - Sticky Left with Flashscore Zone Accent */}
                     <td
-                      className={`py-2.5 px-1 sm:px-2 text-center sticky left-0 z-20 transition-colors border-b border-slate-700/50 border-r border-slate-700 ${stickyBg} ${zoneBorder}`}
+                      className={`py-1 sm:py-1.5 px-1 sm:px-1.5 text-center sticky left-0 z-20 transition-colors border-b border-slate-700/50 border-r border-slate-700 ${stickyBg} ${zoneBorder}`}
                     >
-                      <span className="font-mono font-bold text-xs md:text-sm">
+                      <span className="font-mono font-bold text-[11px] sm:text-xs">
                         {pos}
                       </span>
                     </td>
 
                     {/* Team Name & Crest - Sticky Left */}
                     <td
-                      className={`py-2.5 px-2.5 sm:px-3 font-bold text-white sticky left-10 sm:left-12 z-20 transition-colors border-b border-slate-700/50 border-r border-slate-700 shadow-[2px_0_6px_rgba(0,0,0,0.25)] truncate ${stickyBg}`}
+                      className={`py-1 sm:py-1.5 px-2 sm:px-2.5 font-bold text-white sticky left-10 sm:left-12 z-20 transition-colors border-b border-slate-700/50 border-r border-slate-700 shadow-[2px_0_6px_rgba(0,0,0,0.25)] truncate ${stickyBg}`}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <TeamIcon code={row.short_name} alt={row.name} size={20} />
-                        <span className="hidden sm:inline truncate">{row.name}</span>
-                        <span className="sm:hidden truncate">{row.short_name}</span>
+                      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                        <TeamIcon code={row.short_name} alt={row.name} size={18} />
+                        <span className="hidden sm:inline truncate text-xs">{row.name}</span>
+                        <span className="sm:hidden truncate text-xs">{row.short_name}</span>
 
                         {/* Opponent highlight indicator pill */}
                         {isOpponentTeam && (
-                          <span className="ml-1.5 px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-600/80 shrink-0">
+                          <span className="ml-1 px-1 py-0 rounded text-[8px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-600/80 shrink-0">
                             {lang === 'sk' ? 'SÚPER' : 'OPPONENT'}
                           </span>
                         )}
@@ -535,30 +535,30 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                     </td>
 
                     {/* Matches Played */}
-                    <td className={`py-2.5 px-2 text-center text-slate-300 border-b border-slate-700/50 font-mono ${cellBgClass}`}>
+                    <td className={`py-1 sm:py-1.5 px-1.5 text-center text-slate-300 border-b border-slate-700/50 font-mono text-xs ${cellBgClass}`}>
                       {row.played}
                     </td>
 
                     {/* Full View Columns */}
                     {viewMode === 'full' && (
                       <>
-                        <td className={`py-2.5 px-2 text-center text-emerald-400 border-b border-slate-700/50 font-mono font-semibold ${cellBgClass}`}>
+                        <td className={`py-1 sm:py-1.5 px-1.5 text-center text-emerald-400 border-b border-slate-700/50 font-mono font-semibold text-xs ${cellBgClass}`}>
                           {row.win}
                         </td>
-                        <td className={`py-2.5 px-2 text-center text-slate-400 border-b border-slate-700/50 font-mono ${cellBgClass}`}>
+                        <td className={`py-1 sm:py-1.5 px-1.5 text-center text-slate-400 border-b border-slate-700/50 font-mono text-xs ${cellBgClass}`}>
                           {row.draw}
                         </td>
-                        <td className={`py-2.5 px-2 text-center text-rose-400 border-b border-slate-700/50 font-mono ${cellBgClass}`}>
+                        <td className={`py-1 sm:py-1.5 px-1.5 text-center text-rose-400 border-b border-slate-700/50 font-mono text-xs ${cellBgClass}`}>
                           {row.loss}
                         </td>
-                        <td className={`py-2.5 px-2 text-center text-slate-300 border-b border-slate-700/50 font-mono hidden sm:table-cell ${cellBgClass}`}>
+                        <td className={`py-1 sm:py-1.5 px-1.5 text-center text-slate-300 border-b border-slate-700/50 font-mono text-xs hidden sm:table-cell ${cellBgClass}`}>
                           {row.gf}:{row.ga}
                         </td>
                       </>
                     )}
 
                     {/* Goal Difference */}
-                    <td className={`py-2.5 px-2 text-center border-b border-slate-700/50 font-mono ${cellBgClass}`}>
+                    <td className={`py-1 sm:py-1.5 px-1.5 text-center border-b border-slate-700/50 font-mono text-xs ${cellBgClass}`}>
                       <span
                         className={`font-semibold ${
                           row.gf - row.ga > 0
@@ -574,15 +574,15 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                     </td>
 
                     {/* Points */}
-                    <td className={`py-2.5 px-2 text-center border-b border-slate-700/50 font-mono font-black text-white text-xs md:text-base ${
+                    <td className={`py-1 sm:py-1.5 px-1.5 text-center border-b border-slate-700/50 font-mono font-black text-white text-xs sm:text-sm ${
                       isOpponentTeam ? 'bg-slate-700/50' : 'bg-slate-900/30'
                     }`}>
                       {row.pts}
                     </td>
 
                     {/* Form Pills (Flashscore Style) */}
-                    <td className={`py-2.5 px-2 md:px-3 text-center border-b border-slate-700/50 ${cellBgClass}`}>
-                      <div className="flex items-center justify-center gap-1">
+                    <td className={`py-1 sm:py-1.5 px-1.5 text-center border-b border-slate-700/50 ${cellBgClass}`}>
+                      <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                         {last5.length === 0 ? (
                           <span className="text-slate-500 text-xs font-mono">—</span>
                         ) : (
@@ -621,7 +621,7 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                                   });
                                 }}
                                 onMouseLeave={() => setHoveredForm(null)}
-                                className={`w-5 h-5 sm:w-6 sm:h-6 rounded flex items-center justify-center text-[10px] sm:text-xs font-bold border shadow-xs transition-transform hover:scale-110 active:scale-95 cursor-default ${pillColor}`}
+                                className={`w-[19px] h-[19px] sm:w-5 sm:h-5 rounded flex items-center justify-center text-[9px] sm:text-[10px] font-bold border shadow-xs transition-transform hover:scale-110 active:scale-95 cursor-default ${pillColor}`}
                               >
                                 {pillLabel}
                               </button>
@@ -632,14 +632,14 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
                     </td>
 
                     {/* Next Match Fixture Badge */}
-                    <td className={`py-2.5 px-2 text-center border-b border-slate-700/50 ${cellBgClass}`}>
+                    <td className={`py-1 sm:py-1.5 px-1.5 text-center border-b border-slate-700/50 ${cellBgClass}`}>
                       {nextMatch ? (
                         <div
                           title={`GW${nextMatch.event || ''} vs ${nextMatch.opponentName} (${nextMatch.isHome ? 'H' : 'A'})`}
                           className="inline-flex items-center justify-center"
                         >
                           <span
-                            className={`px-2 py-0.5 rounded font-mono text-[10px] sm:text-xs font-bold border transition-colors ${getFdrColorClasses(
+                            className={`px-1.5 py-0.5 rounded font-mono text-[9px] sm:text-[10px] font-bold border transition-colors ${getFdrColorClasses(
                               nextMatch.difficulty
                             )}`}
                           >
@@ -658,27 +658,27 @@ const LeagueTable: React.FC<LeagueTableProps> = ({ teams, fixtures }) => {
         </div>
 
         {/* Flashscore Zone Legend at bottom */}
-        <div className="bg-slate-900/70 p-3.5 border-t border-slate-700/80 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-400">
-          <div className="flex flex-wrap items-center gap-3.5">
+        <div className="bg-slate-900/70 px-3 py-2 border-t border-slate-700/80 flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] text-slate-400">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3.5">
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-xs bg-blue-500 inline-block shadow-sm" />
+              <span className="w-2 h-2 rounded-xs bg-blue-500 inline-block shadow-sm" />
               <span>{lang === 'sk' ? 'Liga majstrov (1. – 4.)' : 'Champions League (1-4)'}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-xs bg-amber-500 inline-block shadow-sm" />
+              <span className="w-2 h-2 rounded-xs bg-amber-500 inline-block shadow-sm" />
               <span>{lang === 'sk' ? 'Európska liga (5.)' : 'Europa League (5)'}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500 inline-block shadow-sm" />
+              <span className="w-2 h-2 rounded-xs bg-emerald-500 inline-block shadow-sm" />
               <span>{lang === 'sk' ? 'Konferenčná liga (6. – 7.)' : 'Conference League (6-7)'}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-xs bg-rose-500 inline-block shadow-sm" />
+              <span className="w-2 h-2 rounded-xs bg-rose-500 inline-block shadow-sm" />
               <span>{lang === 'sk' ? 'Zostup (18. – 20.)' : 'Relegation (18-20)'}</span>
             </div>
           </div>
 
-          <div className="text-slate-500 text-[10px] font-mono">
+          <div className="text-slate-500 text-[9px] sm:text-[10px] font-mono">
             {lang === 'sk'
               ? 'Forma (zľava najnovší zápas): V = Výhra • R = Remíza • P = Prehra'
               : 'Form (newest on left): W = Win • D = Draw • L = Loss'}
