@@ -83,11 +83,11 @@ export const dict = {
   tp_th_ownership: { en: 'Ownership', sk: 'Vlastníctvo' },
   tp_th_form: { en: 'Form', sk: 'Forma' },
   tp_th_start: { en: 'Start', sk: 'Základ' },
-  tp_th_cs_odds: { en: 'CS Odds', sk: 'Čisté konto' },
-  tp_th_goal_odds: { en: 'Goal Odds', sk: 'Šanca na gól' },
-  tp_th_assist_odds: { en: 'Assist Odds', sk: 'Šanca na asist.' },
-  tp_th_ga_odds: { en: 'G+A Odds', sk: 'Šanca na G+A' },
-  tp_odds_btn: { en: 'Odds', sk: 'Kurzy' },
+  tp_th_cs_odds: { en: 'CS %', sk: 'Č. konto %' },
+  tp_th_goal_odds: { en: 'GOAL %', sk: 'Gól %' },
+  tp_th_assist_odds: { en: 'ASSIST %', sk: 'Asist %' },
+  tp_th_ga_odds: { en: 'G+A %', sk: 'G+A %' },
+  tp_odds_btn: { en: 'Projections', sk: 'Projekcie' },
   tp_odds_mode_cs: { en: 'Clean Sheet', sk: 'Čisté konto' },
   tp_odds_mode_goal: { en: 'Goal', sk: 'Gól' },
   tp_odds_mode_assist: { en: 'Assist', sk: 'Asistencia' },
@@ -108,8 +108,8 @@ export const dict = {
     sk: 'Odhadovaná pravdepodobnosť štartu v základe' 
   },
   tp_cs_prob_tooltip: {
-    en: 'Live Fortuna odds and probability for the team to keep a clean sheet in the next gameweek',
-    sk: 'Reálny kurz a pravdepodobnosť z Fortuny, že tím udrží čisté konto v najbližšom kole'
+    en: 'Model-projected probability for the team to keep a clean sheet in the next gameweek',
+    sk: 'Modelová pravdepodobnosť, že tím udrží čisté konto v najbližšom kole'
   },
   tp_goal_prob_tooltip: { 
     en: 'Probability to score a goal in next gameweek', 

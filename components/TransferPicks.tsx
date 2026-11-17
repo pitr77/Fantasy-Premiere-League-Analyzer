@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { FPLPlayer, FPLTeam, FPLEvent, FPLFixture } from '../types';
-import { ArrowLeftRight, TrendingUp, Calendar, DollarSign, Filter, Info, ChevronDown, ChevronUp, Calculator, Activity, HelpCircle, ArrowUpDown, Clock, Users, ChevronRight, AlertTriangle, Coins, RefreshCw, Target, Flame, Sparkles } from 'lucide-react';
+import { ArrowLeftRight, TrendingUp, Calendar, DollarSign, Filter, Info, ChevronDown, ChevronUp, Calculator, Activity, HelpCircle, ArrowUpDown, Clock, Users, ChevronRight, AlertTriangle, RefreshCw, Target, Flame, Sparkles } from 'lucide-react';
 import ResultChip from './ResultChip';
 import { calculateLeaguePositions, getDynamicDifficulty } from '../lib/fdrModel';
 import { computeTransferIndexForPlayers, TransferIndexResult } from '../lib/transferIndex';
@@ -56,8 +56,8 @@ const transferMetricDescriptions: Record<string, {
             ? 'Poradie hráča v odporúčacom algoritme na prestup pre zvolený horizont.'
             : 'Algorithmic rank based on transfer recommendation index for the selected horizon.',
         tip: (lang) => lang === 'sk'
-            ? 'Hráči na čele rebríčka predstavujú najefektívnejšiu kombináciu formy, priaznivého kalendára a trhových kurzov.'
-            : 'Top-ranked players represent the optimal blend of form, favorable fixtures, and market odds.'
+            ? 'Hráči na čele rebríčka predstavujú najefektívnejšiu kombináciu formy, priaznivého kalendára a modelových projekcií.'
+            : 'Top-ranked players represent the optimal blend of form, favorable fixtures, and performance projections.'
     },
     transferIndex: {
         label: (lang) => lang === 'sk' ? 'Index prestupu (Algoritmus)' : 'Transfer Index',
@@ -171,11 +171,11 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
     const [selectedPlayerForDetail, setSelectedPlayerForDetail] = useState<FPLPlayer | null>(null);
     const [mobileTab, setMobileTab] = useState<'overview' | 'fixtures' | 'intel'>('overview');
 
-    // Fortuna odds states
+    // Market projection states
     const [oddsData, setOddsData] = useState<FortunaMatch[] | null>(null);
     const [oddsLastUpdated, setOddsLastUpdated] = useState<string | null>(null);
     const [isRefreshingOdds, setIsRefreshingOdds] = useState(false);
-    const showOdds = true; // odds columns always on; cells render nothing when Fortuna data is missing
+    const showOdds = true; // projection columns always on; cells render nothing when projection data is missing
     const [oddsMetric, setOddsMetric] = useState<'cs' | 'goal' | 'assist' | 'ga'>('ga');
     const isOddsEligible = true;
     const effectiveOddsMetric = activePos === 1 ? 'cs' : oddsMetric;
@@ -510,12 +510,12 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                     {isOddsEligible && (
                                         <div className="space-y-1">
                                             <p className="text-amber-400 font-medium flex items-center gap-1">
-                                                <Coins size={12} /> {lang === 'sk' ? 'Stávkové kurzy (Fortuna)' : 'Bookmaker Odds (Fortuna)'}
+                                                <TrendingUp size={12} /> {lang === 'sk' ? 'Modelové projekcie' : 'Performance Projections'}
                                             </p>
                                             <p className="text-slate-500">
                                                 {lang === 'sk'
-                                                    ? 'Kurzy a pravdepodobnosti na gól, asistenciu a celkový kanadský bod (G+A) v najbližšom kole z live kurzov Fortuny alebo z tímového xG modelu.'
-                                                    : 'Odds and probabilities for anytime goalscorer, assists, and total goal involvement (G+A) in the upcoming gameweek derived from Fortuna live lines or team xG expectation.'}
+                                                    ? 'Pravdepodobnosti na gól, asistenciu a celkový kanadský bod (G+A) v najbližšom kole odvodené z trhového konsenzu a tímového xG modelu.'
+                                                    : 'Projected probabilities for anytime goalscorer, assists, and total goal involvement (G+A) in the upcoming gameweek derived from market consensus and team xG expectation.'}
                                             </p>
                                         </div>
                                     )}
@@ -691,8 +691,8 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                 : 'text-slate-400 hover:text-white'
                         }`}
                     >
-                        <Coins size={13} className="shrink-0" />
-                        <span className="truncate">{lang === 'sk' ? 'Kurzy & Top 100' : 'Odds & Top 100'}</span>
+                        <TrendingUp size={13} className="shrink-0" />
+                        <span className="truncate">{lang === 'sk' ? 'Projekcie & Top 100' : 'Projections & Top 100'}</span>
                     </button>
                 </div>
 
@@ -768,12 +768,12 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                 <SortHeader
                                                     label={
                                                         effectiveOddsMetric === 'cs'
-                                                            ? (lang === 'sk' ? 'Č. konto' : 'CS Odds')
+                                                            ? (lang === 'sk' ? 'Č. konto %' : 'CS %')
                                                             : effectiveOddsMetric === 'assist'
-                                                            ? (lang === 'sk' ? 'Asist %' : 'Ast Odds')
+                                                            ? (lang === 'sk' ? 'Asist %' : 'ASSIST %')
                                                             : effectiveOddsMetric === 'ga'
-                                                            ? (lang === 'sk' ? 'G+A %' : 'G+A Odds')
-                                                            : (lang === 'sk' ? 'Gól %' : 'Goal Odds')
+                                                            ? (lang === 'sk' ? 'G+A %' : 'G+A %')
+                                                            : (lang === 'sk' ? 'Gól %' : 'GOAL %')
                                                     }
                                                     sortKey="goalProb"
                                                     align="center"
@@ -937,16 +937,12 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                                 if (!metric || !p.goalscorer) {
                                                                     return <span className="text-slate-600 font-mono text-xs">-</span>;
                                                                 }
-                                                                const metricOdds = metric.odds;
                                                                 const metricProb = metric.prob;
                                                                 return (
                                                                     <div className="flex flex-col items-center justify-center leading-tight">
-                                                                        <div className="flex items-center gap-1">
-                                                                            <span className="font-mono font-bold text-white text-[11px]">
-                                                                                {metricOdds.toFixed(2)}
-                                                                            </span>
+                                                                        <div className="flex items-center justify-center">
                                                                             <span
-                                                                                className={`text-[9px] font-bold px-1 py-0.2 rounded font-mono ${
+                                                                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono ${
                                                                                     metricProb >= 0.40
                                                                                         ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                                                                                         : metricProb >= 0.25
@@ -1186,32 +1182,26 @@ const TransferPicks: React.FC<TransferPicksProps> = ({ players, teams, fixtures,
                                                     if (!metric || !p.goalscorer) {
                                                         return <span className="text-slate-600 font-mono text-xs">-</span>;
                                                     }
-                                                    const metricOdds = metric.odds;
                                                     const metricProb = metric.prob;
 
                                                     return (
                                                         <div className="flex flex-col items-center justify-center gap-0.5">
-                                                            <div className="flex items-center gap-1">
-                                                                <span className="font-mono font-bold text-white text-xs">
-                                                                    {metricOdds.toFixed(2)}
-                                                                </span>
-                                                                <span
-                                                                    className={`text-[9px] font-bold px-1 py-0.2 rounded font-mono ${
-                                                                        metricProb >= 0.40
-                                                                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
-                                                                            : metricProb >= 0.25
-                                                                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.15)]'
-                                                                            : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                                                                    }`}
-                                                                    title={
-                                                                        lang === 'sk'
-                                                                            ? `${effectiveOddsMetric === 'cs' ? 'Šanca na čisté konto' : effectiveOddsMetric === 'assist' ? 'Šanca na asistenciu' : effectiveOddsMetric === 'ga' ? 'Šanca na gól alebo asistenciu' : 'Šanca na gól'}: ${Math.round(metricProb * 100)}% (Fortuna Live kurz)`
-                                                                            : `${effectiveOddsMetric === 'cs' ? 'Clean sheet probability' : effectiveOddsMetric === 'assist' ? 'Assist probability' : effectiveOddsMetric === 'ga' ? 'Goal or Assist probability' : 'Goal probability'}: ${Math.round(metricProb * 100)}% (Fortuna Live)`
-                                                                    }
-                                                                >
-                                                                    {Math.round(metricProb * 100)}%
-                                                                </span>
-                                                            </div>
+                                                            <span
+                                                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono ${
+                                                                    metricProb >= 0.40
+                                                                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                                                                        : metricProb >= 0.25
+                                                                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.15)]'
+                                                                        : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                                                }`}
+                                                                title={
+                                                                    lang === 'sk'
+                                                                        ? `${effectiveOddsMetric === 'cs' ? 'Šanca na čisté konto' : effectiveOddsMetric === 'assist' ? 'Šanca na asistenciu' : effectiveOddsMetric === 'ga' ? 'Šanca na gól alebo asistenciu' : 'Šanca na gól'}: ${Math.round(metricProb * 100)}%`
+                                                                        : `${effectiveOddsMetric === 'cs' ? 'Clean sheet probability' : effectiveOddsMetric === 'assist' ? 'Assist probability' : effectiveOddsMetric === 'ga' ? 'Goal or Assist probability' : 'Goal probability'}: ${Math.round(metricProb * 100)}%`
+                                                                }
+                                                            >
+                                                                {Math.round(metricProb * 100)}%
+                                                            </span>
                                                             <span className="text-[9px] text-slate-400">
                                                                 vs {metric.opponentShort || p.goalscorer.opponentShort} ({(metric.isHome ?? p.goalscorer.isHome) ? (lang === 'sk' ? 'D' : 'H') : (lang === 'sk' ? 'V' : 'A')})
                                                             </span>

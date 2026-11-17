@@ -10,7 +10,7 @@ VALUES (
 
 Gameweek 28 presents a classic FPL dilemma: do you play it safe with the most owned player in the game, or do you take a calculated risk to climb the rankings? With the title race heating up, the traditional "set and forget" captaincy on Erling Haaland is being questioned by the top 10k managers.
 
-## The Safe Bet: Erling Haaland (v Everton, Home)
+## The Safe Pick: Erling Haaland (v Everton, Home)
 
 It is hard to ignore a man who averages nearly an attacking return per start at the Etihad. Everton have showed defensive resilience recently, but the sheer volume of chances Manchester City creates usually overwhelms low blocks.
 
@@ -19,7 +19,7 @@ It is hard to ignore a man who averages nearly an attacking return per start at 
 - Big Chances: 4 in the last 3 matches
 - Ownership: >85%
 
-If you don''t captain him, you are effectively betting against the most explosive asset in the league. Is the risk worth the reward?
+If you don''t captain him, you are effectively going against the most explosive asset in the league. Is the risk worth the reward?
 
 ## The Explosive Alternative: Bukayo Saka (v Leicester, Home)
 

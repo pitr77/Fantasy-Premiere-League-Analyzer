@@ -93,7 +93,7 @@ export default async function Image() {
                             fontWeight: 500,
                         }}
                     >
-                        Top 100 Manager Tracking · Dynamic FDR Matrix · Bookmaker Odds Integration · Squad Strategy Simulator
+                        Top 100 Manager Tracking · Dynamic FDR Matrix · Performance Projections · Squad Strategy Simulator
                     </div>
                 </div>
 
@@ -136,7 +136,7 @@ export default async function Image() {
                             fontWeight: 700,
                         }}
                     >
-                        🎲 Clean Sheet & Goal Odds
+                        🎯 Clean Sheet & Goal Projections
                     </div>
                     <div
                         style={{

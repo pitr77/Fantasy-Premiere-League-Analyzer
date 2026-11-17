@@ -23,7 +23,6 @@ import {
   Zap,
   Sparkles,
   BarChart3,
-  Coins,
   History,
   Info,
   ArrowLeftRight
@@ -663,7 +662,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
 
           {!loading && (
             <div className="space-y-6">
-              {/* Fortuna Odds Breakdown for GKP, DEF, MID, FWD (Live Fortuna only, scrolls with content) */}
+              {/* Performance Projections Breakdown for GKP, DEF, MID, FWD (scrolls with content) */}
               {oddsData && player && (() => {
                 const nextEventId = upcomingFixtures[0]?.event || 1;
                 const oddsRes = getGoalscorerOdds(player, teams, fixtures, nextEventId, oddsData);
@@ -680,10 +679,10 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                   <div className="bg-amber-500/10 border border-amber-500/25 p-3.5 rounded-xl shadow-inner">
                     <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                        <Coins size={12} />
+                        <Target size={12} />
                         {lang === 'sk'
-                          ? `Reálne kurzy Fortuna (Najbližší zápas · GW${nextEventId})`
-                          : `Fortuna Live Odds (Next Match · GW${nextEventId})`}
+                          ? `Modelové šance na výkon (Najbližší zápas · GW${nextEventId})`
+                          : `Performance Projections (Next Match · GW${nextEventId})`}
                       </span>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -693,8 +692,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                           <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Čisté konto' : 'Clean Sheet'}</span>
                           {hasLiveCS && oddsRes.cleanSheet ? (
                             <>
-                              <span className="text-white font-mono font-bold text-sm mt-0.5">{oddsRes.cleanSheet.odds.toFixed(2)}</span>
-                              <span className="text-xs text-cyan-300 font-bold">{Math.round(oddsRes.cleanSheet.prob * 100)}%</span>
+                              <span className="text-sm text-cyan-300 font-bold mt-1">{Math.round(oddsRes.cleanSheet.prob * 100)}%</span>
                               <span className="text-[8px] text-slate-500 mt-0.5">vs {oddsRes.cleanSheet.opponentShort || oddsRes.opponentShort}</span>
                             </>
                           ) : (
@@ -709,8 +707,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                             <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Gól' : 'Goal'}</span>
                             {hasLiveGoal ? (
                               <>
-                                <span className="text-white font-mono font-bold text-sm mt-0.5">{oddsRes.goal.odds.toFixed(2)}</span>
-                                <span className="text-xs text-amber-300 font-bold">{Math.round(oddsRes.goal.prob * 100)}%</span>
+                                <span className="text-sm text-amber-300 font-bold mt-1">{Math.round(oddsRes.goal.prob * 100)}%</span>
                                 <span className="text-[8px] text-slate-500 mt-0.5">vs {oddsRes.goal.opponentShort || oddsRes.opponentShort}</span>
                               </>
                             ) : (
@@ -722,8 +719,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                             <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Asistencia' : 'Assist'}</span>
                             {hasLiveAssist ? (
                               <>
-                                <span className="text-white font-mono font-bold text-sm mt-0.5">{oddsRes.assist.odds.toFixed(2)}</span>
-                                <span className="text-xs text-blue-300 font-bold">{Math.round(oddsRes.assist.prob * 100)}%</span>
+                                <span className="text-sm text-blue-300 font-bold mt-1">{Math.round(oddsRes.assist.prob * 100)}%</span>
                                 <span className="text-[8px] text-slate-500 mt-0.5">vs {oddsRes.assist.opponentShort || oddsRes.opponentShort}</span>
                               </>
                             ) : (
@@ -735,8 +731,7 @@ export const PlayerDetailModal: React.FC<PlayerDetailModalProps> = ({
                             <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{lang === 'sk' ? 'Gól + Asist.' : 'G+A'}</span>
                             {hasLiveGA ? (
                               <>
-                                <span className="text-white font-mono font-bold text-sm mt-0.5">{oddsRes.goalOrAssist.odds.toFixed(2)}</span>
-                                <span className="text-xs text-emerald-300 font-bold">{Math.round(oddsRes.goalOrAssist.prob * 100)}%</span>
+                                <span className="text-sm text-emerald-300 font-bold mt-1">{Math.round(oddsRes.goalOrAssist.prob * 100)}%</span>
                                 <span className="text-[8px] text-slate-500 mt-0.5">vs {oddsRes.goalOrAssist.opponentShort || oddsRes.opponentShort}</span>
                               </>
                             ) : (

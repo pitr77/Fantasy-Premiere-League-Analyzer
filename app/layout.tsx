@@ -10,19 +10,19 @@ const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
 export const metadata: Metadata = {
   title: {
-    default: 'FPL Studio — AI-Powered Fantasy Premier League Analytics & Tools',
+    default: 'FPL Studio — Free Fantasy Premier League Analytics & Tools',
     template: '%s | FPL Studio',
   },
   description:
-    'Free AI-powered Fantasy Premier League analytics: Top 100 manager tracker, dynamic FDR fixture difficulty, bookmaker odds, and AI gameweek previews.',
+    'Free Fantasy Premier League analytics platform: Top 100 manager tracking, dynamic FDR fixture difficulty, player performance projections, and AI gameweek previews.',
   metadataBase: new URL(siteUrl),
   alternates: {
     canonical: siteUrl,
   },
   openGraph: {
-    title: 'FPL Studio — AI-Powered Fantasy Premier League Analytics',
+    title: 'FPL Studio — Free Fantasy Premier League Analytics & Tools',
     description:
-      'Free FPL tools: Top 100 manager consensus, dynamic FDR matrix, transfer picks with live bookmaker odds, and AI gameweek previews.',
+      'Free FPL tools: Top 100 manager consensus, dynamic FDR matrix, transfer picks with player performance projections, and AI gameweek previews.',
     siteName: 'FPL Studio',
     type: 'website',
     locale: 'en_GB',
@@ -30,9 +30,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'FPL Studio — AI-Powered FPL Analytics',
+    title: 'FPL Studio — Free FPL Analytics & Decision Support',
     description:
-      'Free FPL tools: Top 100 manager consensus, dynamic FDR matrix, transfer picks with live bookmaker odds, and AI gameweek previews.',
+      'Free FPL tools: Top 100 manager consensus, dynamic FDR matrix, transfer picks with player performance projections, and AI gameweek previews.',
   },
   robots: {
     index: true,
@@ -55,8 +55,8 @@ export const metadata: Metadata = {
   keywords: [
     'FPL', 'Fantasy Premier League', 'FPL analytics', 'FPL tools', 'FPL planner',
     'FPL transfer planner', 'FPL captain picks', 'FPL FDR matrix', 'fixture difficulty rating',
-    'top 100 FPL managers', 'FPL template', 'FPL odds', 'clean sheet odds', 'anytime goalscorer odds',
-    'FPL scout', 'FPL gameweek preview', 'FPL AI', 'FPL expected goals', 'xG xA xGI',
+    'top 100 FPL managers', 'FPL template', 'clean sheet probability', 'goalscorer predictions',
+    'player projections', 'FPL scout', 'FPL gameweek preview', 'FPL AI', 'FPL expected goals', 'xG xA xGI',
     'FPL squad builder', 'fantasy football tips', 'Premier League fantasy'
   ],
 };
@@ -69,7 +69,7 @@ const jsonLdData = {
       '@id': `${siteUrl}/#website`,
       url: siteUrl,
       name: 'FPL Studio',
-      description: 'Free AI-powered Fantasy Premier League analytics, Top 100 manager tracking, dynamic FDR, and bookmaker odds.',
+      description: 'Free Fantasy Premier League analytics, Top 100 manager tracking, dynamic FDR matrix, and player performance projections.',
       inLanguage: 'en-GB',
     },
     {
@@ -87,7 +87,7 @@ const jsonLdData = {
       featureList: [
         'Top 100 FPL Managers Consensus Tracker',
         'Dynamic FDR (Fixture Difficulty Rating)',
-        'Transfer Picks with Bookmaker Clean Sheet & Goalscorer Odds',
+        'Transfer Picks with Clean Sheet & Goalscorer Probabilities',
         'Interactive Gameweek Match Log & Player Detail Drill-down',
         'AI Gameweek Scout Previews & Tactical Analysis',
         'FPL Squad Simulator & Multi-Gameweek Strategy Planner'
@@ -142,8 +142,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           // Keep existing global styles (font + scrollbar) from the old index.html.
           dangerouslySetInnerHTML={{
             __html: `
-              html { background-color: #0f172a; visibility: hidden; }
-              html.tw-ready { visibility: visible; }
+              html { background-color: #0f172a; }
               body { font-family: 'Inter', sans-serif; background-color: #0f172a; margin: 0; }
               ::-webkit-scrollbar { width: 8px; height: 8px; }
               ::-webkit-scrollbar-track { background: #1f2937; }
@@ -152,24 +151,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             `,
           }}
         />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-               (function() {
-                 const check = () => {
-                   if (window.tailwind) {
-                     document.documentElement.classList.add('tw-ready');
-                   } else {
-                     setTimeout(check, 10);
-                   }
-                 };
-                 check();
-                 // Fallback to show items anyway if CDN fails after 2s
-                 setTimeout(() => document.documentElement.classList.add('tw-ready'), 2000);
-               })();
-             `
-          }}
-        />
+
       </head>
       <body className="bg-slate-900 text-gray-100" suppressHydrationWarning>
         <Suspense fallback={null}>

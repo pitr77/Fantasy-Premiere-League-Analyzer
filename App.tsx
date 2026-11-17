@@ -66,6 +66,9 @@ function App() {
   const [view, setView] = useState<View>(View.FIXTURES);
   const PRO_PAYWALL_ENABLED = false;
   const ENABLE_EXPERIMENTAL_SECTIONS = false;
+  const IS_LOCAL_DEV =
+    process.env.NODE_ENV === 'development' ||
+    (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
   const DEV_AUTH_BYPASS =
     process.env.NODE_ENV === 'development' &&
     (process.env.NEXT_PUBLIC_AUTH_BYPASS === '1' ||
@@ -153,16 +156,100 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-20 h-20 bg-slate-900 border border-white/10 rounded-2xl flex items-center justify-center shadow-2xl mb-8">
-          <RefreshCw className="w-10 h-10 text-purple-400 animate-spin" />
-        </div>
-        <div className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400 tracking-tighter mb-2">
-          FPL STUDIO
-        </div>
-        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest animate-pulse">
-          Connecting to FPL...
-        </p>
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between">
+        {/* Top Header Shell */}
+        <header className="h-16 border-b border-slate-800 bg-slate-900/90 px-4 md:px-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400 tracking-tighter">
+              FPL STUDIO
+            </span>
+            <span className="hidden sm:inline-block text-xs uppercase tracking-wider text-slate-400 border-l border-slate-700 pl-3 font-semibold">
+              Free Fantasy Premier League Analytics
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-purple-300 bg-purple-950/40 border border-purple-500/30 px-3 py-1.5 rounded-lg font-bold">
+            <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-400" />
+            <span>Connecting to FPL...</span>
+          </div>
+        </header>
+
+        {/* Substantive Content Shell (Rendered on SSR & while hydrating) */}
+        <main className="max-w-7xl mx-auto px-4 md:px-8 py-8 w-full flex-1 flex flex-col justify-center">
+          <div className="text-center max-w-3xl mx-auto mb-10">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white mb-3">
+              Fantasy Premier League Analytics & Tools
+            </h1>
+            <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
+              FPL Studio is a free decision-support suite providing real-time data, Top 100 manager consensus,
+              dynamic fixture difficulty ratings (FDR), player performance projections, and AI gameweek previews.
+            </p>
+          </div>
+
+          {/* Core Analytics Capabilities Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+            <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-lg">
+              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-3 font-bold">
+                01
+              </div>
+              <h2 className="text-base font-bold text-white mb-1.5">Top 100 Elite Tracker</h2>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Live consensus transfers in/out, captaincy picks, and squad templates from the world&apos;s top-ranked managers.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-lg">
+              <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-3 font-bold">
+                02
+              </div>
+              <h2 className="text-base font-bold text-white mb-1.5">Dynamic FDR Matrix</h2>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Matchup difficulty recalibrated after every gameweek based on rolling form, home/away splits, and goal threat.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-lg">
+              <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-3 font-bold">
+                03
+              </div>
+              <h2 className="text-base font-bold text-white mb-1.5">Transfer Picks & Projections</h2>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Algorithmic transfer recommendations blending expected goals (xG), assists (xA), and modeled clean sheet likelihoods.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-lg">
+              <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-3 font-bold">
+                04
+              </div>
+              <h2 className="text-base font-bold text-white mb-1.5">AI Scout Previews</h2>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Tactical previews, captaincy recommendations, and differential picks generated before every gameweek deadline.
+              </p>
+            </div>
+          </div>
+        </main>
+
+        {/* Persistent Non-Gambling Compliance Footer */}
+        <footer className="border-t border-slate-800/80 bg-slate-950/80 py-6 px-4 text-center text-xs text-slate-500">
+          <div className="max-w-4xl mx-auto space-y-2">
+            <div className="flex flex-wrap items-center justify-center gap-2 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
+              <span>FPL Studio</span>
+              <span>•</span>
+              <span>Free Fantasy Premier League Analytics</span>
+              <span>•</span>
+              <span>Not Premier League Affiliated</span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              FPL Studio is a free decision-support and statistics platform built for Fantasy Premier League managers. 
+              FPL Studio is not a gambling operator, does not offer sports betting, does not accept wagers or stakes, 
+              and does not offer cash prizes. All statistical projections, player likelihoods, and difficulty ratings 
+              are mathematical estimates provided strictly for informational and fantasy entertainment purposes.
+            </p>
+            <p className="text-[10px] text-slate-600">
+              Data sourced from the official Fantasy Premier League API. Premier League and FPL are registered trademarks of The Football Association Premier League Limited.
+            </p>
+          </div>
+        </footer>
       </div>
     );
   }
@@ -283,8 +370,8 @@ function App() {
           type="button"
           onClick={() => setLang('sk')}
           className={`px-2 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 ${lang === 'sk'
-              ? 'bg-purple-600 text-white shadow-sm'
-              : 'text-slate-400 hover:text-white'
+            ? 'bg-purple-600 text-white shadow-sm'
+            : 'text-slate-400 hover:text-white'
             }`}
           title="Slovenčina"
         >
@@ -295,8 +382,8 @@ function App() {
           type="button"
           onClick={() => setLang('en')}
           className={`px-2 py-1 rounded text-xs font-bold transition-all flex items-center gap-1 ${lang === 'en'
-              ? 'bg-purple-600 text-white shadow-sm'
-              : 'text-slate-400 hover:text-white'
+            ? 'bg-purple-600 text-white shadow-sm'
+            : 'text-slate-400 hover:text-white'
             }`}
           title="English"
         >
@@ -341,7 +428,7 @@ function App() {
             <HeaderNavItem v={View.LEAGUE_TABLE} label={t('nav_league_table', lang)} />
             <HeaderNavItem v={View.TEAM_ANALYSIS} label={t('nav_team_analysis', lang)} />
             <HeaderNavItem v={View.TOP_MANAGERS} label={t('nav_top_managers', lang)} />
-            <HeaderNavItem v={View.LEAGUE_OWNERSHIP} label={t('nav_league_ownership', lang)} />
+            {IS_LOCAL_DEV && <HeaderNavItem v={View.LEAGUE_OWNERSHIP} label={t('nav_league_ownership', lang)} />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.OPTIMAL_SQUAD} label={t('nav_optimal_squad', lang)} />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <HeaderNavItem v={View.TEAM} label={t('nav_my_team', lang)} />}
           </nav>
@@ -407,7 +494,7 @@ function App() {
             <NavItem v={View.TEAM_ANALYSIS} label={t('nav_team_analysis', lang)} icon={Search} />
             <NavItem v={View.DETAILED_STATS} label={lang === 'sk' ? 'Detailné analýzy' : 'Detailed Analyses'} icon={Activity} />
             <NavItem v={View.TOP_MANAGERS} label={t('nav_top_managers', lang)} icon={Users} />
-            <NavItem v={View.LEAGUE_OWNERSHIP} label={t('nav_league_ownership', lang)} icon={Trophy} />
+            {IS_LOCAL_DEV && <NavItem v={View.LEAGUE_OWNERSHIP} label={t('nav_league_ownership', lang)} icon={Trophy} />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.OPTIMAL_SQUAD} label={t('nav_optimal_squad', lang)} icon={Zap} />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.TEAM} label={t('nav_my_team', lang)} icon={Shirt} />}
             {ENABLE_EXPERIMENTAL_SECTIONS && <NavItem v={View.COMPARE_MODE} label={lang === 'sk' ? 'Porovnanie' : 'Compare Mode'} icon={Split} />}
@@ -470,7 +557,7 @@ function App() {
             {view === View.STATS && <PlayerStats players={data.elements} teams={data.teams} fixtures={fixtures} />}
             {view === View.DETAILED_STATS && <DetailedStats players={data.elements} teams={data.teams} />}
             {view === View.TOP_MANAGERS && <TopManagers players={data.elements} teams={data.teams} fixtures={fixtures} />}
-            {view === View.LEAGUE_OWNERSHIP && (
+            {view === View.LEAGUE_OWNERSHIP && (IS_LOCAL_DEV ? (
               <LeagueOwnership
                 players={data.elements}
                 teams={data.teams}
@@ -478,9 +565,29 @@ function App() {
                 fixtures={fixtures}
                 initialLeagueId={1286619}
               />
-            )}
+            ) : null)}
             {view === View.COMPARE_MODE && <CompareMode data={data} fixtures={fixtures} />}
             {view === View.CHALLENGE && <MiniChallenge players={data.elements} teams={data.teams} fixtures={fixtures} events={data.events} />}
+
+            {/* Persistent Compliance & Trust Footer */}
+            <footer className="mt-16 pt-8 pb-12 border-t border-slate-800 text-center text-xs text-slate-500 space-y-3">
+              <div className="flex flex-wrap items-center justify-center gap-2 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
+                <span>FPL Studio</span>
+                <span>•</span>
+                <span>Free Fantasy Premier League Analytics</span>
+                <span>•</span>
+                <span>Not Premier League Affiliated</span>
+              </div>
+              <p className="max-w-3xl mx-auto leading-relaxed text-slate-400 text-[11px]">
+                FPL Studio is a free decision-support and statistics platform built for Fantasy Premier League managers. 
+                FPL Studio is not a gambling operator, does not offer sports betting, does not accept wagers or stakes, 
+                and does not offer cash prizes. All statistical projections, player likelihoods, and difficulty ratings 
+                are mathematical estimates provided strictly for informational and fantasy entertainment purposes.
+              </p>
+              <p className="text-[10px] text-slate-600">
+                Data sourced from the official Fantasy Premier League API. Premier League and FPL are registered trademarks of The Football Association Premier League Limited.
+              </p>
+            </footer>
           </div>
         </main>
       </div>

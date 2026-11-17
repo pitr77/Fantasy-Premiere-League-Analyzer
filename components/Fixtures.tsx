@@ -27,10 +27,6 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
     const [plannerSortMode, setPlannerSortMode] = useState<'none' | 'asc' | 'desc'>('none');
     const [expandedTeamId, setExpandedTeamId] = useState<number | null>(null);
     const [oddsData, setOddsData] = useState<FortunaMatch[] | null>(null);
-    const [oddsLastUpdated, setOddsLastUpdated] = useState<string | null>(null);
-    const [isRefreshingOdds, setIsRefreshingOdds] = useState(false);
-    const [refreshStatus, setRefreshStatus] = useState<'idle' | 'success' | 'error'>('idle');
-    const [showOdds, setShowOdds] = useState(true);
 
     useEffect(() => {
         fetch('/api/odds')
@@ -38,47 +34,10 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
             .then(data => {
                 if (data.available && Array.isArray(data.matches)) {
                     setOddsData(data.matches);
-                    if (data.fetchedAt) setOddsLastUpdated(data.fetchedAt);
                 }
             })
             .catch(() => {});
     }, []);
-
-    const formatLastUpdated = (dateStr: string | null) => {
-        if (!dateStr) return null;
-        try {
-            const date = new Date(dateStr);
-            const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const day = date.toLocaleDateString([], { day: 'numeric', month: 'numeric' });
-            return `${time}, ${day}`;
-        } catch {
-            return null;
-        }
-    };
-
-    const handleRefreshOdds = async () => {
-        if (isRefreshingOdds) return;
-        setIsRefreshingOdds(true);
-        setRefreshStatus('idle');
-        try {
-            const res = await fetch('/api/odds', { method: 'POST' });
-            const data = await res.json();
-            if (data.success && Array.isArray(data.matches)) {
-                setOddsData(data.matches);
-                if (data.fetchedAt) setOddsLastUpdated(data.fetchedAt);
-                setRefreshStatus('success');
-                setTimeout(() => setRefreshStatus('idle'), 3000);
-            } else {
-                setRefreshStatus('error');
-                setTimeout(() => setRefreshStatus('idle'), 4000);
-            }
-        } catch {
-            setRefreshStatus('error');
-            setTimeout(() => setRefreshStatus('idle'), 4000);
-        } finally {
-            setIsRefreshingOdds(false);
-        }
-    };
 
     const oddsMap = useMemo(() => {
         const map = new Map<string, FortunaMatch>();
@@ -414,138 +373,6 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
     };
 
 
-    // --- Render Components & Odds Helpers ---
-
-    const renderCleanSheetBadge = (cs: { yes: number; no: number; prob: number } | null | undefined, teamName: string) => {
-        if (!cs) return null;
-        const pct = Math.round(cs.prob * 100);
-        const fillPercent = Math.min(100, Math.round((cs.prob / 0.45) * 100));
-
-        let containerClass = "bg-slate-900/60 border-slate-800/70 text-slate-500 opacity-80";
-        let iconClass = "text-slate-600";
-        let barClass = "bg-slate-600";
-        let textClass = "text-slate-400";
-        let labelTag: string | null = null;
-
-        if (pct >= 38) {
-            containerClass = "bg-emerald-950/80 border-emerald-400 text-emerald-100 shadow-[0_0_12px_rgba(16,185,129,0.35)] ring-1 ring-emerald-400/40";
-            iconClass = "text-emerald-300";
-            barClass = "bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.9)]";
-            textClass = "text-emerald-200 font-black";
-            labelTag = "TOP CS";
-        } else if (pct >= 28) {
-            containerClass = "bg-teal-950/60 border-teal-500/50 text-teal-200 shadow-[0_0_8px_rgba(20,184,166,0.2)]";
-            iconClass = "text-teal-400";
-            barClass = "bg-teal-400";
-            textClass = "text-teal-200 font-bold";
-        } else if (pct >= 20) {
-            containerClass = "bg-slate-800/80 border-slate-700 text-slate-300";
-            iconClass = "text-slate-400";
-            barClass = "bg-slate-400";
-            textClass = "text-slate-200";
-        }
-
-        return (
-            <div
-                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[10px] transition-all ${containerClass}`}
-                title={`Šanca na čisté konto pre ${teamName}: ${pct}% (kurz ${cs.yes.toFixed(2)})`}
-            >
-                <Shield size={11} className={`${iconClass} shrink-0`} />
-                <span className="font-bold text-[9px] uppercase tracking-tight">CS</span>
-                <span className={`font-mono ${textClass}`}>{pct}%</span>
-                {labelTag && (
-                    <span className="text-[8px] bg-emerald-500/30 text-emerald-300 px-1 py-0.2 rounded font-black uppercase tracking-tighter">
-                        {labelTag}
-                    </span>
-                )}
-                {/* Visual Mini Progress Bar (Pás) */}
-                <div className="w-5 sm:w-6 h-1.5 bg-slate-950/80 rounded-full overflow-hidden shrink-0 border border-white/5">
-                    <div
-                        style={{ width: `${fillPercent}%` }}
-                        className={`h-full rounded-full transition-all duration-500 ${barClass}`}
-                    />
-                </div>
-            </div>
-        );
-    };
-
-    const renderOverUnderBadge = (ou: { over: number; under: number; overProb: number | null } | null | undefined) => {
-        if (!ou || ou.overProb === null) return null;
-        const pct = Math.round(ou.overProb * 100);
-        const isHigh = pct >= 58;
-        const fillPercent = Math.min(100, Math.round((ou.overProb / 0.70) * 100));
-
-        let containerClass = "bg-slate-800/80 border-slate-700 text-slate-300";
-        let barClass = "bg-slate-500";
-        let textClass = "text-slate-200";
-
-        if (isHigh) {
-            containerClass = "bg-purple-950/85 border-purple-500/70 text-purple-200 shadow-[0_0_12px_rgba(168,85,247,0.35)] ring-1 ring-purple-400/30";
-            barClass = "bg-gradient-to-r from-purple-400 to-pink-400 shadow-[0_0_6px_rgba(168,85,247,0.9)]";
-            textClass = "text-purple-100 font-black";
-        }
-
-        return (
-            <div
-                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[10px] transition-all ${containerClass}`}
-                title={`Viac ako 2.5 gólu: ${pct}% (kurz ${ou.over.toFixed(2)})`}
-            >
-                <span className="font-extrabold text-[9px] text-purple-300 font-mono">+2.5</span>
-                <span className={`font-mono ${textClass}`}>{pct}%</span>
-                {/* Visual Mini Progress Bar (Pás) */}
-                <div className="w-5 sm:w-6 h-1.5 bg-slate-950/80 rounded-full overflow-hidden shrink-0 border border-white/5">
-                    <div
-                        style={{ width: `${fillPercent}%` }}
-                        className={`h-full rounded-full transition-all duration-500 ${barClass}`}
-                    />
-                </div>
-            </div>
-        );
-    };
-
-    const renderWinOddsBadge = (
-        type: '1' | '2',
-        odds: number | undefined,
-        prob: number | undefined,
-        teamName: string,
-        isHome: boolean
-    ) => {
-        if (!odds) return null;
-        const pct = prob ? Math.round(prob * 100) : null;
-        const isSuperFav = (prob ?? 0) >= 0.60;
-        const isFav = (prob ?? 0) >= 0.48;
-
-        let badgeStyle = "bg-slate-800 border-slate-700 text-slate-200";
-        let pctColor = "text-slate-400";
-
-        if (isSuperFav) {
-            badgeStyle = isHome
-                ? "bg-emerald-950/90 border-emerald-400 text-emerald-200 font-black shadow-[0_0_12px_rgba(16,185,129,0.35)] ring-1 ring-emerald-400/40"
-                : "bg-indigo-950/90 border-indigo-400 text-indigo-200 font-black shadow-[0_0_12px_rgba(99,102,241,0.35)] ring-1 ring-indigo-400/40";
-            pctColor = isHome ? "text-emerald-300" : "text-indigo-300";
-        } else if (isFav) {
-            badgeStyle = isHome
-                ? "bg-emerald-950/60 border-emerald-500/50 text-emerald-300 font-bold"
-                : "bg-indigo-950/60 border-indigo-500/50 text-indigo-300 font-bold";
-            pctColor = isHome ? "text-emerald-300" : "text-indigo-300";
-        }
-
-        return (
-            <div
-                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-mono transition-all ${badgeStyle}`}
-                title={`Kurz na výhru ${teamName}: ${odds.toFixed(2)}${pct ? ` (${pct}%)` : ''}`}
-            >
-                <span className="text-[9px] font-sans font-black text-slate-400 uppercase">{type}</span>
-                <span className="font-bold">{odds.toFixed(2)}</span>
-                {pct !== null && (
-                    <span className={`text-[10px] font-sans font-extrabold ${pctColor}`}>
-                        {pct}%
-                    </span>
-                )}
-            </div>
-        );
-    };
-
     const renderSchedule = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
@@ -570,18 +397,12 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                         const awayCsProb = fixtureOdds?.cleanSheet?.away?.prob ?? 0;
                         const over25Prob = fixtureOdds?.overUnder25?.overProb ?? null;
 
-                        const homeWinOdds = fixtureOdds?.odds?.home;
-                        const drawWinOdds = fixtureOdds?.odds?.draw;
-                        const awayWinOdds = fixtureOdds?.odds?.away;
-                        const homeCsOdds = fixtureOdds?.cleanSheet?.home?.yes;
-                        const awayCsOdds = fixtureOdds?.cleanSheet?.away?.yes;
-                        const over25Odds = fixtureOdds?.overUnder25?.over;
                         const topScorer = topScorersByFixture.get(fixture.id);
 
                         let cardBorderAccent = "border-slate-700";
-                        if (showOdds && (homeWinProb >= 0.60 || homeCsProb >= 0.38)) {
+                        if (homeWinProb >= 0.60 || homeCsProb >= 0.38) {
                             cardBorderAccent = "border-slate-700 border-l-4 border-l-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.08)]";
-                        } else if (showOdds && (awayWinProb >= 0.60 || awayCsProb >= 0.38)) {
+                        } else if (awayWinProb >= 0.60 || awayCsProb >= 0.38) {
                             cardBorderAccent = "border-slate-700 border-r-4 border-r-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.08)]";
                         }
 
@@ -643,8 +464,8 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                                     </div>
                                 </div>
 
-                                {/* Fortuna Odds Section - Sleek Win Probability Bar & FPL Metric Cards */}
-                                {showOdds && fixtureOdds && (
+                                {/* Sleek Win Probability Bar & FPL Metric Cards */}
+                                {fixtureOdds && (
                                     <div className="border-t border-slate-700/60 bg-slate-900/90 px-3 md:px-5 py-3 space-y-2.5">
                                         {/* 1. Visual 1-X-2 Win Probability Bar (Hrubý, čitateľný pruh) */}
                                         {fixtureOdds.probabilities && (() => {
@@ -734,11 +555,6 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            {homeCsOdds && (
-                                                                <span className="text-[10px] text-white font-sans font-bold bg-black/40 border border-white/10 px-1.5 py-0.5 rounded shrink-0">
-                                                                    kurz {homeCsOdds.toFixed(2)}
-                                                                </span>
-                                                            )}
                                                         </div>
                                                     </div>
 
@@ -757,12 +573,7 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                                                         />
                                                         {/* Text Layer Above */}
                                                         <div className="relative z-10 flex items-center justify-between w-full text-white font-sans text-xs font-bold gap-1">
-                                                            {awayCsOdds && (
-                                                                <span className="text-[10px] text-white font-sans font-bold bg-black/40 border border-white/10 px-1.5 py-0.5 rounded shrink-0">
-                                                                    kurz {awayCsOdds.toFixed(2)}
-                                                                </span>
-                                                            )}
-                                                            <div className="flex items-center gap-1.5 truncate justify-end">
+                                                            <div className="flex items-center gap-1.5 truncate justify-end w-full">
                                                                 {awayCsProb >= 0.38 && (
                                                                     <span className="text-[8px] bg-emerald-500/40 text-emerald-200 border border-emerald-400/50 px-1 py-0.2 rounded font-black hidden sm:inline uppercase">
                                                                         TOP CS
@@ -804,14 +615,6 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                                                                 {topScorer.prob}%
                                                             </span>
                                                         </div>
-                                                        {topScorer.odds && (
-                                                            <span
-                                                                className="text-[10px] text-white font-sans font-bold bg-black/40 border border-white/10 px-1.5 py-0.5 rounded shrink-0 shadow-sm"
-                                                                title={topScorer.source === 'fortuna_live' ? 'Fortuna Live kurz na gól' : 'Odhadnutý kurz na gól podľa xG a formy'}
-                                                            >
-                                                                kurz {topScorer.odds.toFixed(2)}
-                                                            </span>
-                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -1126,7 +929,7 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                     </button>
                 </div>
 
-                {/* Gameweek Selector & Fortuna Odds (Schedule & Matrix only) */}
+                {/* Gameweek Selector (Schedule & Matrix only) */}
                 {activeTab !== 'reality' && (
                     <div className="flex items-center gap-2 flex-wrap self-start md:self-auto">
                         {/* Gameweek Selector with Navigation */}
@@ -1160,40 +963,6 @@ const Fixtures: React.FC<FixturesProps> = ({ fixtures, teams, events, players })
                                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 disabled:opacity-30 transition-colors"
                             >
                                 <ChevronRight size={14} />
-                            </button>
-                        </div>
-
-                        {/* Fortuna Odds Toggle & Refresh Controls */}
-                        <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center gap-1 shadow-sm">
-                            <button
-                                onClick={() => setShowOdds(!showOdds)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 ${
-                                    showOdds
-                                        ? 'bg-slate-600/50 text-slate-100 border-slate-500/60 shadow-sm'
-                                        : 'border-transparent text-slate-400 hover:text-slate-200'
-                                }`}
-                                title="Zobraziť stávkové kurzy z Fortuna.sk"
-                            >
-                                <span>Kurzy Fortuna</span>
-                                {oddsData && oddsData.length > 0 && (
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Kurzy sú aktívne"></span>
-                                )}
-                            </button>
-
-                            <button
-                                onClick={handleRefreshOdds}
-                                disabled={isRefreshingOdds}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors disabled:opacity-50"
-                                title={
-                                    oddsLastUpdated
-                                        ? `Naposledy aktualizované: ${formatLastUpdated(oddsLastUpdated)}. Kliknutím stiahnete najčerstvejšie kurzy z Fortuna.sk`
-                                        : 'Stiahnuť aktuálne kurzy z Fortuna.sk'
-                                }
-                            >
-                                <RefreshCw
-                                    size={13}
-                                    className={`${isRefreshingOdds ? 'animate-spin text-amber-400' : refreshStatus === 'success' ? 'text-emerald-400' : 'text-slate-400'}`}
-                                />
                             </button>
                         </div>
                     </div>
