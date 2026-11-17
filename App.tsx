@@ -169,7 +169,7 @@ function App() {
           </div>
           <div className="flex items-center gap-2 text-xs text-purple-300 bg-purple-950/40 border border-purple-500/30 px-3 py-1.5 rounded-lg font-bold">
             <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-400" />
-            <span>Connecting to FPL...</span>
+            <span>Syncing live gameweek stats...</span>
           </div>
         </header>
 

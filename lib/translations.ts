@@ -15,7 +15,7 @@ export const dict = {
   nav_scout: { en: 'FPL Scout', sk: 'FPL Skaut' },
   nav_sign_in: { en: 'Sign in', sk: 'Prihlásiť sa' },
   nav_sign_out: { en: 'Sign out', sk: 'Odhlásiť sa' },
-  connecting_to_fpl: { en: 'Connecting to FPL...', sk: 'Pripájanie k FPL...' },
+  connecting_to_fpl: { en: 'Syncing live gameweek stats...', sk: 'Synchronizácia živých dát...' },
   sync_failed: { en: 'Sync Failed', sk: 'Synchronizácia zlyhala' },
   retry_sync: { en: 'Retry Sync', sk: 'Skúsiť znova' },
 
